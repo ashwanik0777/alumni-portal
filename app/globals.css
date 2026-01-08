@@ -1,47 +1,22 @@
 @import "tailwindcss";
+
 @theme {
-  --color-primary: var(--primary);
-  --color-secondary: var(--secondary);
-  --color-accent: var(--accent);
-  --color-background: var(--bg);
-  --color-card: var(--card);
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-border: var(--border);
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+  --color-accent: var(--color-accent);
+  --color-background: var(--color-bg);
+  --color-card: var(--color-card);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-border: var(--color-border);
 }
-/* 
-:root {
-  --primary: #1E40AF;
-  --secondary: #166534;
-  --accent: #F59E0B;
-  --bg: #F8FAFC;
-  --card: #FFFFFF;
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
-  --border: #E2E8F0;
-}
-
-.dark {
-  --primary: #60A5FA;
-  --secondary: #4ADE80;
-  --accent: #FBBF24;
-  --bg: #020617;
-  --card: #020617;
-  --text-primary: #E5E7EB;
-  --text-secondary: #9CA3AF;
-  --border: #1E293B;
-} */
-
-/* ======================
-   Light Theme (Default)
-====================== */
 
 :root {
   --color-primary: #1E348A;
   --color-secondary: #C9A227;
   --color-accent: #93C5FD;
 
-  --color-bg: #F8F9F4; /* improved */
+  --color-bg: #F8F9F4; 
   --color-card: #FFFFFF;
 
   --color-text-primary: #1F2957;
@@ -51,10 +26,6 @@
   --color-border: #CBD5E1;
 }
 
-
-/* ======================
-   Dark Theme
-====================== */
 
 .dark {
   --color-primary: #93C5FD;
@@ -74,6 +45,6 @@
 
 
 body {
-  background-color: var(--bg);
-  color: var(--text-primary);
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
 }

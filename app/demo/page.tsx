@@ -44,35 +44,35 @@ export default function StyleGuidePage() {
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <div className="h-20 rounded-lg bg-primary shadow-sm flex items-center justify-center text-white font-mono text-sm">--primary</div>
+              <div className="h-20 rounded-lg bg-primary shadow-sm flex items-center justify-center text-white font-mono text-sm">--color-primary</div>
               <p className="text-sm font-medium text-text-primary text-center">Primary Action</p>
             </div>
             <div className="space-y-2">
-              <div className="h-20 rounded-lg bg-secondary shadow-sm flex items-center justify-center text-white font-mono text-sm">--secondary</div>
+              <div className="h-20 rounded-lg bg-secondary shadow-sm flex items-center justify-center text-white font-mono text-sm">--color-secondary</div>
               <p className="text-sm font-medium text-text-primary text-center">Secondary / Success</p>
             </div>
             <div className="space-y-2">
-              <div className="h-20 rounded-lg bg-accent shadow-sm flex items-center justify-center text-white font-mono text-sm">--accent</div>
+              <div className="h-20 rounded-lg bg-accent shadow-sm flex items-center justify-center text-white font-mono text-sm">--color-accent</div>
               <p className="text-sm font-medium text-text-primary text-center">Accent / Highlight</p>
             </div>
             <div className="space-y-2">
-              <div className="h-20 rounded-lg border border-border bg-background shadow-sm flex items-center justify-center text-text-primary font-mono text-sm">--bg</div>
+              <div className="h-20 rounded-lg border border-border bg-background shadow-sm flex items-center justify-center text-text-primary font-mono text-sm">--color-bg</div>
               <p className="text-sm font-medium text-text-primary text-center">Page Background</p>
             </div>
             <div className="space-y-2">
-              <div className="h-20 rounded-lg border border-border bg-card shadow-sm flex items-center justify-center text-text-primary font-mono text-sm">--card</div>
+              <div className="h-20 rounded-lg border border-border bg-card shadow-sm flex items-center justify-center text-text-primary font-mono text-sm">--color-card</div>
               <p className="text-sm font-medium text-text-primary text-center">Card Surface</p>
             </div>
             <div className="space-y-2">
-              <div className="h-20 rounded-lg bg-text-primary shadow-sm flex items-center justify-center text-background font-mono text-sm">--text-primary</div>
+              <div className="h-20 rounded-lg bg-text-primary shadow-sm flex items-center justify-center text-background font-mono text-sm">--color-text-primary</div>
               <p className="text-sm font-medium text-text-primary text-center">Main Text</p>
             </div>
             <div className="space-y-2">
-              <div className="h-20 rounded-lg bg-text-secondary shadow-sm flex items-center justify-center text-background font-mono text-sm">--text-secondary</div>
+              <div className="h-20 rounded-lg bg-text-secondary shadow-sm flex items-center justify-center text-background font-mono text-sm">--color-text-secondary</div>
               <p className="text-sm font-medium text-text-primary text-center">Muted Text</p>
             </div>
             <div className="space-y-2">
-              <div className="h-20 rounded-lg bg-border shadow-sm flex items-center justify-center text-text-primary font-mono text-sm">--border</div>
+              <div className="h-20 rounded-lg bg-border shadow-sm flex items-center justify-center text-text-primary font-mono text-sm">--color-border</div>
               <p className="text-sm font-medium text-text-primary text-center">Borders</p>
             </div>
           </div>

@@ -40,14 +40,14 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <ColorCard name="Primary" variable="--primary" bgClass="bg-primary" textClass="text-white" />
-          <ColorCard name="Secondary" variable="--secondary" bgClass="bg-secondary" textClass="text-white" />
-          <ColorCard name="Accent" variable="--accent" bgClass="bg-accent" textClass="text-black" />
-          <ColorCard name="Background" variable="--bg" bgClass="bg-background" textClass="text-text-primary" />
-          <ColorCard name="Card" variable="--card" bgClass="bg-card" textClass="text-text-primary" />
-          <ColorCard name="Text Primary" variable="--text-primary" bgClass="bg-text-primary" textClass="text-background" />
-          <ColorCard name="Text Secondary" variable="--text-secondary" bgClass="bg-text-secondary" textClass="text-background" />
-          <ColorCard name="Border" variable="--border" bgClass="bg-border" textClass="text-text-primary" />
+          <ColorCard name="Primary" variable="--color-primary" bgClass="bg-primary" textClass="text-white" />
+          <ColorCard name="Secondary" variable="--color-secondary" bgClass="bg-secondary" textClass="text-white" />
+          <ColorCard name="Accent" variable="--color-accent" bgClass="bg-accent" textClass="text-black" />
+          <ColorCard name="Background" variable="--color-bg" bgClass="bg-background" textClass="text-text-primary" />
+          <ColorCard name="Card" variable="--color-card" bgClass="bg-card" textClass="text-text-primary" />
+          <ColorCard name="Text Primary" variable="--color-text-primary" bgClass="bg-text-primary" textClass="text-background" />
+          <ColorCard name="Text Secondary" variable="--color-text-secondary" bgClass="bg-text-secondary" textClass="text-background" />
+          <ColorCard name="Border" variable="--color-border" bgClass="bg-border" textClass="text-text-primary" />
         </div>
 
         <div className="p-6 rounded-2xl bg-card border border-border shadow-sm space-y-4 transition-colors duration-300">
