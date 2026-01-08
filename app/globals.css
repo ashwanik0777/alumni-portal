@@ -9,7 +9,7 @@
   --color-text-secondary: var(--text-secondary);
   --color-border: var(--border);
 }
-
+/* 
 :root {
   --primary: #1E40AF;
   --secondary: #166534;
@@ -30,7 +30,48 @@
   --text-primary: #E5E7EB;
   --text-secondary: #9CA3AF;
   --border: #1E293B;
+} */
+
+/* ======================
+   Light Theme (Default)
+====================== */
+
+:root {
+  --color-primary: #1E348A;
+  --color-secondary: #C9A227;
+  --color-accent: #93C5FD;
+
+  --color-bg: #F8F9F4; /* improved */
+  --color-card: #FFFFFF;
+
+  --color-text-primary: #1F2957;
+  --color-text-secondary: #1E348A;
+  --color-muted: #64748B;
+
+  --color-border: #CBD5E1;
 }
+
+
+/* ======================
+   Dark Theme
+====================== */
+
+.dark {
+  --color-primary: #93C5FD;
+  --color-secondary: #C9A227;
+  --color-accent: #FAF996;
+
+  --color-bg: #1F2957;
+  --color-card: #1E348A;
+
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #93C5FD;
+  --color-muted: #94A3B8;
+
+  --color-border: #334155;
+}
+
+
 
 body {
   background-color: var(--bg);
