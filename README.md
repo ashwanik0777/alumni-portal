@@ -1,4 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Alumni Portal
+
+A modern portal aimed at connecting and engaging with alumni, built with the latest web technologies.
+
+## 🚀 Tech Stack
+
+- **Framework:** [Next.js](https://nextjs.org/) (App Directory)
+- **Language:** TypeScript
+- **Styling:** [Tailwind CSS v4](https://tailwindcss.com/)
+- **Icons:** [Lucide React](https://lucide.dev/)
+
+## 🎨 Theme & Design System
+
+The application features a comprehensive styling system built on CSS variables and Tailwind CSS, supporting both Light and Dark modes.
+
+### Color Palette
+
+| Role | Variable | Light Mode Color | Dark Mode Color | Usage |
+|------|----------|------------------|-----------------|-------|
+| **Primary** | `--color-primary` | `#1E348A` (Royal Blue) | `#93C5FD` (Light Blue) | Main actions, brand headers |
+| **Secondary** | `--color-secondary` | `#C9A227` (Gold) | `#C9A227` (Gold) | Highlights, success states |
+| **Accent** | `--color-accent` | `#93C5FD` (Sky Blue) | `#FAF996` (Pale Yellow) | Subtle highlights, decorations |
+| **Background** | `--color-bg` | `#F8F9F4` (Off-White) | `#1F2957` (Deep Blue) | Main page background |
+| **Card** | `--color-card` | `#FFFFFF` (White) | `#1E348A` (Royal Blue) | Surface elements, modals |
+
+### Using Icons
+We use **Lucide React** for iconography.
+```tsx
+import { User, Bell } from 'lucide-react';
+
+<User className="h-4 w-4 text-primary" />
+```
 
 ## Getting Started
 
