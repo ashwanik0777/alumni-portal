@@ -1,71 +1,83 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import Link from "next/link";
+import { ArrowRight, Users, Calendar, Briefcase, HandHeart } from "lucide-react";
 
 export default function Home() {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [isDark]);
-
-  const toggleTheme = () => {
-    setIsDark(!isDark);
-  };
-
-  const ColorCard = ({ name, variable, bgClass, textClass }: { name: string, variable: string, bgClass: string, textClass: string }) => (
-    <div className="flex flex-col items-center gap-2 p-4 rounded-xl shadow-sm border border-border bg-card transition-colors duration-300">
-      <div className={`w-24 h-24 rounded-lg shadow-inner ${bgClass} border border-border flex items-center justify-center transition-colors duration-300`}>
-        <span className={`text-xs ${textClass} font-mono`}>{variable}</span>
-      </div>
-      <p className="font-semibold text-text-primary capitalize">{name}</p>
-    </div>
-  );
-
   return (
-    <div className="min-h-screen p-8 transition-colors duration-300 bg-background text-text-primary font-sans">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold tracking-tight">Theme Color Palette</h1>
-          <button
-            onClick={toggleTheme}
-            className="px-4 py-2 rounded-lg bg-primary text-white font-medium hover:opacity-90 transition-all active:scale-95 shadow-md cursor-pointer"
-          >
-            {isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <ColorCard name="Primary" variable="--color-primary" bgClass="bg-primary" textClass="text-white" />
-          <ColorCard name="Secondary" variable="--color-secondary" bgClass="bg-secondary" textClass="text-white" />
-          <ColorCard name="Accent" variable="--color-accent" bgClass="bg-accent" textClass="text-black" />
-          <ColorCard name="Background" variable="--color-bg" bgClass="bg-background" textClass="text-text-primary" />
-          <ColorCard name="Card" variable="--color-card" bgClass="bg-card" textClass="text-text-primary" />
-          <ColorCard name="Text Primary" variable="--color-text-primary" bgClass="bg-text-primary" textClass="text-background" />
-          <ColorCard name="Text Secondary" variable="--color-text-secondary" bgClass="bg-text-secondary" textClass="text-background" />
-          <ColorCard name="Border" variable="--color-border" bgClass="bg-border" textClass="text-text-primary" />
-        </div>
-
-        <div className="p-6 rounded-2xl bg-card border border-border shadow-sm space-y-4 transition-colors duration-300">
-          <h2 className="text-xl font-semibold text-text-primary">Preview Content</h2>
-          <p className="text-text-secondary leading-relaxed">
-            This is a sample paragraph to demonstrate the text colors. 
-            The primary text color is used for headings and main content, 
-            while secondary text is used for supporting information like this.
-            The background of this box uses the card color, and it has a border using the border color.
+    <div className="flex flex-col min-h-screen">
+      {/* Hero Section */}
+      <section className="relative py-20 lg:py-32 overflow-hidden bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+          <h1 className="text-4xl md:text-6xl font-extrabold text-text-primary mb-6 tracking-tight">
+            Welcome Home, <span className="text-primary">Alumni</span>
+          </h1>
+          <p className="text-lg md:text-xl text-text-secondary max-w-2xl mx-auto mb-10 leading-relaxed">
+            Reconnect with classmates, expand your professional network, and give back to the community that shaped your journey.
           </p>
-          <div className="flex gap-4 flex-wrap">
-            <button className="px-4 py-2 rounded-md bg-primary text-white font-medium hover:opacity-90 transition-opacity cursor-pointer">Primary Button</button>
-            <button className="px-4 py-2 rounded-md bg-secondary text-white font-medium hover:opacity-90 transition-opacity cursor-pointer">Secondary Button</button>
-            <button className="px-4 py-2 rounded-md bg-accent text-black font-medium hover:opacity-90 transition-opacity cursor-pointer">Accent Button</button>
-            <button className="px-4 py-2 rounded-md border border-border text-text-primary hover:bg-background transition-colors cursor-pointer">Outline Button</button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/register"
+              className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-primary text-white font-semibold hover:opacity-90 transition-opacity shadow-lg flex items-center justify-center gap-2"
+            >
+              Join the Network
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              href="/directory"
+              className="w-full sm:w-auto px-8 py-3.5 rounded-xl border border-border bg-card text-text-primary font-semibold hover:border-primary/50 transition-colors shadow-sm"
+            >
+              Search Directory
+            </Link>
           </div>
         </div>
+        
+        {/* Abstract Background Decoration */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none opacity-30">
+          <div className="absolute top-20 left-10 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/10 rounded-full blur-3xl"></div>
+        </div>
+      </section>
+
+      {/* Feature Grid */}
+      <section className="py-20 bg-card border-y border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <FeatureCard
+              icon={<Users className="w-6 h-6 text-primary" />}
+              title="Alumni Directory"
+              description="Find lost friends and connect with professionals in your field."
+            />
+            <FeatureCard
+              icon={<Calendar className="w-6 h-6 text-primary" />}
+              title="Events & Reunions"
+              description="Stay updated on upcoming campus events, webinars, and reunions."
+            />
+            <FeatureCard
+              icon={<Briefcase className="w-6 h-6 text-primary" />}
+              title="Career Opportunities"
+              description="Access exclusive job listings and mentorship programs."
+            />
+            <FeatureCard
+              icon={<HandHeart className="w-6 h-6 text-primary" />}
+              title="Give Back"
+              description="Support the next generation of students through mentorship and giving."
+            />
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function FeatureCard({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
+  return (
+    <div className="p-6 rounded-2xl bg-background border border-border hover:border-primary/30 transition-colors group">
+      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+        {icon}
       </div>
+      <h3 className="text-lg font-bold text-text-primary mb-2">{title}</h3>
+      <p className="text-text-secondary text-sm leading-relaxed">{description}</p>
     </div>
   );
 }
