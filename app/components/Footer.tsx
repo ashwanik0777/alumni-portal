@@ -101,15 +101,11 @@ export default function Footer() {
             <ul className="space-y-4 text-sm">
               <li className="flex items-start gap-3 text-text-secondary">
                 <MapPin className="h-5 w-5 text-primary shrink-0" />
-                <span>123 University Ave,<br />Innovation District, ED 45678</span>
+                <span>Jawahar Navodaya Vidyalaya,<br />Farrukhabad, Uttar Pradesh</span>
               </li>
               <li className="flex items-center gap-3 text-text-secondary">
-                <Phone className="h-5 w-5 text-primary shrink-0" />
-                <span>+1 (555) 123-4567</span>
-              </li>
-               <li className="flex items-center gap-3 text-text-secondary">
                 <Mail className="h-5 w-5 text-primary shrink-0" />
-                <span>alumni@university.edu</span>
+                <span>alumnijnvfarrukhaad@gmail.com</span>
               </li>
             </ul>
             {/* Unique Viewer Counter */}
