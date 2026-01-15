@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GraduationCap, Mail, Phone, MapPin, Linkedin, Twitter, Facebook, Instagram } from "lucide-react";
+import UniqueViewerCounter from "./UniqueViewerCounter";
 
 export default function Footer() {
   return (
@@ -111,6 +112,8 @@ export default function Footer() {
                 <span>alumni@university.edu</span>
               </li>
             </ul>
+            {/* Unique Viewer Counter */}
+        <UniqueViewerCounter />
           </div>
 
         </div>
@@ -128,6 +131,8 @@ export default function Footer() {
              </Link>
           </div>
         </div>
+        
+        
       </div>
     </footer>
   );
