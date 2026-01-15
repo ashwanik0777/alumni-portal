@@ -115,9 +115,17 @@ export default function Footer() {
         </div>
         
         <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-text-secondary text-sm">
-            &copy; {new Date().getFullYear()} Alumni Portal. All rights reserved.
-          </p>
+          <div className="flex flex-col md:items-start items-center gap-1">
+            <p className="text-text-secondary text-sm">
+              &copy; {new Date().getFullYear()} Alumni Portal. All rights reserved.
+            </p>
+          
+          </div>
+          <div>
+              <p className="text-xs text-text-secondary opacity-80">
+              Designed & Developed by <Link href="/team" className="text-secondary hover:text-primary transition-colors font-medium">Alumni Tech Team</Link>
+            </p>
+          </div>
           <div className="flex gap-6 text-sm">
              <Link href="/privacy" className="text-text-secondary hover:text-primary transition-colors">
                Privacy Policy
