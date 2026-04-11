@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Users, Calendar, Briefcase, HandHeart, Star, Quote, MapPin, GraduationCap } from "lucide-react";
 
@@ -16,18 +17,24 @@ const spotlight = [
     desc: "Small-group sessions for career planning, interview preparation, and industry transitions.",
     href: "/mentorship",
     cta: "Explore Mentorship",
+    eyebrow: "Guided Growth",
+    stat: "1:1 + Peer Learning",
   },
   {
     title: "Chapter Reunions",
     desc: "City chapters host structured meetups to strengthen alumni bonds and community collaboration.",
     href: "/events",
     cta: "View Events",
+    eyebrow: "Community Momentum",
+    stat: "28 Cities Active",
   },
   {
     title: "Alumni Job Board",
     desc: "Curated opportunities from trusted alumni networks, founders, and hiring partners.",
     href: "/jobs",
     cta: "Browse Jobs",
+    eyebrow: "Career Advantage",
+    stat: "Fresh Roles Weekly",
   },
 ];
 
@@ -45,6 +52,27 @@ const testimonials = [
 ];
 
 export default function Home() {
+  const impactRef = useRef<HTMLElement | null>(null);
+  const [impactVisible, setImpactVisible] = useState(false);
+
+  useEffect(() => {
+    const target = impactRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setImpactVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.35 }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
@@ -109,17 +137,28 @@ export default function Home() {
       </section>
 
       {/* Impact Numbers */}
-      <section className="py-14 lg:py-16 bg-background">
+      <section ref={impactRef} className="py-14 lg:py-16 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 lg:p-10 shadow-sm">
-            <div className="flex items-center justify-between gap-4 mb-8 flex-wrap">
-              <h2 className="text-2xl sm:text-3xl font-bold text-text-primary">Community Impact Snapshot</h2>
+          <div className="relative rounded-4xl border border-border bg-card p-6 sm:p-8 lg:p-10 shadow-sm overflow-hidden">
+            <div className="absolute -top-16 -right-14 h-48 w-48 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-14 -left-12 h-44 w-44 rounded-full bg-secondary/15 blur-3xl pointer-events-none" />
+
+            <div className="relative flex items-center justify-between gap-4 mb-8 flex-wrap">
+              <div>
+                <p className="inline-flex rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary mb-3">
+                  Community Impact Snapshot
+                </p>
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-text-primary">Real growth across the alumni ecosystem</h2>
+              </div>
               <p className="text-sm text-text-secondary">Updated for 2026 Alumni Cycle</p>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+            <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-4">
               {impactStats.map((item) => (
-                <div key={item.label} className="rounded-2xl border border-border bg-background p-5 hover:border-primary/35 transition-colors">
-                  <p className="text-2xl sm:text-3xl font-black text-primary">{item.value}</p>
+                <div key={item.label} className="rounded-2xl border border-border bg-background p-5 hover:border-primary/35 hover:-translate-y-1 hover:shadow-md transition-all">
+                  <p className="text-2xl sm:text-3xl font-black text-primary">
+                    <AnimatedImpactValue value={item.value} start={impactVisible} />
+                  </p>
                   <p className="text-sm text-text-secondary mt-1">{item.label}</p>
                 </div>
               ))}
@@ -131,23 +170,47 @@ export default function Home() {
       {/* Spotlight */}
       <section className="py-16 lg:py-20 bg-card border-y border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary">
-              <Star className="w-4 h-4" />
-              What You Can Do Here
+          <div className="mb-10 lg:mb-12 grid lg:grid-cols-12 gap-5 lg:gap-8 items-end">
+            <div className="lg:col-span-8">
+              <p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary">
+                <Star className="w-4 h-4" />
+                What You Can Do Here
+              </p>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mt-4 leading-tight">
+                Built For Real Outcomes,
+                <span className="block text-primary">Not Just Static Profiles</span>
+              </h2>
+            </div>
+            <p className="lg:col-span-4 text-text-secondary leading-relaxed lg:pb-1">
+              Every experience below is designed to help alumni grow faster through mentorship,
+              opportunities, and meaningful community collaboration.
             </p>
-            <h2 className="text-3xl sm:text-4xl font-black mt-4">Designed For Growth, Not Just Profiles</h2>
           </div>
 
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {spotlight.map((item) => (
-              <article key={item.title} className="rounded-2xl border border-border bg-background p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all">
-                <h3 className="text-xl font-bold text-text-primary">{item.title}</h3>
-                <p className="text-text-secondary mt-3 leading-relaxed">{item.desc}</p>
-                <Link href={item.href} className="inline-flex items-center gap-2 mt-6 text-primary font-semibold hover:gap-3 transition-all">
-                  {item.cta}
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
+          <div className="grid md:grid-cols-2 xl:grid-cols-6 gap-5">
+            {spotlight.map((item, index) => (
+              <article
+                key={item.title}
+                className={`group relative rounded-3xl border border-border bg-background p-6 sm:p-7 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden ${
+                  index === 0 ? "md:col-span-2 xl:col-span-3" : "xl:col-span-3"
+                }`}
+              >
+                <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-primary/10 blur-2xl" />
+                <div className="relative">
+                  <p className="inline-flex rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary">
+                    {item.eyebrow}
+                  </p>
+                  <h3 className="text-xl sm:text-2xl font-bold text-text-primary mt-4">{item.title}</h3>
+                  <p className="text-text-secondary mt-3 leading-relaxed">{item.desc}</p>
+
+                  <div className="mt-5 pt-4 border-t border-border/80 flex items-center justify-between gap-3">
+                    <span className="text-xs sm:text-sm font-semibold text-text-primary">{item.stat}</span>
+                    <Link href={item.href} className="inline-flex items-center gap-2 text-primary font-semibold group-hover:gap-3 transition-all">
+                      {item.cta}
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </div>
               </article>
             ))}
           </div>
@@ -211,6 +274,37 @@ export default function Home() {
       </section>
     </div>
   );
+}
+
+function AnimatedImpactValue({ value, start }: { value: string; start: boolean }) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    if (!start) return;
+
+    const target = Number(value.replace(/[^\d]/g, ""));
+    if (Number.isNaN(target)) return;
+
+    const duration = 1400;
+    const startTime = performance.now();
+    let raf = 0;
+
+    const tick = (time: number) => {
+      const progress = Math.min((time - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(Math.round(target * eased));
+
+      if (progress < 1) {
+        raf = requestAnimationFrame(tick);
+      }
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [start, value]);
+
+  const suffix = value.replace(/[\d,]/g, "");
+  return `${displayValue.toLocaleString()}${suffix}`;
 }
 
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
