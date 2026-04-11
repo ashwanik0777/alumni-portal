@@ -75,58 +75,85 @@ export default function LoginPage() {
         transition: "opacity 0.45s ease, transform 0.45s ease",
       }}
     >
-      <section className="relative overflow-hidden py-8 sm:py-10 lg:py-12">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-20 -left-24 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
-          <div className="absolute top-10 right-0 h-96 w-96 rounded-full bg-secondary/20 blur-3xl" />
-        </div>
+      <section className="relative overflow-hidden min-h-screen">
+        <div className="grid min-h-screen lg:grid-cols-12">
+          <aside
+            className="relative lg:col-span-6 p-7 sm:p-9 lg:p-12 text-white overflow-hidden"
+            style={{
+              backgroundImage:
+                "radial-gradient(ellipse 70% 60% at 10% 10%, rgba(255,255,255,0.12), transparent 65%), radial-gradient(ellipse 70% 60% at 90% 90%, rgba(201,162,39,0.22), transparent 70%)",
+              backgroundColor: "var(--color-primary)",
+            }}
+          >
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0"
+              style={{
+                backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px)",
+                backgroundSize: "28px 28px",
+              }}
+            />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative grid lg:grid-cols-12 gap-6 items-stretch">
-            <div className="lg:col-span-6 rounded-4xl border border-primary/20 bg-primary p-7 sm:p-9 lg:p-10 text-white relative overflow-hidden">
-              <div className="absolute -top-16 -right-14 h-52 w-52 rounded-full border border-white/20" />
-              <div className="absolute -bottom-20 -left-16 h-64 w-64 rounded-full bg-white/10" />
-
-              <div className="relative z-10">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-2xl bg-white/15 p-2.5">
-                    <GraduationCap className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold">Alumni Portal</p>
-                    <p className="text-[11px] text-white/70 uppercase tracking-wide">Unified Community Access</p>
-                  </div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl bg-white/15 p-2.5 shadow-sm">
+                  <GraduationCap className="h-6 w-6" />
                 </div>
+                <div>
+                  <p className="text-xl font-bold">Alumni Portal</p>
+                  <p className="text-[11px] text-white/70 uppercase tracking-[0.18em]">Unified Community Access</p>
+                </div>
+              </div>
 
-                <h1 className="mt-10 text-4xl sm:text-5xl font-black leading-[1.08]">
-                  Sign in once.
-                  <span className="block text-secondary">Access everything.</span>
-                </h1>
+              <h1 className="mt-10 text-4xl sm:text-5xl font-black leading-[1.08]">
+                Sign in once.
+                <span className="block text-secondary">Access everything.</span>
+              </h1>
 
-                <p className="mt-5 text-white/85 max-w-xl leading-relaxed">
-                  Connect with alumni, discover opportunities, join events, and manage mentorship from one secure account.
-                </p>
+              <p className="mt-5 text-white/85 max-w-xl leading-relaxed">
+                Connect with alumni, discover opportunities, join events, and manage mentorship from one secure account.
+              </p>
 
-                <div className="mt-8 grid sm:grid-cols-3 gap-3">
-                  {stats.map(({ value, label, icon: Icon }) => (
-                    <div key={label} className="rounded-xl border border-white/20 bg-white/5 p-3">
-                      <div className="inline-flex items-center justify-center rounded-lg bg-white/10 p-2 mb-2">
-                        <Icon className="h-4 w-4 text-secondary" />
-                      </div>
-                      <p className="text-lg font-black">{value}</p>
-                      <p className="text-[11px] text-white/75">{label}</p>
+              <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold">
+                <Sparkles className="h-3.5 w-3.5" />
+                AI-inspired and role-aware access experience
+              </p>
+
+              <div className="mt-8 grid sm:grid-cols-3 gap-3 max-w-2xl">
+                {stats.map(({ value, label, icon: Icon }) => (
+                  <div key={label} className="rounded-xl border border-white/20 bg-white/5 p-3">
+                    <div className="inline-flex items-center justify-center rounded-lg bg-white/10 p-2 mb-2">
+                      <Icon className="h-4 w-4 text-secondary" />
                     </div>
-                  ))}
-                </div>
-
-                <p className="mt-7 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-semibold">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Premium, secure, and role-aware login experience
-                </p>
+                    <p className="text-lg font-black">{value}</p>
+                    <p className="text-[11px] text-white/75">{label}</p>
+                  </div>
+                ))}
               </div>
             </div>
+          </aside>
 
-            <div className="lg:col-span-6 rounded-4xl border border-border bg-card p-7 sm:p-9 shadow-sm">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 z-20 hidden lg:block"
+            style={{ left: "calc(50% - 40px)", width: "80px" }}
+          >
+            <svg className="h-full w-full" viewBox="0 0 80 900" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M 0 0 L 40 0 C 78 82, 80 162, 60 242 C 40 322, 0 402, 20 482 C 40 562, 80 642, 60 722 C 40 802, 0 882, 40 900 L 0 900 Z"
+                fill="currentColor"
+                className="text-primary"
+              />
+              <path
+                d="M 80 0 L 40 0 C 78 82, 80 162, 60 242 C 40 322, 0 402, 20 482 C 40 562, 80 642, 60 722 C 40 802, 0 882, 40 900 L 80 900 Z"
+                fill="currentColor"
+                className="text-card"
+              />
+            </svg>
+          </div>
+
+          <main className="lg:col-span-6 flex items-center justify-center px-6 py-10 sm:px-10 bg-card">
+            <div className="w-full max-w-md">
               <div
                 style={{
                   opacity: formVisible ? 1 : 0,
@@ -136,13 +163,13 @@ export default function LoginPage() {
               >
                 {formMode === "login" && (
                   <>
-                    <p className="text-[11px] uppercase tracking-wide font-semibold text-primary">Welcome Back</p>
-                    <h2 className="mt-1 text-3xl sm:text-4xl font-black">Sign In</h2>
-                    <p className="mt-2 text-sm text-text-secondary">Enter your account credentials to continue.</p>
+                    <p className="text-[11px] uppercase tracking-[0.18em] font-bold text-primary">Welcome Back</p>
+                    <h2 className="mt-1 text-3xl sm:text-4xl font-black">Sign in</h2>
+                    <p className="mt-2 text-sm text-text-secondary">Enter your credentials to access your dashboard.</p>
 
                     <form onSubmit={onLoginSubmit} className="mt-7 space-y-4">
                       <label className="block">
-                        <span className="mb-1.5 block text-sm font-medium">Email Address</span>
+                        <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-text-secondary">Email Address</span>
                         <div className="relative">
                           <Mail className="h-4 w-4 text-text-secondary absolute left-4 top-1/2 -translate-y-1/2" />
                           <input
@@ -156,7 +183,7 @@ export default function LoginPage() {
 
                       <label className="block">
                         <div className="mb-1.5 flex items-center justify-between gap-3">
-                          <span className="text-sm font-medium">Password</span>
+                          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-text-secondary">Password</span>
                           <button
                             type="button"
                             onClick={() => switchMode("forgot-request")}
@@ -195,45 +222,35 @@ export default function LoginPage() {
                         type="submit"
                         className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
                       >
-                        Sign In
+                        Sign in
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     </form>
 
-                    <div className="mt-6 grid sm:grid-cols-2 gap-3">
-                      <Link
-                        href="/register"
-                        className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-3 text-sm font-semibold text-text-primary hover:border-primary/30 transition-colors"
-                      >
-                        Create New Account
-                      </Link>
-                      <Link
-                        href="/directory"
-                        className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-3 text-sm font-semibold text-text-primary hover:border-primary/30 transition-colors"
-                      >
-                        Explore Directory
-                      </Link>
+                    <div className="mt-7">
+                      <p className="mb-4 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-text-secondary/80">Or continue with</p>
+                      <div className="flex items-center justify-center gap-3">
+                        <button type="button" className="h-11 w-11 rounded-full border border-border bg-background text-sm font-bold text-primary hover:border-primary/40 transition-colors">G</button>
+                        <button type="button" className="h-11 w-11 rounded-full border border-border bg-background text-sm font-bold text-primary hover:border-primary/40 transition-colors">GH</button>
+                        <button type="button" className="h-11 w-11 rounded-full border border-border bg-background text-sm font-bold text-primary hover:border-primary/40 transition-colors">A</button>
+                      </div>
                     </div>
                   </>
                 )}
 
                 {formMode === "forgot-request" && (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => switchMode("login")}
-                      className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-primary"
-                    >
+                    <button type="button" onClick={() => switchMode("login")} className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-primary">
                       <ChevronLeft className="h-4 w-4" /> Back to sign in
                     </button>
 
-                    <p className="text-[11px] uppercase tracking-wide font-semibold text-primary">Password Recovery</p>
-                    <h2 className="mt-1 text-3xl sm:text-4xl font-black">Reset access</h2>
+                    <p className="text-[11px] uppercase tracking-[0.18em] font-bold text-primary">Password Recovery</p>
+                    <h2 className="mt-1 text-3xl sm:text-4xl font-black">Forgot password?</h2>
                     <p className="mt-2 text-sm text-text-secondary">Enter your registered email to receive a reset code.</p>
 
                     <form onSubmit={onForgotRequest} className="mt-7 space-y-4">
                       <label className="block">
-                        <span className="mb-1.5 block text-sm font-medium">Email Address</span>
+                        <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-text-secondary">Email Address</span>
                         <div className="relative">
                           <Mail className="h-4 w-4 text-text-secondary absolute left-4 top-1/2 -translate-y-1/2" />
                           <input
@@ -246,10 +263,7 @@ export default function LoginPage() {
                         </div>
                       </label>
 
-                      <button
-                        type="submit"
-                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
-                      >
+                      <button type="submit" className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors">
                         Send Reset Code
                         <ArrowRight className="h-4 w-4" />
                       </button>
@@ -259,15 +273,11 @@ export default function LoginPage() {
 
                 {formMode === "forgot-reset" && (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => switchMode("forgot-request")}
-                      className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-primary"
-                    >
+                    <button type="button" onClick={() => switchMode("forgot-request")} className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-primary">
                       <ChevronLeft className="h-4 w-4" /> Back
                     </button>
 
-                    <p className="text-[11px] uppercase tracking-wide font-semibold text-primary">Verification</p>
+                    <p className="text-[11px] uppercase tracking-[0.18em] font-bold text-primary">Verification</p>
                     <h2 className="mt-1 text-3xl sm:text-4xl font-black">Enter reset code</h2>
                     <p className="mt-2 text-sm text-text-secondary">
                       We sent a code to <span className="font-semibold text-text-primary">{forgotEmail || "your email"}</span>. Set your new password below.
@@ -275,7 +285,7 @@ export default function LoginPage() {
 
                     <form onSubmit={onForgotReset} className="mt-7 space-y-4">
                       <label className="block">
-                        <span className="mb-1.5 block text-sm font-medium">Reset Code</span>
+                        <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-text-secondary">Reset Code</span>
                         <input
                           type="text"
                           placeholder="Enter 6-digit code"
@@ -285,7 +295,7 @@ export default function LoginPage() {
                       </label>
 
                       <label className="block">
-                        <span className="mb-1.5 block text-sm font-medium">New Password</span>
+                        <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-text-secondary">New Password</span>
                         <input
                           type="password"
                           placeholder="Minimum 8 characters"
@@ -294,10 +304,7 @@ export default function LoginPage() {
                         />
                       </label>
 
-                      <button
-                        type="submit"
-                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
-                      >
+                      <button type="submit" className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors">
                         Reset Password
                         <ArrowRight className="h-4 w-4" />
                       </button>
@@ -310,16 +317,12 @@ export default function LoginPage() {
                     <div className="mx-auto mb-5 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary/20 border border-secondary/40">
                       <CheckCircle2 className="h-8 w-8 text-secondary" />
                     </div>
-                    <p className="text-[11px] uppercase tracking-wide font-semibold text-primary">Done</p>
+                    <p className="text-[11px] uppercase tracking-[0.18em] font-bold text-primary">Done</p>
                     <h2 className="mt-1 text-3xl sm:text-4xl font-black">Password Updated</h2>
                     <p className="mt-2 text-sm text-text-secondary max-w-sm mx-auto">
                       Your password has been reset successfully. Continue by signing in with your new credentials.
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => switchMode("login")}
-                      className="mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
-                    >
+                    <button type="button" onClick={() => switchMode("login")} className="mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors">
                       Back To Sign In
                       <ArrowRight className="h-4 w-4" />
                     </button>
@@ -328,18 +331,15 @@ export default function LoginPage() {
 
                 <div className="mt-8 rounded-xl border border-border bg-background p-4 text-sm text-text-secondary leading-relaxed">
                   By signing in, you agree to our{" "}
-                  <Link href="/terms" className="font-semibold text-primary hover:underline">
-                    Terms of Service
-                  </Link>
+                  <Link href="/terms" className="font-semibold text-primary hover:underline">Terms of Service</Link>
                   {" "}and{" "}
-                  <Link href="/privacy" className="font-semibold text-primary hover:underline">
-                    Privacy Policy
-                  </Link>
-                  .
+                  <Link href="/privacy" className="font-semibold text-primary hover:underline">Privacy Policy</Link>.
                 </div>
+
+                <p className="mt-8 text-center text-xs text-text-secondary/80">&copy; {new Date().getFullYear()} Alumni Portal</p>
               </div>
             </div>
-          </div>
+          </main>
         </div>
       </section>
     </div>
