@@ -19,7 +19,7 @@ export default function UnderConstruction({ pageName }: UnderConstructionProps) 
       </h2>
       <p className="text-text-secondary max-w-md mb-8 text-lg">
         We are working hard to build this feature for our alumni community. 
-        Stay tuned for updates! 🚀
+        Stay tuned for updates! 
       </p>
       <Link 
         href="/" 
