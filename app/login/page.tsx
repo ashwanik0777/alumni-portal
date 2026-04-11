@@ -13,6 +13,7 @@ import {
   Eye,
   EyeOff,
   GraduationCap,
+  House,
   LockKeyhole,
   Mail,
   ShieldCheck,
@@ -210,6 +211,16 @@ export default function LoginPage() {
 
           <main className="lg:col-span-6 flex items-center justify-center px-6 py-10 sm:px-10 bg-card">
             <div className="w-full max-w-md">
+              <div className="mb-5 flex items-center justify-end">
+                <Link
+                  href="/"
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-xs font-semibold text-text-primary hover:border-primary/40 hover:text-primary transition-colors"
+                >
+                  <House className="h-3.5 w-3.5" />
+                  Go to Home
+                </Link>
+              </div>
+
               <div
                 style={{
                   opacity: formVisible ? 1 : 0,
@@ -379,14 +390,36 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                <div className="mt-8 rounded-xl border border-border bg-background p-4 text-sm text-text-secondary leading-relaxed">
-                  By signing in, you agree to our{" "}
-                  <Link href="/terms" className="font-semibold text-primary hover:underline">Terms of Service</Link>
-                  {" "}and{" "}
-                  <Link href="/privacy" className="font-semibold text-primary hover:underline">Privacy Policy</Link>.
+                <div className="mt-8 rounded-2xl border border-border bg-background/80 p-4 sm:p-5">
+                  <div className="flex items-start gap-3">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20">
+                      <ShieldCheck className="h-4 w-4 text-primary" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-text-primary">Secure and compliant sign-in</p>
+                      <p className="mt-1 text-xs text-text-secondary leading-relaxed">
+                        By continuing, you accept our legal terms and data handling practices.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2.5">
+                    <Link
+                      href="/terms"
+                      className="inline-flex items-center rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-text-primary hover:border-primary/40 hover:text-primary transition-colors"
+                    >
+                      Terms of Service
+                    </Link>
+                    <Link
+                      href="/privacy"
+                      className="inline-flex items-center rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-text-primary hover:border-primary/40 hover:text-primary transition-colors"
+                    >
+                      Privacy Policy
+                    </Link>
+                  </div>
                 </div>
 
-                <p className="mt-8 text-center text-xs text-text-secondary/80">&copy; {new Date().getFullYear()} Alumni Portal</p>
+                <p className="mt-6 text-center text-xs text-text-secondary/80">&copy; {new Date().getFullYear()} Alumni Portal</p>
               </div>
             </div>
           </main>
