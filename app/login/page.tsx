@@ -5,6 +5,8 @@ import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
+  Briefcase,
+  CalendarDays,
   ChevronLeft,
   Check,
   CheckCircle2,
@@ -13,6 +15,7 @@ import {
   GraduationCap,
   LockKeyhole,
   Mail,
+  ShieldCheck,
   Sparkles,
   TrendingUp,
   Users,
@@ -87,12 +90,40 @@ export default function LoginPage() {
           >
             <div
               aria-hidden
+              className="pointer-events-none absolute -left-20 -top-24 h-72 w-72 rounded-full border border-white/20 bg-white/10 blur-2xl"
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-20 top-1/3 h-80 w-80 rounded-full border border-secondary/30 bg-secondary/20 blur-2xl"
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -left-24 bottom-10 h-64 w-64 rounded-full border border-white/10 bg-white/5 blur-2xl"
+            />
+            <div
+              aria-hidden
               className="pointer-events-none absolute inset-0"
               style={{
                 backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px)",
                 backgroundSize: "28px 28px",
               }}
             />
+
+            <svg
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-36 w-full opacity-80 lg:hidden"
+              viewBox="0 0 400 120"
+              preserveAspectRatio="none"
+            >
+              <path
+                d="M0,20 C60,95 130,10 200,56 C260,96 330,54 400,22 L400,120 L0,120 Z"
+                fill="rgba(255,255,255,0.18)"
+              />
+              <path
+                d="M0,48 C70,105 140,42 200,74 C265,105 330,66 400,44 L400,120 L0,120 Z"
+                fill="rgba(201,162,39,0.24)"
+              />
+            </svg>
 
             <div className="relative z-10">
               <div className="flex items-center gap-3">
@@ -129,6 +160,31 @@ export default function LoginPage() {
                     <p className="text-[11px] text-white/75">{label}</p>
                   </div>
                 ))}
+              </div>
+
+              <ul className="mt-7 grid gap-3 sm:grid-cols-2 max-w-2xl">
+                <li className="list-none rounded-2xl border border-white/25 bg-white/10 px-4 py-3 backdrop-blur-sm">
+                  <p className="flex items-center gap-2 text-xs font-semibold">
+                    <ShieldCheck className="h-4 w-4 text-secondary" />
+                    Secure Unified Identity
+                  </p>
+                  <p className="mt-1 text-[11px] text-white/75">One account for events, jobs, mentorship, and alumni directory.</p>
+                </li>
+                <li className="list-none rounded-2xl border border-white/25 bg-white/10 px-4 py-3 backdrop-blur-sm">
+                  <p className="flex items-center gap-2 text-xs font-semibold">
+                    <Briefcase className="h-4 w-4 text-secondary" />
+                    Career and Network Access
+                  </p>
+                  <p className="mt-1 text-[11px] text-white/75">Discover referrals, openings, and verified opportunities faster.</p>
+                </li>
+              </ul>
+
+              <div className="mt-6 rounded-2xl border border-white/20 bg-white/5 p-3.5 max-w-sm">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-white/70">Upcoming</p>
+                <p className="mt-1 flex items-center gap-2 text-sm font-semibold">
+                  <CalendarDays className="h-4 w-4 text-secondary" />
+                  Alumni Leadership Meet - 23 April
+                </p>
               </div>
             </div>
           </aside>
@@ -227,14 +283,8 @@ export default function LoginPage() {
                       </button>
                     </form>
 
-                    <div className="mt-7">
-                      <p className="mb-4 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-text-secondary/80">Or continue with</p>
-                      <div className="flex items-center justify-center gap-3">
-                        <button type="button" className="h-11 w-11 rounded-full border border-border bg-background text-sm font-bold text-primary hover:border-primary/40 transition-colors">G</button>
-                        <button type="button" className="h-11 w-11 rounded-full border border-border bg-background text-sm font-bold text-primary hover:border-primary/40 transition-colors">GH</button>
-                        <button type="button" className="h-11 w-11 rounded-full border border-border bg-background text-sm font-bold text-primary hover:border-primary/40 transition-colors">A</button>
-                      </div>
-                    </div>
+                   
+
                   </>
                 )}
 

@@ -1,8 +1,17 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { GraduationCap, Mail, Phone, MapPin, Linkedin, Twitter, Facebook, Instagram } from "lucide-react";
 import UniqueViewerCounter from "./UniqueViewerCounter";
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  if (pathname?.startsWith("/login")) {
+    return null;
+  }
+
   return (
     <footer className="bg-card border-t border-border pt-12 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

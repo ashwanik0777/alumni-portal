@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, X, GraduationCap, User, LogIn, Sun, Moon } from "lucide-react";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const pathname = usePathname();
 
   // Initialize theme from system preference or local storage
   useEffect(() => {
@@ -43,12 +45,16 @@ export default function Navbar() {
     { name: "Mentorship", href: "/mentorship" },
   ];
 
+  if (pathname?.startsWith("/login")) {
+    return null;
+  }
+
   return (
     <nav className="sticky top-0 z-50 w-full bg-card/80 backdrop-blur-md border-b border-border shadow-sm transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex-shrink-0 flex items-center">
+          <div className="shrink-0 flex items-center">
             <Link href="/" className="flex items-center gap-2 group" onClick={() => setIsOpen(false)}>
               <div className="bg-primary/10 p-2 rounded-lg group-hover:bg-primary/20 transition-colors">
                 <GraduationCap className="h-6 w-6 text-primary" />
