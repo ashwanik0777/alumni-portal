@@ -17,24 +17,18 @@ const spotlight = [
     desc: "Small-group sessions for career planning, interview preparation, and industry transitions.",
     href: "/mentorship",
     cta: "Explore Mentorship",
-    eyebrow: "Guided Growth",
-    stat: "1:1 + Peer Learning",
   },
   {
     title: "Chapter Reunions",
     desc: "City chapters host structured meetups to strengthen alumni bonds and community collaboration.",
     href: "/events",
     cta: "View Events",
-    eyebrow: "Community Momentum",
-    stat: "28 Cities Active",
   },
   {
     title: "Alumni Job Board",
     desc: "Curated opportunities from trusted alumni networks, founders, and hiring partners.",
     href: "/jobs",
     cta: "Browse Jobs",
-    eyebrow: "Career Advantage",
-    stat: "Fresh Roles Weekly",
   },
 ];
 
@@ -43,11 +37,15 @@ const testimonials = [
     quote: "I reconnected with my batchmates after 9 years and found my current role through the alumni network.",
     author: "Ritika Singh",
     meta: "Batch 2014, Product Manager",
+    company: "Product Manager, Bengaluru",
+    outcome: "Career Transition Success",
   },
   {
     quote: "The mentorship program gave me clarity, confidence, and direct guidance from seniors in my target domain.",
     author: "Nitin Raj",
     meta: "Batch 2020, Software Engineer",
+    company: "Software Engineer, Hyderabad",
+    outcome: "Mentorship Breakthrough",
   },
 ];
 
@@ -170,47 +168,23 @@ export default function Home() {
       {/* Spotlight */}
       <section className="py-16 lg:py-20 bg-card border-y border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 lg:mb-12 grid lg:grid-cols-12 gap-5 lg:gap-8 items-end">
-            <div className="lg:col-span-8">
-              <p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary">
-                <Star className="w-4 h-4" />
-                What You Can Do Here
-              </p>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mt-4 leading-tight">
-                Built For Real Outcomes,
-                <span className="block text-primary">Not Just Static Profiles</span>
-              </h2>
-            </div>
-            <p className="lg:col-span-4 text-text-secondary leading-relaxed lg:pb-1">
-              Every experience below is designed to help alumni grow faster through mentorship,
-              opportunities, and meaningful community collaboration.
+          <div className="text-center mb-10">
+            <p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary">
+              <Star className="w-4 h-4" />
+              What You Can Do Here
             </p>
+            <h2 className="text-3xl sm:text-4xl font-black mt-4">Designed For Growth, Not Just Profiles</h2>
           </div>
 
-          <div className="grid md:grid-cols-2 xl:grid-cols-6 gap-5">
-            {spotlight.map((item, index) => (
-              <article
-                key={item.title}
-                className={`group relative rounded-3xl border border-border bg-background p-6 sm:p-7 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden ${
-                  index === 0 ? "md:col-span-2 xl:col-span-3" : "xl:col-span-3"
-                }`}
-              >
-                <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-primary/10 blur-2xl" />
-                <div className="relative">
-                  <p className="inline-flex rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary">
-                    {item.eyebrow}
-                  </p>
-                  <h3 className="text-xl sm:text-2xl font-bold text-text-primary mt-4">{item.title}</h3>
-                  <p className="text-text-secondary mt-3 leading-relaxed">{item.desc}</p>
-
-                  <div className="mt-5 pt-4 border-t border-border/80 flex items-center justify-between gap-3">
-                    <span className="text-xs sm:text-sm font-semibold text-text-primary">{item.stat}</span>
-                    <Link href={item.href} className="inline-flex items-center gap-2 text-primary font-semibold group-hover:gap-3 transition-all">
-                      {item.cta}
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  </div>
-                </div>
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {spotlight.map((item) => (
+              <article key={item.title} className="rounded-2xl border border-border bg-background p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all">
+                <h3 className="text-xl font-bold text-text-primary">{item.title}</h3>
+                <p className="text-text-secondary mt-3 leading-relaxed">{item.desc}</p>
+                <Link href={item.href} className="inline-flex items-center gap-2 mt-6 text-primary font-semibold hover:gap-3 transition-all">
+                  {item.cta}
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </article>
             ))}
           </div>
@@ -220,24 +194,58 @@ export default function Home() {
       {/* Testimonials */}
       <section className="py-16 lg:py-20 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-12 gap-8 items-start">
-            <div className="lg:col-span-4">
-              <p className="text-sm font-semibold text-primary uppercase tracking-wide">Voices Of Alumni</p>
-              <h2 className="text-3xl sm:text-4xl font-black mt-3">Real stories from our network</h2>
-              <p className="mt-3 text-text-secondary leading-relaxed">
-                From mentorship to referrals and reunion friendships, alumni continue to create meaningful outcomes together.
-              </p>
-            </div>
+          <div className="rounded-4xl border border-border bg-card p-6 sm:p-8 lg:p-10 shadow-sm">
+            <div className="grid lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+              <div className="lg:col-span-4">
+                <p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary">
+                  <Quote className="w-3.5 h-3.5" />
+                  Voices Of Alumni
+                </p>
+                <h2 className="text-3xl sm:text-4xl font-black mt-4 leading-tight">Real stories with measurable outcomes</h2>
+                <p className="mt-3 text-text-secondary leading-relaxed">
+                  From mentorship guidance to career referrals, alumni continue to create meaningful progress together.
+                </p>
 
-            <div className="lg:col-span-8 grid md:grid-cols-2 gap-5">
-              {testimonials.map((item) => (
-                <article key={item.author} className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                  <Quote className="w-6 h-6 text-secondary" />
-                  <p className="mt-4 text-text-primary leading-relaxed">{item.quote}</p>
-                  <p className="mt-5 font-bold text-primary">{item.author}</p>
-                  <p className="text-sm text-text-secondary">{item.meta}</p>
-                </article>
-              ))}
+                <div className="mt-6 grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-border bg-background p-4">
+                    <p className="text-2xl font-black text-primary">89%</p>
+                    <p className="text-xs text-text-secondary mt-1">Positive outcomes</p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-background p-4">
+                    <p className="text-2xl font-black text-primary">1,300+</p>
+                    <p className="text-xs text-text-secondary mt-1">Stories shared</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-8 grid md:grid-cols-2 gap-5">
+                {testimonials.map((item) => (
+                  <article key={item.author} className="group rounded-2xl border border-border bg-background p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="inline-flex rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                        {item.outcome}
+                      </p>
+                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-sm">
+                        {item.author
+                          .split(" ")
+                          .map((part) => part[0])
+                          .join("")
+                          .slice(0, 2)
+                          .toUpperCase()}
+                      </span>
+                    </div>
+
+                    <Quote className="w-6 h-6 text-secondary mt-4" />
+                    <p className="mt-4 text-text-primary leading-relaxed">{item.quote}</p>
+
+                    <div className="mt-6 pt-4 border-t border-border/80">
+                      <p className="font-bold text-primary">{item.author}</p>
+                      <p className="text-sm text-text-secondary">{item.meta}</p>
+                      <p className="text-xs text-text-secondary mt-1">{item.company}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
             </div>
           </div>
         </div>
