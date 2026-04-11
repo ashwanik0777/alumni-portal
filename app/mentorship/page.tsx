@@ -131,29 +131,63 @@ export default function MentorshipPage() {
       </section>
 
       <section className="border-y border-border bg-card/70">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-16 grid lg:grid-cols-12 gap-8 lg:gap-10 items-start">
-          <div className="lg:col-span-4 rounded-2xl border border-border bg-background p-6 sm:p-7 shadow-sm">
-            <p className="inline-flex items-center gap-2 rounded-full bg-secondary/20 px-3 py-1 text-xs font-semibold text-text-primary mb-4">
-              <BookOpen className="h-4 w-4 text-primary" />
-              Program Flow
-            </p>
-            <h2 className="text-2xl sm:text-3xl font-bold">How the mentorship journey works</h2>
-            <p className="mt-3 text-text-secondary leading-relaxed">
-              A clear framework designed to convert conversations into measurable growth outcomes.
-            </p>
-          </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-16">
+          <div className="rounded-4xl border border-border bg-background p-6 sm:p-8 lg:p-10 shadow-sm">
+            <div className="grid lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+              <div className="lg:col-span-4">
+                <p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary mb-4">
+                  <BookOpen className="h-4 w-4" />
+                  Program Blueprint
+                </p>
+                <h2 className="text-2xl sm:text-3xl font-black leading-tight">How mentorship turns into measurable growth</h2>
+                <p className="mt-3 text-text-secondary leading-relaxed">
+                  A structured journey with clear checkpoints, progress visibility, and practical outcomes.
+                </p>
 
-          <ol className="lg:col-span-8 grid sm:grid-cols-2 gap-4">
-            {process.map((step, index) => (
-              <li key={step.title} className="rounded-2xl border border-border bg-background p-5 shadow-sm">
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white text-xs font-bold mb-3">
-                  {index + 1}
-                </span>
-                <h3 className="text-lg font-bold">{step.title}</h3>
-                <p className="mt-2 text-sm text-text-secondary leading-relaxed">{step.text}</p>
-              </li>
-            ))}
-          </ol>
+                <div className="mt-6 grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-border bg-card p-4">
+                    <p className="text-2xl font-black text-primary">4</p>
+                    <p className="text-xs text-text-secondary mt-1">Core phases</p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-card p-4">
+                    <p className="text-2xl font-black text-primary">1:1</p>
+                    <p className="text-xs text-text-secondary mt-1">Mentor guidance</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-8 relative">
+                <div className="hidden sm:block absolute left-4 top-3 bottom-3 w-px bg-primary/20" />
+                <ol className="space-y-4 sm:space-y-5">
+                  {process.map((step, index) => (
+                    <li key={step.title} className="relative sm:pl-11">
+                      <span className="hidden sm:inline-flex absolute left-0 top-5 h-8 w-8 items-center justify-center rounded-full bg-primary text-white text-xs font-bold ring-4 ring-background">
+                        {index + 1}
+                      </span>
+
+                      <article className="group rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between gap-3">
+                          <h3 className="text-lg sm:text-xl font-bold">{step.title}</h3>
+                          <span className="inline-flex rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-semibold text-text-secondary">
+                            Step 0{index + 1}
+                          </span>
+                        </div>
+
+                        <p className="mt-2 text-sm text-text-secondary leading-relaxed">{step.text}</p>
+
+                        <div className="mt-4 h-1.5 w-full rounded-full bg-primary/10 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-linear-to-r from-primary to-secondary"
+                            style={{ width: `${(index + 1) * 25}%` }}
+                          />
+                        </div>
+                      </article>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
