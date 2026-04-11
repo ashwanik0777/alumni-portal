@@ -62,7 +62,7 @@ export default function PrivacyPage() {
       </section>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14 lg:pb-16">
-        <div className="rounded-3xl border border-primary/20 bg-linear-to-r from-primary to-primary/90 p-7 sm:p-9 text-white">
+        <div className="rounded-3xl border border-primary/20 dark:border-primary/40 bg-linear-to-r from-primary to-primary/90 dark:from-slate-900 dark:to-blue-950 p-7 sm:p-9 text-white">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
             <div>
               <p className="inline-flex items-center gap-2 text-sm font-medium bg-white/10 px-3 py-1 rounded-full mb-3">

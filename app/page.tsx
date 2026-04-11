@@ -183,7 +183,7 @@ export default function Home() {
       {/* Final CTA */}
       <section className="py-16 lg:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative rounded-3xl border border-primary/20 bg-linear-to-r from-primary/95 to-primary p-8 sm:p-10 lg:p-12 text-white overflow-hidden">
+          <div className="relative rounded-3xl border border-primary/20 dark:border-primary/40 bg-linear-to-r from-primary/95 to-primary dark:from-slate-900 dark:to-blue-950 p-8 sm:p-10 lg:p-12 text-white overflow-hidden">
             <div className="absolute -top-16 -right-14 h-48 w-48 rounded-full bg-white/10" />
             <div className="absolute -bottom-16 -left-10 h-48 w-48 rounded-full bg-secondary/20" />
             <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">

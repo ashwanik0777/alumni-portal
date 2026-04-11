@@ -67,13 +67,13 @@ export default function TermsPage() {
       </section>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14 lg:pb-16">
-        <div className="rounded-3xl border border-secondary/40 bg-linear-to-r from-secondary/35 to-secondary/20 p-7 sm:p-9">
+        <div className="rounded-3xl border border-secondary/40 dark:border-primary/40 bg-linear-to-r from-secondary/35 to-secondary/20 dark:from-slate-900 dark:to-blue-950 p-7 sm:p-9 text-text-primary dark:text-white">
           <p className="inline-flex items-center gap-2 rounded-full bg-card/70 border border-border px-3 py-1 text-sm font-semibold text-text-primary">
             <BadgeCheck className="h-4 w-4 text-primary" />
             Transparent & Fair
           </p>
           <h3 className="mt-4 text-2xl font-bold">Questions About These Terms?</h3>
-          <p className="mt-2 text-text-secondary max-w-2xl">
+          <p className="mt-2  max-w-2xl">
             For any clarification regarding account policies, content moderation, or event participation,
             our support and administrative team is available to help.
           </p>

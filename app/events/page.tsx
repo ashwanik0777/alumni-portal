@@ -166,7 +166,7 @@ export default function EventsPage() {
       </section>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-16">
-        <div className="rounded-3xl border border-primary/20 bg-linear-to-r from-primary/95 to-primary p-8 sm:p-10 text-white relative overflow-hidden">
+        <div className="rounded-3xl border border-primary/20 dark:border-primary/40 bg-linear-to-r from-primary/95 to-primary dark:from-slate-900 dark:to-blue-950 p-8 sm:p-10 text-white relative overflow-hidden">
           <div className="absolute -right-14 -top-14 h-44 w-44 rounded-full bg-white/10" />
           <div className="absolute -left-12 -bottom-16 h-52 w-52 rounded-full bg-secondary/20" />
           <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
