@@ -79,7 +79,7 @@ export default function TermsPage() {
           </p>
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
             <a
-              href="mailto:alumnijnvfarrukhaad@gmail.com"
+              href="mailto:jnvfarrukhabad.alumni@gmail.com"
               className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 font-semibold text-white hover:bg-primary/90 transition-colors"
             >
               Contact Administration

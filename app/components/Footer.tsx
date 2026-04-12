@@ -114,7 +114,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-3 text-text-secondary">
                 <Mail className="h-5 w-5 text-primary shrink-0" />
-                <span>alumnijnvfarrukhaad@gmail.com</span>
+                <span>jnvfarrukhabad.alumni@gmail.com</span>
               </li>
             </ul>
             {/* Unique Viewer Counter */}

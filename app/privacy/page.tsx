@@ -73,7 +73,7 @@ export default function PrivacyPage() {
               <p className="text-white/90 mt-1">For data access, correction, or deletion requests, write to us anytime.</p>
             </div>
             <a
-              href="mailto:alumnijnvfarrukhaad@gmail.com"
+              href="mailto:jnvfarrukhabad.alumni@gmail.com"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-semibold text-primary hover:bg-white/90 transition-colors"
             >
               <Mail className="h-4 w-4" />

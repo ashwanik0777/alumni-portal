@@ -5,7 +5,7 @@ const supportChannels = [
   {
     icon: Mail,
     title: "Email Support",
-    detail: "alumnijnvfarrukhaad@gmail.com",
+    detail: "jnvfarrukhabad.alumni@gmail.com",
     note: "Best for detailed requests and document sharing",
   },
   {
@@ -51,7 +51,7 @@ export default function ContactPage() {
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4">
             <a
-              href="mailto:alumnijnvfarrukhaad@gmail.com"
+              href="mailto:jnvfarrukhabad.alumni@gmail.com"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
             >
               <Mail className="h-4 w-4" />
