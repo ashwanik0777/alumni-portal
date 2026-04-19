@@ -35,11 +35,12 @@ export default function LoginPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState<"user" | "admin">("user");
   const [formMode, setFormMode] = useState<FormMode>("login");
   const [formVisible, setFormVisible] = useState(true);
   const [forgotEmail, setForgotEmail] = useState("");
   const [success, setSuccess] = useState(false);
+  const [loginMessage, setLoginMessage] = useState("");
+  const [multiAccess, setMultiAccess] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 20);
@@ -51,16 +52,52 @@ export default function LoginPage() {
     setTimeout(() => {
       setFormMode(next);
       setSuccess(false);
+      setLoginMessage("");
+      setMultiAccess(false);
       setFormVisible(true);
     }, 220);
   };
 
+  const resolveAccessFromEmail = (email: string): "user" | "admin" | "both" => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (normalizedEmail.includes("+both") || normalizedEmail.startsWith("multi.")) {
+      return "both";
+    }
+
+    if (normalizedEmail.includes("+admin") || normalizedEmail.startsWith("admin.")) {
+      return "admin";
+    }
+
+    return "user";
+  };
+
+  const continueLogin = (targetRole: "user" | "admin") => {
+    localStorage.setItem("auth_user", "active");
+    localStorage.setItem("auth_role", targetRole);
+    setSuccess(true);
+    setLoginMessage(`Signed in successfully. Redirecting to ${targetRole === "admin" ? "Admin" : "User"} dashboard.`);
+    setTimeout(() => {
+      router.push(targetRole === "admin" ? "/admin" : "/user");
+    }, 350);
+  };
+
   const onLoginSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSuccess(true);
-    setTimeout(() => {
-      router.push(role === "admin" ? "/admin" : "/user");
-    }, 300);
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") || "");
+    const detectedAccess = resolveAccessFromEmail(email);
+
+    setSuccess(false);
+
+    if (detectedAccess === "both") {
+      setMultiAccess(true);
+      setLoginMessage("Your credentials are valid for both accounts. Please choose which account you want to open.");
+      return;
+    }
+
+    setMultiAccess(false);
+    continueLogin(detectedAccess);
   };
 
   const onForgotRequest = (event: React.FormEvent<HTMLFormElement>) => {
@@ -246,6 +283,7 @@ export default function LoginPage() {
                         <div className="relative">
                           <Mail className="h-4 w-4 text-text-secondary absolute left-4 top-1/2 -translate-y-1/2" />
                           <input
+                            name="email"
                             type="email"
                             placeholder="you@example.com"
                             className="w-full rounded-xl border border-border bg-background pl-10 pr-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -268,6 +306,7 @@ export default function LoginPage() {
                         <div className="relative">
                           <LockKeyhole className="h-4 w-4 text-text-secondary absolute left-4 top-1/2 -translate-y-1/2" />
                           <input
+                            name="password"
                             type={showPassword ? "text" : "password"}
                             placeholder="Enter your password"
                             className="w-full rounded-xl border border-border bg-background pl-10 pr-12 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -284,27 +323,39 @@ export default function LoginPage() {
                         </div>
                       </label>
 
-                      <label className="block">
-                        <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-text-secondary">Login Role</span>
-                        <select
-                          value={role}
-                          onChange={(event) => setRole(event.target.value as "user" | "admin")}
-                          className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        >
-                          <option value="user">Alumni User</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      </label>
 
-                      {success && (
+                      {!!loginMessage && (
                         <div className="flex items-center gap-2 rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-3 text-sm text-text-primary">
                           <Check className="h-4 w-4 text-secondary" />
-                          Sign-in check passed. Redirecting to {role === "admin" ? "Admin" : "User"} dashboard.
+                          {loginMessage}
+                        </div>
+                      )}
+
+                      {multiAccess && (
+                        <div className="rounded-xl border border-border bg-background p-3">
+                          <p className="text-xs font-semibold text-text-secondary">Choose Account</p>
+                          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <button
+                              type="button"
+                              onClick={() => continueLogin("user")}
+                              className="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                            >
+                              Continue as User
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => continueLogin("admin")}
+                              className="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                            >
+                              Continue as Admin
+                            </button>
+                          </div>
                         </div>
                       )}
 
                       <button
                         type="submit"
+                        disabled={success}
                         className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
                       >
                         Sign in
