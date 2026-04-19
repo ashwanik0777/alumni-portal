@@ -81,7 +81,7 @@ export default function UserLayout({ children }: { children: ReactNode }) {
 
       <aside
         className={[
-          "fixed inset-0 left-0 z-50 w-screen max-w-none rounded-none border-0 bg-card shadow-2xl transition-transform duration-300 lg:inset-y-3 lg:left-3 lg:right-auto lg:w-auto lg:rounded-4xl lg:border lg:border-border/80 lg:bg-card/95 lg:backdrop-blur lg:translate-x-0",
+          "fixed inset-0 left-0 z-50 w-screen max-w-none rounded-none border-0 bg-card shadow-2xl transition-transform duration-300 lg:inset-y-3 lg:left-8 lg:right-auto lg:w-auto lg:rounded-4xl lg:border lg:border-border/80 lg:bg-card/95 lg:backdrop-blur lg:translate-x-0",
           isMobileOpen ? "translate-x-0" : "-translate-x-full",
           isCollapsed ? "lg:w-24" : "lg:w-80",
         ].join(" ")}
@@ -181,7 +181,7 @@ export default function UserLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <div className={isCollapsed ? "lg:pl-28" : "lg:pl-84"}>
+      <div className={isCollapsed ? "lg:pl-26" : "lg:pl-82"}>
         <header className="sticky top-0 z-30 border-b border-border/70 bg-background/90 backdrop-blur lg:hidden">
           <div className="flex items-center justify-between px-4 py-3">
             <div>
@@ -199,7 +199,7 @@ export default function UserLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="px-4 py-6 lg:px-8">{children}</main>
+        <main className="px-4 py-6 lg:px-6">{children}</main>
       </div>
     </div>
   );

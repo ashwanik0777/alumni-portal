@@ -83,6 +83,8 @@ export default function Navbar() {
   };
 
   const dashboardHref = role === "admin" ? "/admin" : "/user";
+  const settingsHref = role === "admin" ? "/admin/settings" : "/user/settings";
+  const firstInitial = firstName.trim().charAt(0).toUpperCase() || "A";
 
   const navLinks = [
     { name: "Home", href: "/" },
@@ -154,15 +156,21 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => setIsProfileOpen((prev) => !prev)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/40 hover:text-primary transition-colors"
+                  className="inline-flex items-center gap-1 rounded-xl border border-border bg-background px-2 py-2 text-sm font-semibold text-text-primary hover:border-primary/40 hover:text-primary transition-colors"
+                  aria-label="Open profile menu"
                 >
-                  <UserCircle2 className="w-5 h-5 text-primary" />
-                  <span>{firstName}</span>
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-xs font-bold text-primary">
+                    {firstInitial}
+                  </span>
                   <ChevronDown className={`w-4 h-4 transition-transform ${isProfileOpen ? "rotate-180" : "rotate-0"}`} />
                 </button>
 
                 {isProfileOpen && (
-                  <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-border bg-card p-2 shadow-xl z-50">
+                  <div className="absolute -right-2 mt-2 w-60 rounded-2xl border border-border bg-card p-2 shadow-xl z-50">
+                    <div className="mb-1 rounded-xl border border-border/80 bg-background px-3 py-2">
+                      <p className="text-sm font-bold text-text-primary">{firstName}</p>
+                      <p className="text-[11px] uppercase tracking-[0.12em] text-text-secondary">{role} account</p>
+                    </div>
                     <Link
                       href={dashboardHref}
                       className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-text-primary hover:bg-background hover:text-primary"
@@ -172,7 +180,7 @@ export default function Navbar() {
                       Dashboard
                     </Link>
                     <Link
-                      href="/settings"
+                      href={settingsHref}
                       className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-text-primary hover:bg-background hover:text-primary"
                       onClick={() => setIsProfileOpen(false)}
                     >
@@ -271,7 +279,7 @@ export default function Navbar() {
                   Dashboard
                 </Link>
                 <Link
-                  href="/settings"
+                  href={settingsHref}
                   className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-border text-text-primary font-medium hover:bg-background transition-colors w-full"
                   onClick={() => setIsOpen(false)}
                 >
