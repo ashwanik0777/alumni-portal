@@ -175,8 +175,8 @@ export default function Home() {
             <p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary">
               Live Opportunity Streams
             </p>
-            <h2 className="text-3xl sm:text-4xl font-black mt-4">Events, Jobs, and Mentorship In Motion</h2>
-            <p className="mt-3 text-text-secondary">Each stream shows 5 quick updates and keeps moving smoothly.</p>
+            <h2 className="text-3xl sm:text-4xl font-black my-8">Explore Events, Find Jobs, Get Mentorship</h2>
+            
           </div>
 
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
