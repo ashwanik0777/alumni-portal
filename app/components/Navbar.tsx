@@ -1,13 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, GraduationCap, User, LogIn, Sun, Moon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronDown, GraduationCap, LayoutDashboard, LogIn, LogOut, Menu, Moon, Settings, Sun, User, UserCircle2, X } from "lucide-react";
 
 export default function Navbar() {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [firstName, setFirstName] = useState("Alumni");
+  const [role, setRole] = useState<"user" | "admin">("user");
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
 
   // Initialize theme from system preference or local storage
@@ -20,6 +27,33 @@ export default function Navbar() {
       setIsDark(false);
       document.documentElement.classList.remove('dark');
     }
+  }, []);
+
+  useEffect(() => {
+    const syncAuthState = () => {
+      const authUser = localStorage.getItem("auth_user") === "active";
+      const authRole = (localStorage.getItem("auth_role") as "user" | "admin" | null) || "user";
+      const storedFirstName = localStorage.getItem("auth_first_name") || "Alumni";
+
+      setIsAuthenticated(authUser);
+      setRole(authRole === "admin" ? "admin" : "user");
+      setFirstName(storedFirstName);
+    };
+
+    syncAuthState();
+    window.addEventListener("storage", syncAuthState);
+    return () => window.removeEventListener("storage", syncAuthState);
+  }, [pathname]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
   const toggleTheme = () => {
@@ -36,6 +70,20 @@ export default function Navbar() {
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
+  const handleLogout = () => {
+    document.cookie = "auth_user=; path=/; max-age=0; samesite=strict";
+    document.cookie = "auth_role=; path=/; max-age=0; samesite=strict";
+    localStorage.removeItem("auth_user");
+    localStorage.removeItem("auth_role");
+    localStorage.removeItem("auth_first_name");
+    setIsAuthenticated(false);
+    setIsProfileOpen(false);
+    setIsOpen(false);
+    router.push("/login");
+  };
+
+  const dashboardHref = role === "admin" ? "/admin" : "/user";
+
   const navLinks = [
     { name: "Home", href: "/" },
     { name: "About", href: "/about" },
@@ -45,6 +93,12 @@ export default function Navbar() {
     { name: "Jobs", href: "/jobs" },
     { name: "Mentorship", href: "/mentorship" },
   ];
+
+  const isActiveLink = (href: string) => {
+    if (!pathname) return false;
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   if (pathname?.startsWith("/login") || pathname?.startsWith("/admin") || pathname?.startsWith("/user")) {
     return null;
@@ -72,7 +126,11 @@ export default function Navbar() {
               <Link
                 key={link.name}
                 href={link.href}
-                className="px-3 py-2 rounded-md text-sm font-medium text-text-secondary hover:text-primary hover:bg-primary/5 transition-all"
+                className={`relative px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  isActiveLink(link.href)
+                    ? "bg-primary/10 text-primary"
+                    : "text-text-secondary hover:text-primary hover:bg-primary/5"
+                }`}
               >
                 {link.name}
               </Link>
@@ -91,19 +149,64 @@ export default function Navbar() {
             
             <div className="h-6 w-px bg-border mx-1"></div>
 
-            <Link
-              href="/login"
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-secondary hover:text-primary transition-colors"
-            >
-              <LogIn className="w-4 h-4" />
-              Login
-            </Link>
-            <Link
-              href="/register"
-              className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0"
-            >
-              Join Network
-            </Link>
+            {isAuthenticated ? (
+              <div className="relative" ref={profileMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsProfileOpen((prev) => !prev)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/40 hover:text-primary transition-colors"
+                >
+                  <UserCircle2 className="w-5 h-5 text-primary" />
+                  <span>{firstName}</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${isProfileOpen ? "rotate-180" : "rotate-0"}`} />
+                </button>
+
+                {isProfileOpen && (
+                  <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-border bg-card p-2 shadow-xl z-50">
+                    <Link
+                      href={dashboardHref}
+                      className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-text-primary hover:bg-background hover:text-primary"
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <LayoutDashboard className="w-4 h-4" />
+                      Dashboard
+                    </Link>
+                    <Link
+                      href="/settings"
+                      className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-text-primary hover:bg-background hover:text-primary"
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <Settings className="w-4 h-4" />
+                      Settings
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-secondary hover:text-primary transition-colors"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  Join Network
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button & Theme Toggle */}
@@ -142,29 +245,68 @@ export default function Navbar() {
             <Link
               key={link.name}
               href={link.href}
-              className="block px-3 py-3 rounded-md text-base font-medium text-text-primary hover:text-primary hover:bg-primary/5 transition-colors"
+              className={`block px-3 py-3 rounded-md text-base font-medium transition-colors ${
+                isActiveLink(link.href)
+                  ? "bg-primary/10 text-primary border-l-2 border-primary"
+                  : "text-text-primary hover:text-primary hover:bg-primary/5"
+              }`}
               onClick={() => setIsOpen(false)}
             >
               {link.name}
             </Link>
           ))}
           <div className="mt-4 pt-4 border-t border-border flex flex-col gap-3">
-             <Link
-              href="/login"
-              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-border text-text-primary font-medium hover:bg-background transition-colors w-full"
-              onClick={() => setIsOpen(false)}
-            >
-              <LogIn className="w-4 h-4" />
-              Log In
-            </Link>
-            <Link
-              href="/register"
-              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-medium hover:opacity-90 transition-opacity w-full shadow-sm"
-              onClick={() => setIsOpen(false)}
-            >
-              <User className="w-4 h-4" />
-              Join Network
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <div className="flex items-center gap-2 rounded-lg bg-background px-3 py-2">
+                  <UserCircle2 className="w-5 h-5 text-primary" />
+                  <p className="text-sm font-semibold text-text-primary">{firstName}</p>
+                </div>
+                <Link
+                  href={dashboardHref}
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-border text-text-primary font-medium hover:bg-background transition-colors w-full"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </Link>
+                <Link
+                  href="/settings"
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-border text-text-primary font-medium hover:bg-background transition-colors w-full"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Settings className="w-4 h-4" />
+                  Settings
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-red-200 text-red-600 font-medium hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors w-full"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-border text-text-primary font-medium hover:bg-background transition-colors w-full"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <LogIn className="w-4 h-4" />
+                  Log In
+                </Link>
+                <Link
+                  href="/register"
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-medium hover:opacity-90 transition-opacity w-full shadow-sm"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <User className="w-4 h-4" />
+                  Join Network
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

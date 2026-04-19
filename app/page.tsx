@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Users, Calendar, Briefcase, HandHeart, Star, Quote, MapPin, GraduationCap } from "lucide-react";
+import { ArrowRight, Users, Calendar, Briefcase, HandHeart, Quote, MapPin, GraduationCap } from "lucide-react";
 
 const impactStats = [
   { label: "Active Alumni", value: "4,200+" },
@@ -11,25 +11,28 @@ const impactStats = [
   { label: "Opportunities Shared", value: "950+" },
 ];
 
-const spotlight = [
-  {
-    title: "Career Circles",
-    desc: "Small-group sessions for career planning, interview preparation, and industry transitions.",
-    href: "/mentorship",
-    cta: "Explore Mentorship",
-  },
-  {
-    title: "Chapter Reunions",
-    desc: "City chapters host structured meetups to strengthen alumni bonds and community collaboration.",
-    href: "/events",
-    cta: "View Events",
-  },
-  {
-    title: "Alumni Job Board",
-    desc: "Curated opportunities from trusted alumni networks, founders, and hiring partners.",
-    href: "/jobs",
-    cta: "Browse Jobs",
-  },
+const eventHighlights = [
+  { title: "Annual Alumni Meet", time: "Sat, 5:30 PM", venue: "Main Auditorium" },
+  { title: "Startup Founder Panel", time: "Sun, 11:00 AM", venue: "Innovation Hub" },
+  { title: "Tech Career Meetup", time: "Fri, 6:30 PM", venue: "City Chapter Hall" },
+  { title: "Women In Leadership Talk", time: "Thu, 4:00 PM", venue: "Seminar Block" },
+  { title: "Batch 2012 Reunion", time: "Sat, 7:00 PM", venue: "Lawn Arena" },
+];
+
+const jobHighlights = [
+  { title: "Frontend Engineer", sub: "PixelNest Labs", meta: "Bengaluru | Full-time" },
+  { title: "Data Analyst", sub: "InsightGrid", meta: "Remote | Full-time" },
+  { title: "Product Designer", sub: "BlueOrbit", meta: "Pune | Hybrid" },
+  { title: "Growth Associate", sub: "ScaleBridge", meta: "Delhi | Full-time" },
+  { title: "Backend Developer", sub: "CloudSprint", meta: "Hyderabad | Hybrid" },
+];
+
+const mentorshipHighlights = [
+  { title: "Resume Review Clinic", sub: "Mentor: Nitin Raj", meta: "Slots: Tue 7 PM" },
+  { title: "Mock Interview Track", sub: "Mentor: Ritika Singh", meta: "Slots: Wed 8 PM" },
+  { title: "Career Switch Strategy", sub: "Mentor: Karan Mehta", meta: "Slots: Thu 6 PM" },
+  { title: "Higher Studies Guidance", sub: "Mentor: Meera Sinha", meta: "Slots: Fri 5 PM" },
+  { title: "Portfolio Feedback", sub: "Mentor: Aman Tiwari", meta: "Slots: Sat 11 AM" },
 ];
 
 const testimonials = [
@@ -165,28 +168,53 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Spotlight */}
+      {/* Live Feeds */}
       <section className="py-16 lg:py-20 bg-card border-y border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary">
-              <Star className="w-4 h-4" />
-              What You Can Do Here
+              Live Opportunity Streams
             </p>
-            <h2 className="text-3xl sm:text-4xl font-black mt-4">Designed For Growth, Not Just Profiles</h2>
+            <h2 className="text-3xl sm:text-4xl font-black mt-4">Events, Jobs, and Mentorship In Motion</h2>
+            <p className="mt-3 text-text-secondary">Each stream shows 5 quick updates and keeps moving smoothly.</p>
           </div>
 
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {spotlight.map((item) => (
-              <article key={item.title} className="rounded-2xl border border-border bg-background p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all">
-                <h3 className="text-xl font-bold text-text-primary">{item.title}</h3>
-                <p className="text-text-secondary mt-3 leading-relaxed">{item.desc}</p>
-                <Link href={item.href} className="inline-flex items-center gap-2 mt-6 text-primary font-semibold hover:gap-3 transition-all">
-                  {item.cta}
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </article>
-            ))}
+            <ScrollingFeedBox
+              title="Events"
+              icon={<Calendar className="w-4 h-4" />}
+              link="/events"
+              cta="View All Events"
+              items={eventHighlights.map((item) => ({
+                primary: item.title,
+                secondary: item.time,
+                tertiary: item.venue,
+              }))}
+            />
+
+            <ScrollingFeedBox
+              title="Jobs"
+              icon={<Briefcase className="w-4 h-4" />}
+              link="/jobs"
+              cta="Browse Jobs"
+              items={jobHighlights.map((item) => ({
+                primary: item.title,
+                secondary: item.sub,
+                tertiary: item.meta,
+              }))}
+            />
+
+            <ScrollingFeedBox
+              title="Mentorship"
+              icon={<Users className="w-4 h-4" />}
+              link="/mentorship"
+              cta="Join Mentorship"
+              items={mentorshipHighlights.map((item) => ({
+                primary: item.title,
+                secondary: item.sub,
+                tertiary: item.meta,
+              }))}
+            />
           </div>
         </div>
       </section>
@@ -324,5 +352,75 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode, titl
       <h3 className="text-lg font-bold text-text-primary mb-2">{title}</h3>
       <p className="text-text-secondary text-sm leading-relaxed">{description}</p>
     </div>
+  );
+}
+
+function ScrollingFeedBox({
+  title,
+  icon,
+  link,
+  cta,
+  items,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  link: string;
+  cta: string;
+  items: { primary: string; secondary: string; tertiary: string }[];
+}) {
+  const mergedItems = [...items, ...items];
+
+  return (
+    <article className="rounded-2xl border border-border bg-background p-5 shadow-sm hover:shadow-lg transition-all">
+      <div className="flex items-center justify-between mb-4">
+        <p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary">
+          {icon}
+          {title}
+        </p>
+        <Link href={link} className="text-xs font-semibold text-primary hover:underline">
+          {cta}
+        </Link>
+      </div>
+
+      <div className="relative overflow-hidden rounded-xl border border-border/70 bg-card/60 h-75">
+        <div className="absolute inset-x-0 top-0 h-8 bg-linear-to-b from-background to-transparent z-10 pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-8 bg-linear-to-t from-background to-transparent z-10 pointer-events-none" />
+
+        <div className="feed-track px-3 py-2">
+          {mergedItems.map((item, index) => (
+            <div key={`${title}-${item.primary}-${index}`} className="h-14.5 rounded-lg border border-border bg-background/95 px-3 py-2 mb-2">
+              <p className="text-sm font-semibold text-text-primary truncate">{item.primary}</p>
+              <div className="mt-0.5 flex items-center justify-between gap-2">
+                <p className="text-xs text-text-secondary truncate">{item.secondary}</p>
+                <p className="text-[11px] text-text-secondary/90 inline-flex shrink-0 items-center gap-1 text-right">
+                  <MapPin className="w-3 h-3" />
+                  <span className="max-w-30 truncate">{item.tertiary}</span>
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <style jsx>{`
+        .feed-track {
+          animation: feed-scroll 18s linear infinite;
+          will-change: transform;
+        }
+
+        article:hover .feed-track {
+          animation-play-state: paused;
+        }
+
+        @keyframes feed-scroll {
+          from {
+            transform: translateY(0%);
+          }
+          to {
+            transform: translateY(-50%);
+          }
+        }
+      `}</style>
+    </article>
   );
 }

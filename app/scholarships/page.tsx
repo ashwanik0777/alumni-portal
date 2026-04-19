@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -19,6 +19,22 @@ import {
 } from "lucide-react";
 
 type ModalType = "none" | "alumni" | "student";
+
+type Recipient = {
+  student: string;
+  slug: string;
+  scholarship: string;
+  year: string;
+  provider: string;
+  amount: string;
+};
+
+type Testimonial = {
+  quote: string;
+  student: string;
+  slug: string;
+  note: string;
+};
 
 const runningScholarships = [
   {
@@ -44,23 +60,26 @@ const runningScholarships = [
   },
 ];
 
-const recipients = [
+const recipients: Recipient[] = [
   {
-    student: "Riya S. (Public Consent Shared)",
+    student: "Aditi Verma (Public Consent Shared)",
+    slug: "aditi-verma",
     scholarship: "Merit Excellence Scholarship",
     year: "2025",
     provider: "Aman Tiwari",
     amount: "INR 50,000",
   },
   {
-    student: "Arjun K. (Public Consent Shared)",
+    student: "Rohit Mishra (Public Consent Shared)",
+    slug: "rohit-mishra",
     scholarship: "STEM Future Grant",
     year: "2025",
     provider: "Nidhi Sharma",
     amount: "INR 35,000",
   },
   {
-    student: "Pooja M. (Public Consent Shared)",
+    student: "Nidhi Chauhan (Public Consent Shared)",
+    slug: "nidhi-chauhan",
     scholarship: "Girls Higher Education Fund",
     year: "2024",
     provider: "Ruchi Verma",
@@ -68,21 +87,41 @@ const recipients = [
   },
 ];
 
-const testimonials = [
+const testimonials: Testimonial[] = [
   {
     quote:
       "The scholarship reduced my financial stress. I could focus on exams and secure admission in my preferred college.",
-    author: "Riya S., Scholarship Recipient",
+    student: "Aditi Verma",
+    slug: "aditi-verma",
+    note: "Scholarship Recipient",
   },
   {
     quote:
       "I received support at the right time. The alumni mentors also guided me during entrance preparation.",
-    author: "Arjun K., Scholarship Recipient",
+    student: "Rohit Mishra",
+    slug: "rohit-mishra",
+    note: "Scholarship Recipient",
   },
   {
     quote:
       "This support helped my family continue my education journey without interruption.",
-    author: "Pooja M., Scholarship Recipient",
+    student: "Nidhi Chauhan",
+    slug: "nidhi-chauhan",
+    note: "Scholarship Recipient",
+  },
+  {
+    quote:
+      "The process was transparent and simple. I got both financial support and academic direction.",
+    student: "Sneha Dubey",
+    slug: "sneha-dubey",
+    note: "Scholarship Recipient",
+  },
+  {
+    quote:
+      "I felt supported by the alumni network. The scholarship gave me confidence to continue higher studies.",
+    student: "Kunal Saxena",
+    slug: "kunal-saxena",
+    note: "Scholarship Recipient",
   },
 ];
 
@@ -96,30 +135,93 @@ const providers = [
 
 export default function ScholarshipsPage() {
   const [activeModal, setActiveModal] = useState<ModalType>("none");
-  const [slideIndex, setSlideIndex] = useState(0);
+  const [itemsPerView, setItemsPerView] = useState(1);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [slideDirection, setSlideDirection] = useState<"next" | "prev">("next");
+  const testimonialsTrackRef = useRef<HTMLDivElement | null>(null);
 
-  const totalSlides = testimonials.length;
+  useEffect(() => {
+    const updateItemsPerView = () => {
+      if (window.innerWidth >= 1024) {
+        setItemsPerView(3);
+      } else if (window.innerWidth >= 768) {
+        setItemsPerView(2);
+      } else {
+        setItemsPerView(1);
+      }
+    };
 
-  const nextSlide = () => {
-    setSlideIndex((prev) => (prev + 1) % totalSlides);
+    updateItemsPerView();
+    window.addEventListener("resize", updateItemsPerView);
+    return () => window.removeEventListener("resize", updateItemsPerView);
+  }, []);
+
+  const getWrappedIndex = (index: number) => {
+    const total = testimonials.length;
+    return (index + total) % total;
   };
 
-  const prevSlide = () => {
-    setSlideIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
+  const handleNext = () => {
+    setSlideDirection("next");
+    setActiveIndex((prev) => getWrappedIndex(prev + 1));
+  };
+
+  const handlePrev = () => {
+    setSlideDirection("prev");
+    setActiveIndex((prev) => getWrappedIndex(prev - 1));
   };
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setSlideIndex((prev) => (prev + 1) % totalSlides);
+    const timer = window.setInterval(() => {
+      handleNext();
     }, 4000);
 
-    return () => clearInterval(timer);
-  }, [totalSlides]);
+    return () => window.clearInterval(timer);
+  }, []);
 
-  const testimonialTrackStyle = useMemo(
-    () => ({ transform: `translateX(-${slideIndex * 100}%)` }),
-    [slideIndex],
-  );
+  const visibleTestimonials = useMemo(() => {
+    if (itemsPerView === 1) {
+      return [testimonials[activeIndex]];
+    }
+
+    if (itemsPerView === 2) {
+      return [
+        testimonials[getWrappedIndex(activeIndex)],
+        testimonials[getWrappedIndex(activeIndex + 1)],
+      ];
+    }
+
+    return [
+      testimonials[getWrappedIndex(activeIndex - 1)],
+      testimonials[getWrappedIndex(activeIndex)],
+      testimonials[getWrappedIndex(activeIndex + 1)],
+    ];
+  }, [activeIndex, itemsPerView]);
+
+  useEffect(() => {
+    const node = testimonialsTrackRef.current;
+    if (!node) {
+      return;
+    }
+
+    const startX = slideDirection === "next" ? 36 : -36;
+    node.animate(
+      [
+        {
+          opacity: 0,
+          transform: `translateX(${startX}px) scale(0.98)`,
+        },
+        {
+          opacity: 1,
+          transform: "translateX(0) scale(1)",
+        },
+      ],
+      {
+        duration: 520,
+        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      },
+    );
+  }, [activeIndex, slideDirection, itemsPerView]);
 
   return (
     <div className="bg-background text-text-primary">
@@ -289,8 +391,12 @@ export default function ScholarshipsPage() {
               </thead>
               <tbody>
                 {recipients.map((row) => (
-                  <tr key={`${row.student}-${row.year}`} className="border-b border-border last:border-0">
-                    <td className="px-4 py-3">{row.student}</td>
+                  <tr key={`${row.slug}-${row.year}`} className="border-b border-border last:border-0">
+                    <td className="px-4 py-3">
+                      <Link href={`/directory/${row.slug}`} className="text-primary hover:underline font-medium">
+                        {row.student}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3">{row.scholarship}</td>
                     <td className="px-4 py-3">{row.year}</td>
                     <td className="px-4 py-3">{row.provider}</td>
@@ -304,39 +410,55 @@ export default function ScholarshipsPage() {
       </section>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="mb-8 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold">Student Testimonial Stories</h2>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={prevSlide}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-text-secondary hover:text-primary"
-              aria-label="Previous testimonial"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={nextSlide}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-text-secondary hover:text-primary"
-              aria-label="Next testimonial"
-            >
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-border bg-card">
-          <div className="flex transition-transform duration-500 ease-out" style={testimonialTrackStyle}>
-            {testimonials.map((item) => (
-              <article key={item.author} className="w-full shrink-0 p-6 sm:p-8">
-                <Quote className="h-6 w-6 text-primary" />
-                <p className="mt-4 text-lg text-text-secondary leading-relaxed">{item.quote}</p>
-                <p className="mt-5 text-sm font-semibold text-text-primary">{item.author}</p>
-              </article>
-            ))}
+        <div className="flex items-center gap-3 lg:gap-5 mt-16">
+          <button
+            type="button"
+            onClick={handlePrev}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-card text-text-secondary shadow-sm transition hover:-translate-y-0.5 hover:text-primary hover:shadow-md"
+            aria-label="Previous testimonials"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+
+          <div ref={testimonialsTrackRef} className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+            {visibleTestimonials.map((item, index) => {
+              const isCenterCard = itemsPerView === 3 && index === 1;
+              return (
+                <article
+                  key={`${item.slug}-${activeIndex}-${index}`}
+                  className={`rounded-2xl border p-5 transition-all duration-500 ${
+                    isCenterCard
+                      ? "scale-100 border-primary/30 bg-card shadow-xl lg:scale-[1.06]"
+                      : "border-border bg-card/80 shadow-md lg:scale-95"
+                  }`}
+                >
+                  <div className="inline-flex rounded-lg bg-primary/10 p-2 text-primary">
+                    <Quote className="h-5 w-5" />
+                  </div>
+                  <p className="mt-4 text-sm leading-relaxed text-text-secondary">{item.quote}</p>
+                  <Link href={`/directory/${item.slug}`} className="mt-4 inline-flex text-sm font-semibold text-primary hover:underline">
+                    {item.student}
+                  </Link>
+                  <p className="mt-1 text-xs text-text-secondary">{item.note}</p>
+                </article>
+              );
+            })}
           </div>
+
+          <button
+            type="button"
+            onClick={handleNext}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-card text-text-secondary shadow-sm transition hover:-translate-y-0.5 hover:text-primary hover:shadow-md"
+            aria-label="Next testimonials"
+          >
+            <ArrowRight className="h-5 w-5" />
+          </button>
         </div>
+
       </section>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
@@ -356,9 +478,7 @@ export default function ScholarshipsPage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 lg:pb-20">
         <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
           <h3 className="text-2xl font-bold">Scholarship Actions</h3>
-          <p className="mt-2 text-sm text-text-secondary">
-            Use the buttons below to open the required form screen without leaving this page.
-          </p>
+
           <div className="mt-5 flex flex-wrap gap-3">
             <button
               type="button"
@@ -379,15 +499,6 @@ export default function ScholarshipsPage() {
           </div>
         </div>
 
-        <div className="mt-6 rounded-2xl border border-primary/20 bg-primary/5 p-5 text-sm text-text-secondary">
-          <p className="font-semibold text-text-primary inline-flex items-center gap-2">
-            <Star className="h-4 w-4 text-primary" />
-            Public Information Policy
-          </p>
-          <p className="mt-1.5">
-            Only approved scholarship information, alumni provider names, and student records with explicit public consent are shown on this page.
-          </p>
-        </div>
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <Link href="/directory" className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-text-primary hover:border-primary/30">

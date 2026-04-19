@@ -41,6 +41,14 @@ export default function LoginPage() {
   const [success, setSuccess] = useState(false);
   const [loginMessage, setLoginMessage] = useState("");
   const [multiAccess, setMultiAccess] = useState(false);
+  const [pendingFirstName, setPendingFirstName] = useState("");
+
+  const resolveFirstNameFromEmail = (email: string) => {
+    const localPart = email.trim().split("@")[0] || "Alumni";
+    const cleanName = localPart.replace(/[._+\-\d]/g, " ").trim();
+    const firstChunk = cleanName.split(/\s+/).filter(Boolean)[0] || "Alumni";
+    return firstChunk.charAt(0).toUpperCase() + firstChunk.slice(1).toLowerCase();
+  };
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 20);
@@ -72,12 +80,13 @@ export default function LoginPage() {
     return "user";
   };
 
-  const continueLogin = (targetRole: "user" | "admin") => {
+  const continueLogin = (targetRole: "user" | "admin", firstName = "Alumni") => {
     const cookieAge = 60 * 60 * 8;
     document.cookie = `auth_user=active; path=/; max-age=${cookieAge}; samesite=strict`;
     document.cookie = `auth_role=${targetRole}; path=/; max-age=${cookieAge}; samesite=strict`;
     localStorage.setItem("auth_user", "active");
     localStorage.setItem("auth_role", targetRole);
+    localStorage.setItem("auth_first_name", firstName);
     setSuccess(true);
     setLoginMessage(`Signed in successfully. Redirecting to ${targetRole === "admin" ? "Admin" : "User"} dashboard.`);
     setTimeout(() => {
@@ -90,6 +99,8 @@ export default function LoginPage() {
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") || "");
     const detectedAccess = resolveAccessFromEmail(email);
+    const firstName = resolveFirstNameFromEmail(email);
+    setPendingFirstName(firstName);
 
     setSuccess(false);
 
@@ -100,7 +111,7 @@ export default function LoginPage() {
     }
 
     setMultiAccess(false);
-    continueLogin(detectedAccess);
+    continueLogin(detectedAccess, firstName);
   };
 
   const onForgotRequest = (event: React.FormEvent<HTMLFormElement>) => {
@@ -340,14 +351,14 @@ export default function LoginPage() {
                           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <button
                               type="button"
-                              onClick={() => continueLogin("user")}
+                              onClick={() => continueLogin("user", pendingFirstName || "Alumni")}
                               className="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
                             >
                               Continue as User
                             </button>
                             <button
                               type="button"
-                              onClick={() => continueLogin("admin")}
+                              onClick={() => continueLogin("admin", pendingFirstName || "Alumni")}
                               className="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
                             >
                               Continue as Admin
