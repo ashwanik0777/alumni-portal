@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { ChevronDown, GraduationCap, LayoutDashboard, LogIn, LogOut, Menu, Moon, Settings, Sun, User, UserCircle2, X } from "lucide-react";
+import { GraduationCap, LayoutDashboard, LogIn, LogOut, Menu, Moon, Settings, Sun, User, UserCircle2, X } from "lucide-react";
 
 export default function Navbar() {
   const router = useRouter();
@@ -156,13 +156,12 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => setIsProfileOpen((prev) => !prev)}
-                  className="inline-flex items-center gap-1 rounded-xl border border-border bg-background px-2 py-2 text-sm font-semibold text-text-primary hover:border-primary/40 hover:text-primary transition-colors"
+                  className="inline-flex items-center rounded-xl border border-border bg-background p-1.5 text-sm font-semibold text-text-primary hover:border-primary/40 hover:text-primary transition-colors"
                   aria-label="Open profile menu"
                 >
                   <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-xs font-bold text-primary">
                     {firstInitial}
                   </span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${isProfileOpen ? "rotate-180" : "rotate-0"}`} />
                 </button>
 
                 {isProfileOpen && (

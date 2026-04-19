@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { BadgeCheck, Calendar, GraduationCap, Mail, ShieldCheck, Sparkles, UserPlus, Users } from "lucide-react";
 
@@ -23,7 +26,63 @@ const steps = [
   },
 ];
 
+const currentYear = new Date().getFullYear();
+const passingYears = Array.from({ length: currentYear - 1986 + 1 }, (_, index) => String(currentYear - index));
+
+const houseOptions = ["Arawali", "Neelgiri", "Shiwalik", "Udayagiri"];
+
 export default function RegisterPage() {
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isOtpVerified, setIsOtpVerified] = useState(false);
+  const [otpMessage, setOtpMessage] = useState("");
+  const [submitMessage, setSubmitMessage] = useState("");
+
+  const handleSendOtp = () => {
+    if (!email.trim()) {
+      setOtpMessage("Please enter your email address first.");
+      return;
+    }
+
+    setIsSendingOtp(true);
+    setOtpMessage("");
+    setIsOtpVerified(false);
+    setTimeout(() => {
+      setIsSendingOtp(false);
+      setIsOtpSent(true);
+      setOtpMessage("OTP sent successfully. Use 123456 for frontend demo verification.");
+    }, 900);
+  };
+
+  const handleVerifyOtp = () => {
+    if (!isOtpSent) {
+      setOtpMessage("Please send OTP first.");
+      return;
+    }
+
+    if (otp.trim() === "123456") {
+      setIsOtpVerified(true);
+      setOtpMessage("Email verified successfully.");
+      return;
+    }
+
+    setIsOtpVerified(false);
+    setOtpMessage("Invalid OTP. For now use 123456 in frontend demo.");
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!isOtpVerified) {
+      setSubmitMessage("Please verify your email with OTP before submitting.");
+      return;
+    }
+
+    setSubmitMessage("Registration form submitted successfully. You can complete profile details after dashboard access.");
+  };
+
   return (
     <div className="bg-background text-text-primary">
       <section className="relative overflow-hidden border-b border-border">
@@ -87,11 +146,8 @@ export default function RegisterPage() {
               <span className="text-sm font-semibold">Registration Form</span>
             </div>
             <h3 className="text-2xl sm:text-3xl font-bold">Create Your Alumni Profile</h3>
-            <p className="mt-2 text-text-secondary leading-relaxed">
-              Please complete the details accurately to help us verify and activate your account quickly.
-            </p>
 
-            <form className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <label>
                 <span className="mb-1.5 block text-sm font-medium">Full Name</span>
                 <input
@@ -107,8 +163,11 @@ export default function RegisterPage() {
                   <Mail className="h-4 w-4 text-text-secondary absolute left-4 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
                     placeholder="you@example.com"
                     className="w-full rounded-xl border border-border bg-background pl-10 pr-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary"
+                    required
                   />
                 </div>
               </label>
@@ -117,71 +176,111 @@ export default function RegisterPage() {
                 <span className="mb-1.5 block text-sm font-medium">Batch / Passing Year</span>
                 <div className="relative">
                   <Calendar className="h-4 w-4 text-text-secondary absolute left-4 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="e.g. 2016"
-                    className="w-full rounded-xl border border-border bg-background pl-10 pr-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary"
-                  />
+                  <select
+                    defaultValue=""
+                    className="w-full appearance-none rounded-xl border border-border bg-background pl-10 pr-4 py-3 text-text-primary outline-none focus:border-primary"
+                    required
+                  >
+                    <option value="" disabled>
+                      Select passing year
+                    </option>
+                    {passingYears.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </label>
 
               <label>
-                <span className="mb-1.5 block text-sm font-medium">Current City</span>
+                <span className="mb-1.5 block text-sm font-medium">House</span>
+                <select
+                  defaultValue=""
+                  className="w-full appearance-none rounded-xl border border-border bg-background px-4 py-3 text-text-primary outline-none focus:border-primary"
+                  required
+                >
+                  <option value="" disabled>
+                    Select house
+                  </option>
+                  {houseOptions.map((house) => (
+                    <option key={house} value={house}>
+                      {house}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                <span className="mb-1.5 block text-sm font-medium">Mobile Number</span>
                 <input
-                  type="text"
-                  placeholder="Enter your city"
+                  type="tel"
+                  placeholder="Enter mobile number"
                   className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary"
+                  required
                 />
               </label>
 
               <label>
-                <span className="mb-1.5 block text-sm font-medium">Current Role</span>
+                <span className="mb-1.5 block text-sm font-medium">Father's Name</span>
                 <input
                   type="text"
-                  placeholder="e.g. Software Engineer"
+                  placeholder="Enter father's name"
                   className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary"
-                />
-              </label>
-
-              <label>
-                <span className="mb-1.5 block text-sm font-medium">Organization</span>
-                <input
-                  type="text"
-                  placeholder="Company or Institution"
-                  className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary"
+                  required
                 />
               </label>
 
               <label className="sm:col-span-2">
-                <span className="mb-1.5 block text-sm font-medium">Areas Of Interest</span>
-                <input
-                  type="text"
-                  placeholder="Mentorship, Startups, Hiring, Volunteering"
-                  className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary"
-                />
+                <span className="mb-1.5 block text-sm font-medium">Email OTP Verification</span>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={(event) => setOtp(event.target.value)}
+                    placeholder="Enter 6-digit OTP"
+                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary sm:w-96"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={isSendingOtp}
+                    className="inline-flex min-w-32 items-center justify-center whitespace-nowrap rounded-xl border border-primary/40 bg-transparent px-5 py-3 text-sm font-semibold leading-none text-primary hover:border-primary/70"
+                  >
+                    {isSendingOtp ? "Sending..." : isOtpSent ? "Resend OTP" : "Send OTP"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    className="inline-flex min-w-32 items-center justify-center whitespace-nowrap rounded-xl border border-primary/40 bg-transparent px-5 py-3 text-sm font-semibold leading-none text-primary hover:border-primary/70"
+                  >
+                    Verify OTP
+                  </button>
+                </div>
               </label>
 
-              <label className="sm:col-span-2">
-                <span className="mb-1.5 block text-sm font-medium">Short Bio</span>
-                <textarea
-                  rows={4}
-                  placeholder="Write a short introduction about your journey and how you want to engage with the alumni network."
-                  className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary resize-y"
-                />
-              </label>
+              {!!otpMessage && (
+                <div className="sm:col-span-2 rounded-xl border border-border bg-background px-4 py-3 text-sm text-text-secondary">
+                  {otpMessage}
+                </div>
+              )}
 
               <div className="sm:col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
-                <p className="inline-flex items-center gap-2 text-xs text-text-secondary">
-                  <ShieldCheck className="h-4 w-4 text-primary" />
-                  Your registration details are reviewed securely and used only for alumni network operations.
-                </p>
+
                 <button
-                  type="button"
-                  className="inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3 font-semibold text-white hover:bg-primary/90 transition-colors"
+                  type="submit"
+                  disabled={!isOtpVerified}
+                  className="inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3 font-semibold text-white hover:bg-primary/90 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Submit Registration
                 </button>
               </div>
+
+              {!!submitMessage && (
+                <div className="sm:col-span-2 rounded-xl border border-border bg-background px-4 py-3 text-sm text-text-secondary">
+                  {submitMessage}
+                </div>
+              )}
             </form>
           </div>
         </div>
