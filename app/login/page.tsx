@@ -73,6 +73,9 @@ export default function LoginPage() {
   };
 
   const continueLogin = (targetRole: "user" | "admin") => {
+    const cookieAge = 60 * 60 * 8;
+    document.cookie = `auth_user=active; path=/; max-age=${cookieAge}; samesite=strict`;
+    document.cookie = `auth_role=${targetRole}; path=/; max-age=${cookieAge}; samesite=strict`;
     localStorage.setItem("auth_user", "active");
     localStorage.setItem("auth_role", targetRole);
     setSuccess(true);

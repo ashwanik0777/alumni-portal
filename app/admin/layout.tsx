@@ -59,6 +59,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   };
 
   const handleLogout = () => {
+    document.cookie = "auth_user=; path=/; max-age=0; samesite=strict";
+    document.cookie = "auth_role=; path=/; max-age=0; samesite=strict";
     localStorage.removeItem("auth_role");
     localStorage.removeItem("auth_user");
     router.push("/login");
