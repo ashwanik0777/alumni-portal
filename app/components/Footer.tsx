@@ -8,7 +8,7 @@ import UniqueViewerCounter from "./UniqueViewerCounter";
 export default function Footer() {
   const pathname = usePathname();
 
-  if (pathname?.startsWith("/login")) {
+  if (pathname?.startsWith("/login") || pathname?.startsWith("/admin") || pathname?.startsWith("/user")) {
     return null;
   }
 

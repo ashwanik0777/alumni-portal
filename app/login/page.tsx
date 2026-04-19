@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   BookOpen,
@@ -31,8 +32,10 @@ const stats = [
 type FormMode = "login" | "forgot-request" | "forgot-reset" | "forgot-success";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [role, setRole] = useState<"user" | "admin">("user");
   const [formMode, setFormMode] = useState<FormMode>("login");
   const [formVisible, setFormVisible] = useState(true);
   const [forgotEmail, setForgotEmail] = useState("");
@@ -55,6 +58,9 @@ export default function LoginPage() {
   const onLoginSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSuccess(true);
+    setTimeout(() => {
+      router.push(role === "admin" ? "/admin" : "/user");
+    }, 300);
   };
 
   const onForgotRequest = (event: React.FormEvent<HTMLFormElement>) => {
@@ -278,10 +284,22 @@ export default function LoginPage() {
                         </div>
                       </label>
 
+                      <label className="block">
+                        <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-text-secondary">Login Role</span>
+                        <select
+                          value={role}
+                          onChange={(event) => setRole(event.target.value as "user" | "admin")}
+                          className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="user">Alumni User</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </label>
+
                       {success && (
                         <div className="flex items-center gap-2 rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-3 text-sm text-text-primary">
                           <Check className="h-4 w-4 text-secondary" />
-                          Sign-in check passed. Connect this to your auth backend to continue.
+                          Sign-in check passed. Redirecting to {role === "admin" ? "Admin" : "User"} dashboard.
                         </div>
                       )}
 

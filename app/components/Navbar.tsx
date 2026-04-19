@@ -45,7 +45,7 @@ export default function Navbar() {
     { name: "Mentorship", href: "/mentorship" },
   ];
 
-  if (pathname?.startsWith("/login")) {
+  if (pathname?.startsWith("/login") || pathname?.startsWith("/admin") || pathname?.startsWith("/user")) {
     return null;
   }
 
