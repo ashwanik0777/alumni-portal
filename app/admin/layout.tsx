@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
-  Bell,
   BookOpen,
   Calendar,
   ChevronLeft,
@@ -83,9 +82,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
       <aside
         className={[
-          "fixed inset-y-3 left-3 z-50 rounded-3xl border border-border/80 bg-card/95 shadow-2xl backdrop-blur transition-transform duration-300 lg:translate-x-0",
+          "fixed inset-0 left-0 z-50 w-screen max-w-none rounded-none border-0 bg-card shadow-2xl transition-transform duration-300 lg:inset-y-3 lg:left-3 lg:right-auto lg:w-auto lg:rounded-3xl lg:border lg:border-border/80 lg:bg-card/95 lg:backdrop-blur lg:translate-x-0",
           isMobileOpen ? "translate-x-0" : "-translate-x-full",
-          isCollapsed ? "w-24" : "w-80",
+          isCollapsed ? "lg:w-24" : "lg:w-80",
         ].join(" ")}
       >
         <div aria-hidden className="pointer-events-none absolute -right-10 top-5 h-24 w-24 rounded-full border border-primary/20 bg-primary/10 blur-xl" />
@@ -183,6 +182,23 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </aside>
 
       <div className={isCollapsed ? "lg:pl-28" : "lg:pl-84"}>
+        <header className="sticky top-0 z-30 border-b border-border/70 bg-background/90 backdrop-blur lg:hidden">
+          <div className="flex items-center justify-between px-4 py-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-secondary">Admin Panel</p>
+              <h1 className="text-base font-black">{pageTitle}</h1>
+            </div>
+
+            <button
+              onClick={() => setIsMobileOpen(true)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-text-secondary hover:text-primary"
+              aria-label="Open sidebar"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          </div>
+        </header>
+
         <main className="px-4 py-6 lg:px-8">{children}</main>
       </div>
     </div>
