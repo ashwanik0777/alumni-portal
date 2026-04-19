@@ -4,6 +4,7 @@ import { type ComponentType, type ReactNode, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Award,
   BookOpen,
   Briefcase,
   ChevronLeft,
@@ -33,6 +34,7 @@ const navItems: NavItem[] = [
   { label: "Mentorship", href: "/user/mentorship", icon: Compass },
   { label: "Jobs", href: "/user/jobs", icon: Briefcase },
   { label: "Events", href: "/user/events", icon: BookOpen },
+  { label: "Scholarships", href: "/user/scholarships", icon: Award },
   { label: "Messages", href: "/user/messages", icon: MessageSquare },
   { label: "Settings", href: "/user/settings", icon: Settings },
 ];

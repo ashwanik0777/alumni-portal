@@ -22,6 +22,10 @@ const sectionMeta: Record<string, { title: string; subtitle: string }> = {
     title: "Events",
     subtitle: "See upcoming events, your registrations, and participation status.",
   },
+  scholarships: {
+    title: "Scholarships",
+    subtitle: "Apply to admin-published scholarships based on criteria eligibility.",
+  },
   messages: {
     title: "Messages",
     subtitle: "Check communication updates from mentors, alumni, and admin.",

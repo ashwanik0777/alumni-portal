@@ -138,7 +138,44 @@ export default function ScholarshipsPage() {
   const [itemsPerView, setItemsPerView] = useState(1);
   const [activeIndex, setActiveIndex] = useState(0);
   const [slideDirection, setSlideDirection] = useState<"next" | "prev">("next");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [gateMessage, setGateMessage] = useState("");
+  const [profilePrefill, setProfilePrefill] = useState({
+    fullName: "",
+    email: "",
+    mobile: "",
+    currentCourse: "",
+  });
   const testimonialsTrackRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const authUser = localStorage.getItem("auth_user") === "active";
+    setIsAuthenticated(authUser);
+
+    const saved = localStorage.getItem("user_profile_draft_v1");
+    if (!saved) return;
+
+    try {
+      const parsed = JSON.parse(saved) as Record<string, string>;
+      setProfilePrefill({
+        fullName: parsed.fullName || "",
+        email: parsed.email || "",
+        mobile: parsed.mobile || "",
+        currentCourse: parsed.studentCourse || parsed.currentCourse || parsed.jobTitle || "",
+      });
+    } catch {
+      // Keep manual form entry if profile draft is not available.
+    }
+  }, []);
+
+  const openModalWithAuth = (type: Exclude<ModalType, "none">) => {
+    if (!isAuthenticated) {
+      setGateMessage("Please login first. Scholarship forms are available only for logged-in users.");
+      return;
+    }
+    setGateMessage("");
+    setActiveModal(type);
+  };
 
   useEffect(() => {
     const updateItemsPerView = () => {
@@ -267,10 +304,31 @@ export default function ScholarshipsPage() {
               </form>
             ) : (
               <form className="space-y-3">
-                <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Student full name" />
-                <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Current class or course" />
-                <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Email address" type="email" />
-                <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Phone number" />
+                <input
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
+                  placeholder="Student full name"
+                  defaultValue={profilePrefill.fullName}
+                  readOnly={Boolean(profilePrefill.fullName)}
+                />
+                <input
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
+                  placeholder="Current class or course"
+                  defaultValue={profilePrefill.currentCourse}
+                  readOnly={Boolean(profilePrefill.currentCourse)}
+                />
+                <input
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
+                  placeholder="Email address"
+                  type="email"
+                  defaultValue={profilePrefill.email}
+                  readOnly={Boolean(profilePrefill.email)}
+                />
+                <input
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
+                  placeholder="Phone number"
+                  defaultValue={profilePrefill.mobile}
+                  readOnly={Boolean(profilePrefill.mobile)}
+                />
                 <select className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary">
                   <option>Select scholarship</option>
                   {runningScholarships.map((item) => (
@@ -278,6 +336,9 @@ export default function ScholarshipsPage() {
                   ))}
                 </select>
                 <textarea className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" rows={4} placeholder="Why are you applying? (short statement)" />
+                <p className="text-xs text-text-secondary">
+                  Basic information is auto-filled from your profile when available.
+                </p>
                 <label className="flex items-start gap-2 text-xs text-text-secondary">
                   <input type="checkbox" className="mt-0.5" />
                   I agree to share my details with the scholarship review committee for evaluation.
@@ -482,7 +543,7 @@ export default function ScholarshipsPage() {
           <div className="mt-5 flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => setActiveModal("alumni")}
+              onClick={() => openModalWithAuth("alumni")}
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
             >
               <ClipboardList className="h-4 w-4" />
@@ -490,13 +551,19 @@ export default function ScholarshipsPage() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveModal("student")}
+              onClick={() => openModalWithAuth("student")}
               className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-5 py-2.5 text-sm font-semibold text-text-primary hover:border-primary/30"
             >
               <Users className="h-4 w-4" />
               Open Student Application Form
             </button>
           </div>
+
+          {gateMessage && (
+            <p className="mt-3 text-sm text-amber-700">
+              {gateMessage} <Link href="/login" className="font-semibold text-primary hover:underline">Go to Login</Link>
+            </p>
+          )}
         </div>
 
 
