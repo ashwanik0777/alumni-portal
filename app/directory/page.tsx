@@ -1,56 +1,6 @@
 import Link from "next/link";
 import { Briefcase, Filter, GraduationCap, MapPin, Search, Star, Users } from "lucide-react";
-
-const alumni = [
-  {
-    name: "Aditi Verma",
-    batch: "2015",
-    role: "Senior Software Engineer",
-    company: "Microsoft",
-    location: "Bengaluru",
-    expertise: "Backend, Cloud Architecture",
-  },
-  {
-    name: "Rohit Mishra",
-    batch: "2012",
-    role: "Product Manager",
-    company: "Flipkart",
-    location: "Mumbai",
-    expertise: "Product Strategy, Growth",
-  },
-  {
-    name: "Sneha Dubey",
-    batch: "2018",
-    role: "Data Scientist",
-    company: "Amazon",
-    location: "Hyderabad",
-    expertise: "ML, Analytics",
-  },
-  {
-    name: "Anurag Singh",
-    batch: "2010",
-    role: "Founder",
-    company: "EdTech Venture",
-    location: "Delhi NCR",
-    expertise: "Startups, Fundraising",
-  },
-  {
-    name: "Nidhi Chauhan",
-    batch: "2016",
-    role: "UX Designer",
-    company: "Adobe",
-    location: "Pune",
-    expertise: "Design Systems, Research",
-  },
-  {
-    name: "Kunal Saxena",
-    batch: "2014",
-    role: "DevOps Lead",
-    company: "Infosys",
-    location: "Noida",
-    expertise: "Kubernetes, Platform Engineering",
-  },
-];
+import { alumniProfiles } from "./data";
 
 const filters = ["All", "Engineering", "Product", "Design", "Data", "Founders", "Mentors"];
 
@@ -125,13 +75,13 @@ export default function DirectoryPage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14 lg:pb-16">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl sm:text-3xl font-bold">Featured Alumni Profiles</h2>
-          <p className="text-sm text-text-secondary">Showing {alumni.length} members</p>
+          <p className="text-sm text-text-secondary">Showing {alumniProfiles.length} members</p>
         </div>
 
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {alumni.map((person) => (
+          {alumniProfiles.map((person) => (
             <article
-              key={person.name}
+              key={person.slug}
               className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all"
             >
               <div className="flex items-start justify-between gap-3">
@@ -160,9 +110,12 @@ export default function DirectoryPage() {
               </div>
 
               <div className="mt-6 grid grid-cols-2 gap-2">
-                <button className="rounded-xl border border-border bg-background py-2.5 text-sm font-semibold text-text-primary hover:border-primary/30 transition-colors">
+                <Link
+                  href={`/directory/${person.slug}`}
+                  className="inline-flex items-center justify-center rounded-xl border border-border bg-background py-2.5 text-sm font-semibold text-text-primary hover:border-primary/30 transition-colors"
+                >
                   View Profile
-                </button>
+                </Link>
                 <button className="rounded-xl bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
                   Connect
                 </button>

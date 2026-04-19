@@ -1,5 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import {
+  ArrowLeft,
+  ArrowRight,
   Award,
   BadgeCheck,
   CalendarClock,
@@ -10,7 +15,10 @@ import {
   Quote,
   Star,
   Users,
+  X,
 } from "lucide-react";
+
+type ModalType = "none" | "alumni" | "student";
 
 const runningScholarships = [
   {
@@ -87,8 +95,101 @@ const providers = [
 ];
 
 export default function ScholarshipsPage() {
+  const [activeModal, setActiveModal] = useState<ModalType>("none");
+  const [slideIndex, setSlideIndex] = useState(0);
+
+  const totalSlides = testimonials.length;
+
+  const nextSlide = () => {
+    setSlideIndex((prev) => (prev + 1) % totalSlides);
+  };
+
+  const prevSlide = () => {
+    setSlideIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
+  };
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSlideIndex((prev) => (prev + 1) % totalSlides);
+    }, 4000);
+
+    return () => clearInterval(timer);
+  }, [totalSlides]);
+
+  const testimonialTrackStyle = useMemo(
+    () => ({ transform: `translateX(-${slideIndex * 100}%)` }),
+    [slideIndex],
+  );
+
   return (
     <div className="bg-background text-text-primary">
+      {activeModal !== "none" && (
+        <div className="fixed inset-0 z-80 bg-black/50 p-4 sm:p-6">
+          <div className="mx-auto h-full w-full max-w-3xl overflow-y-auto rounded-2xl border border-border bg-card p-5 sm:p-7">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-2xl font-bold">
+                  {activeModal === "alumni" ? "Alumni Scholarship Contribution Form" : "Student Scholarship Application Form"}
+                </h3>
+                <p className="mt-1 text-sm text-text-secondary">
+                  {activeModal === "alumni"
+                    ? "Submit scholarship details for review. Approved public details are shown on this page."
+                    : "Apply to running scholarships. Personal details are reviewed privately."}
+                </p>
+              </div>
+              <button
+                onClick={() => setActiveModal("none")}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border text-text-secondary hover:text-primary"
+                aria-label="Close form"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {activeModal === "alumni" ? (
+              <form className="space-y-3">
+                <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Full name" />
+                <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Batch year" />
+                <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Email address" type="email" />
+                <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Scholarship title" />
+                <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Support amount and model" />
+                <textarea className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" rows={4} placeholder="Eligibility and key criteria" />
+                <label className="flex items-start gap-2 text-xs text-text-secondary">
+                  <input type="checkbox" className="mt-0.5" />
+                  I confirm that submitted details can be reviewed by the alumni scholarship committee.
+                </label>
+                <button type="button" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90">
+                  <ClipboardList className="h-4 w-4" />
+                  Submit Contribution
+                </button>
+              </form>
+            ) : (
+              <form className="space-y-3">
+                <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Student full name" />
+                <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Current class or course" />
+                <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Email address" type="email" />
+                <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Phone number" />
+                <select className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary">
+                  <option>Select scholarship</option>
+                  {runningScholarships.map((item) => (
+                    <option key={item.name}>{item.name}</option>
+                  ))}
+                </select>
+                <textarea className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" rows={4} placeholder="Why are you applying? (short statement)" />
+                <label className="flex items-start gap-2 text-xs text-text-secondary">
+                  <input type="checkbox" className="mt-0.5" />
+                  I agree to share my details with the scholarship review committee for evaluation.
+                </label>
+                <button type="button" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90">
+                  <Users className="h-4 w-4" />
+                  Submit Application
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       <section className="relative overflow-hidden border-b border-border">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -top-14 left-6 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
@@ -203,14 +304,38 @@ export default function ScholarshipsPage() {
       </section>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid gap-6 lg:grid-cols-3">
-          {testimonials.map((item) => (
-            <article key={item.author} className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-              <Quote className="h-5 w-5 text-primary" />
-              <p className="mt-3 text-text-secondary leading-relaxed">{item.quote}</p>
-              <p className="mt-4 text-sm font-semibold text-text-primary">{item.author}</p>
-            </article>
-          ))}
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <h2 className="text-2xl sm:text-3xl font-bold">Student Testimonial Stories</h2>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={prevSlide}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-text-secondary hover:text-primary"
+              aria-label="Previous testimonial"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={nextSlide}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-text-secondary hover:text-primary"
+              aria-label="Next testimonial"
+            >
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          <div className="flex transition-transform duration-500 ease-out" style={testimonialTrackStyle}>
+            {testimonials.map((item) => (
+              <article key={item.author} className="w-full shrink-0 p-6 sm:p-8">
+                <Quote className="h-6 w-6 text-primary" />
+                <p className="mt-4 text-lg text-text-secondary leading-relaxed">{item.quote}</p>
+                <p className="mt-5 text-sm font-semibold text-text-primary">{item.author}</p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -229,59 +354,29 @@ export default function ScholarshipsPage() {
       </section>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 lg:pb-20">
-        <div className="grid gap-6 lg:grid-cols-2">
-          <article className="rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-sm">
-            <h3 className="text-xl font-bold">Alumni Scholarship Contribution Form</h3>
-            <p className="mt-2 text-sm text-text-secondary">
-              Alumni can submit new scholarship details here. After verification, approved public details are listed on this page.
-            </p>
-
-            <form className="mt-5 space-y-3">
-              <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Full name" />
-              <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Batch year" />
-              <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Email address" type="email" />
-              <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Scholarship title" />
-              <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Support amount and model" />
-              <textarea className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" rows={4} placeholder="Eligibility and key criteria" />
-              <label className="flex items-start gap-2 text-xs text-text-secondary">
-                <input type="checkbox" className="mt-0.5" />
-                I confirm that submitted details can be reviewed by the alumni scholarship committee.
-              </label>
-              <button type="button" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90">
-                <ClipboardList className="h-4 w-4" />
-                Submit Contribution
-              </button>
-            </form>
-          </article>
-
-          <article className="rounded-2xl border border-border bg-card p-6 sm:p-7 shadow-sm">
-            <h3 className="text-xl font-bold">Student Scholarship Application Form</h3>
-            <p className="mt-2 text-sm text-text-secondary">
-              Students can apply for running scholarships. Personal data is reviewed privately and not shown publicly without consent.
-            </p>
-
-            <form className="mt-5 space-y-3">
-              <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Student full name" />
-              <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Current class or course" />
-              <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Email address" type="email" />
-              <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Phone number" />
-              <select className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary">
-                <option>Select scholarship</option>
-                {runningScholarships.map((item) => (
-                  <option key={item.name}>{item.name}</option>
-                ))}
-              </select>
-              <textarea className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" rows={4} placeholder="Why are you applying? (short statement)" />
-              <label className="flex items-start gap-2 text-xs text-text-secondary">
-                <input type="checkbox" className="mt-0.5" />
-                I agree to share my details with the scholarship review committee for evaluation.
-              </label>
-              <button type="button" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90">
-                <Users className="h-4 w-4" />
-                Submit Application
-              </button>
-            </form>
-          </article>
+        <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
+          <h3 className="text-2xl font-bold">Scholarship Actions</h3>
+          <p className="mt-2 text-sm text-text-secondary">
+            Use the buttons below to open the required form screen without leaving this page.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setActiveModal("alumni")}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
+            >
+              <ClipboardList className="h-4 w-4" />
+              Open Alumni Contribution Form
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveModal("student")}
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-5 py-2.5 text-sm font-semibold text-text-primary hover:border-primary/30"
+            >
+              <Users className="h-4 w-4" />
+              Open Student Application Form
+            </button>
+          </div>
         </div>
 
         <div className="mt-6 rounded-2xl border border-primary/20 bg-primary/5 p-5 text-sm text-text-secondary">
