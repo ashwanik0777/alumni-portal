@@ -43,23 +43,14 @@ type PendingFirstLoginUser = {
   createdAt: string;
 };
 
-const DEMO_CREDENTIALS = {
-  admin: {
-    email: "admin@jnvportal.in",
-    password: "Admin@123",
-    firstName: "Admin",
-  },
-  user: {
-    email: "alumni@jnvportal.in",
-    password: "User@123",
-    firstName: "Alumni",
-  },
-  both: {
-    email: "access@jnvportal.in",
-    password: "admin123",
-    firstName: "Alumni",
-  },
-} as const;
+type LoginApiResponse = {
+  message: string;
+  user?: {
+    email: string;
+    firstName: string;
+    roles: Array<"admin" | "user">;
+  };
+};
 
 export default function LoginPage() {
   return (
@@ -83,6 +74,7 @@ function LoginPageContent() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [success, setSuccess] = useState(false);
   const [loginMessage, setLoginMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [multiAccess, setMultiAccess] = useState(false);
   const [pendingFirstName, setPendingFirstName] = useState("");
   const [firstLoginEmail, setFirstLoginEmail] = useState("");
@@ -128,20 +120,6 @@ function LoginPageContent() {
     localStorage.setItem(FIRST_LOGIN_USERS_KEY, JSON.stringify(users));
   };
 
-  const resolveAccessFromEmail = (email: string): "user" | "admin" | "both" => {
-    const normalizedEmail = email.trim().toLowerCase();
-
-    if (normalizedEmail.includes("+both") || normalizedEmail.startsWith("multi.")) {
-      return "both";
-    }
-
-    if (normalizedEmail.includes("+admin") || normalizedEmail.startsWith("admin.")) {
-      return "admin";
-    }
-
-    return "user";
-  };
-
   const continueLogin = (targetRole: "user" | "admin", firstName = "Alumni") => {
     const cookieAge = 60 * 60 * 8;
     document.cookie = `auth_user=active; path=/; max-age=${cookieAge}; samesite=strict`;
@@ -158,88 +136,51 @@ function LoginPageContent() {
     }, 350);
   };
 
-  const onLoginSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const onLoginSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") || "");
     const password = String(form.get("password") || "");
-    const normalizedEmail = email.trim().toLowerCase();
-    const detectedAccess = resolveAccessFromEmail(email);
     const firstName = resolveFirstNameFromEmail(email);
     setPendingFirstName(firstName);
 
     setSuccess(false);
+    setIsSubmitting(true);
 
-    const pendingUsers = getPendingUsers();
-    const pendingAccount = pendingUsers.find((item) => item.email === normalizedEmail);
-    if (pendingAccount) {
-      if (password !== pendingAccount.currentPassword) {
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const payload = (await response.json()) as LoginApiResponse;
+
+      if (!response.ok || !payload.user) {
         setMultiAccess(false);
-        setLoginMessage("Invalid password. Please use the temporary password sent on approval email.");
+        setLoginMessage(payload.message || "Invalid credentials.");
         return;
       }
 
-      if (pendingAccount.mustSetPassword) {
-        setMultiAccess(false);
-        setFirstLoginEmail(pendingAccount.email);
-        setFirstLoginFirstName(pendingAccount.firstName || "Alumni");
-        setLoginMessage("First login detected. Please set your new password.");
-        switchMode("set-password");
+      const userFirstName = payload.user.firstName || firstName;
+      setPendingFirstName(userFirstName);
+
+      if (payload.user.roles.length > 1) {
+        setMultiAccess(true);
+        setLoginMessage("Credentials are valid for both roles. Please choose which dashboard to open.");
         return;
       }
 
       setMultiAccess(false);
-      continueLogin("user", pendingAccount.firstName || "Alumni");
-      return;
-    }
-
-    if (normalizedEmail === DEMO_CREDENTIALS.admin.email) {
-      if (password !== DEMO_CREDENTIALS.admin.password) {
-        setMultiAccess(false);
-        setLoginMessage("Invalid admin password. Please use the provided admin credentials.");
-        return;
-      }
+      continueLogin(payload.user.roles[0], userFirstName);
+    } catch {
       setMultiAccess(false);
-      continueLogin("admin", DEMO_CREDENTIALS.admin.firstName);
-      return;
+      setLoginMessage("Login service is currently unavailable. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (normalizedEmail === DEMO_CREDENTIALS.user.email) {
-      if (password !== DEMO_CREDENTIALS.user.password) {
-        setMultiAccess(false);
-        setLoginMessage("Invalid user password. Please use the provided user credentials.");
-        return;
-      }
-      setMultiAccess(false);
-      continueLogin("user", DEMO_CREDENTIALS.user.firstName);
-      return;
-    }
-
-    if (normalizedEmail === DEMO_CREDENTIALS.both.email) {
-      if (password !== DEMO_CREDENTIALS.both.password) {
-        setMultiAccess(false);
-        setLoginMessage("Invalid password for account chooser demo.");
-        return;
-      }
-      setMultiAccess(true);
-      setLoginMessage("Your credentials are valid for both accounts. Please choose which account you want to open.");
-      return;
-    }
-
-    if (normalizedEmail.endsWith("@jnvportal.in") || detectedAccess === "admin") {
-      setMultiAccess(false);
-      setLoginMessage("Unknown credentials. Please use one of the demo accounts shown below.");
-      return;
-    }
-
-    if (detectedAccess === "both") {
-      setMultiAccess(true);
-      setLoginMessage("Your credentials are valid for both accounts. Please choose which account you want to open.");
-      return;
-    }
-
-    setMultiAccess(false);
-    continueLogin(detectedAccess, firstName);
   };
 
   const onForgotRequest = (event: React.FormEvent<HTMLFormElement>) => {
@@ -530,10 +471,10 @@ function LoginPageContent() {
 
                       <button
                         type="submit"
-                        disabled={success}
+                        disabled={success || isSubmitting}
                         className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
                       >
-                        Sign in
+                        {isSubmitting ? "Verifying..." : "Sign in"}
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     </form>
