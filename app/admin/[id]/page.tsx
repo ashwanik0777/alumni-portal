@@ -57,6 +57,7 @@ type AdminSectionConfig = {
 };
 
 type ProgramActionView = "none" | "launch" | "assign" | "report";
+type RequestActionView = "none" | "priority" | "assign" | "close";
 
 const sectionMeta: Record<string, AdminSectionConfig> = {
   members: {
@@ -471,6 +472,11 @@ export default function AdminSectionPage() {
   const [programActionMessage, setProgramActionMessage] = useState("");
   const [selectedProgramForMentor, setSelectedProgramForMentor] = useState("");
   const [selectedMentors, setSelectedMentors] = useState<string[]>([]);
+  const [requestActionView, setRequestActionView] = useState<RequestActionView>("none");
+  const [requestActionMessage, setRequestActionMessage] = useState("");
+  const [selectedRequestId, setSelectedRequestId] = useState("");
+  const [requestAssignTeam, setRequestAssignTeam] = useState("");
+  const [requestAssignNote, setRequestAssignNote] = useState("");
 
   useEffect(() => {
     if (key === "members") {
@@ -493,6 +499,11 @@ export default function AdminSectionPage() {
     setProgramActionMessage("");
     setSelectedProgramForMentor("");
     setSelectedMentors([]);
+    setRequestActionView("none");
+    setRequestActionMessage("");
+    setSelectedRequestId("");
+    setRequestAssignTeam("");
+    setRequestAssignNote("");
   }, [key, info.rows]);
 
   const availableStatuses = useMemo(() => ["All", ...new Set(rows.map((row) => row.status))], [rows]);
@@ -627,6 +638,41 @@ export default function AdminSectionPage() {
       if (action === "Export Weekly Report") {
         setProgramActionView("report");
         setProgramActionMessage("Weekly report preview is ready. Export or print it.");
+        return;
+      }
+    }
+
+    if (key === "requests") {
+      if (action === "Open Priority Queue") {
+        setRequestActionView("priority");
+        setStatusFilter("Open");
+        setPrimaryFilter("High");
+        setCurrentPage(1);
+        setRequestActionMessage("Priority queue opened: showing high priority open requests.");
+        return;
+      }
+
+      if (action === "Assign Team") {
+        setRequestActionView("assign");
+        setRequestActionMessage("Select a request and assign it to the appropriate team.");
+        return;
+      }
+
+      if (action === "Close Resolved Batch") {
+        setRequestActionView("close");
+        const resolvedIds = rows.filter((row) => row.status === "Resolved").map((row) => row.id);
+        if (resolvedIds.length === 0) {
+          setRequestActionMessage("No resolved requests found to close in batch.");
+          return;
+        }
+        setRows((prev) =>
+          prev.map((row) =>
+            resolvedIds.includes(row.id)
+              ? { ...row, updatedAt: "Just now", note: "Resolved request archived in closure batch." }
+              : row,
+          ),
+        );
+        setRequestActionMessage(`Closed and archived ${resolvedIds.length} resolved request(s).`);
         return;
       }
     }
@@ -843,6 +889,60 @@ export default function AdminSectionPage() {
     window.print();
   };
 
+  const requestTeams = ["Support", "Program", "Admin", "Compliance", "Operations"];
+
+  const assignRequestToTeam = () => {
+    if (!selectedRequestId) {
+      setRequestActionMessage("Please select a request first.");
+      return;
+    }
+    if (!requestAssignTeam) {
+      setRequestActionMessage("Please select a team for assignment.");
+      return;
+    }
+
+    setRows((prev) =>
+      prev.map((row) =>
+        row.id === selectedRequestId
+          ? {
+              ...row,
+              owner: `${requestAssignTeam} Team`,
+              status: row.status === "Open" || row.status === "Review" ? "In Progress" : row.status,
+              secondaryFilterValue: requestAssignTeam,
+              updatedAt: "Just now",
+              note: requestAssignNote.trim()
+                ? `Assigned to ${requestAssignTeam} Team. Note: ${requestAssignNote.trim()}`
+                : `Assigned to ${requestAssignTeam} Team for handling.`,
+            }
+          : row,
+      ),
+    );
+
+    setRequestActionMessage(`Request ${selectedRequestId} assigned to ${requestAssignTeam} Team.`);
+    setRequestAssignNote("");
+  };
+
+  const updateRequestStatus = (rowId: string, nextStatus: "In Progress" | "Resolved" | "Review") => {
+    setRows((prev) =>
+      prev.map((row) =>
+        row.id === rowId
+          ? {
+              ...row,
+              status: nextStatus,
+              updatedAt: "Just now",
+              note:
+                nextStatus === "Resolved"
+                  ? "Request resolved and marked complete by admin."
+                  : nextStatus === "Review"
+                    ? "Request escalated for review."
+                    : "Request accepted and moved to in-progress queue.",
+            }
+          : row,
+      ),
+    );
+    setActionMessage(`Request ${rowId} updated to ${nextStatus}.`);
+  };
+
   return (
     <div className="space-y-6">
       <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-6">
@@ -1038,6 +1138,37 @@ export default function AdminSectionPage() {
               )}
 
               <p className="mt-3 text-sm text-text-secondary">{row.note}</p>
+
+              {key === "requests" && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {(row.status === "Open" || row.status === "Review") && (
+                    <button
+                      onClick={() => updateRequestStatus(row.id, "In Progress")}
+                      className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary/90"
+                    >
+                      Start Processing
+                    </button>
+                  )}
+
+                  {row.status !== "Resolved" && (
+                    <button
+                      onClick={() => updateRequestStatus(row.id, "Resolved")}
+                      className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                    >
+                      Mark Resolved
+                    </button>
+                  )}
+
+                  {row.status !== "Review" && (
+                    <button
+                      onClick={() => updateRequestStatus(row.id, "Review")}
+                      className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+                    >
+                      Escalate Review
+                    </button>
+                  )}
+                </div>
+              )}
 
               {key === "members" && row.status === "Rejected" && row.rejectionReason && (
                 <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
@@ -1388,6 +1519,109 @@ export default function AdminSectionPage() {
               )}
             </div>
           )}
+
+          {key === "requests" && (
+            <div className="mt-4 rounded-2xl border border-border bg-background p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-bold text-text-primary">Request Action Workspace</p>
+                <button
+                  onClick={() => {
+                    setRequestActionView("none");
+                    setRequestActionMessage("");
+                    setSelectedRequestId("");
+                    setRequestAssignTeam("");
+                    setRequestAssignNote("");
+                  }}
+                  className="rounded-lg border border-border bg-card px-3 py-1 text-xs font-semibold text-text-secondary hover:border-primary/30 hover:text-primary"
+                >
+                  Reset Panel
+                </button>
+              </div>
+
+              {requestActionMessage && (
+                <p className="mt-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-xs text-text-secondary">{requestActionMessage}</p>
+              )}
+
+              {requestActionView === "priority" && (
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <div className="rounded-xl border border-border bg-card p-3">
+                    <p className="text-xs text-text-secondary">Open Requests</p>
+                    <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Open").length}</p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-card p-3">
+                    <p className="text-xs text-text-secondary">High Priority</p>
+                    <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.primaryFilterValue === "High").length}</p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-card p-3">
+                    <p className="text-xs text-text-secondary">In Progress</p>
+                    <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "In Progress").length}</p>
+                  </div>
+                </div>
+              )}
+
+              {requestActionView === "assign" && (
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <label>
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Request</span>
+                    <select
+                      value={selectedRequestId}
+                      onChange={(event) => setSelectedRequestId(event.target.value)}
+                      className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                    >
+                      <option value="">Select request</option>
+                      {rows.map((row) => (
+                        <option key={`request-assign-${row.id}`} value={row.id}>
+                          {row.id} - {row.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Assign Team</span>
+                    <select
+                      value={requestAssignTeam}
+                      onChange={(event) => setRequestAssignTeam(event.target.value)}
+                      className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                    >
+                      <option value="">Select team</option>
+                      {requestTeams.map((team) => (
+                        <option key={team} value={team}>
+                          {team}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="sm:col-span-2">
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Assignment Note (Optional)</span>
+                    <textarea
+                      value={requestAssignNote}
+                      onChange={(event) => setRequestAssignNote(event.target.value)}
+                      rows={3}
+                      placeholder="Add context for assigned team"
+                      className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                    />
+                  </label>
+
+                  <div className="sm:col-span-2 flex justify-end">
+                    <button
+                      onClick={assignRequestToTeam}
+                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                    >
+                      Assign Request
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {requestActionView === "close" && (
+                <div className="mt-3 rounded-xl border border-border bg-card p-3 text-sm text-text-secondary">
+                  Resolved batch close operation complete. You can now filter by status <span className="font-semibold text-text-primary">Resolved</span> to review archived entries.
+                </div>
+              )}
+            </div>
+          )}
         </article>
 
         <article className="rounded-2xl border border-border bg-card p-5">
@@ -1399,6 +1633,12 @@ export default function AdminSectionPage() {
             <p className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-text-secondary">
               New user registrations appear in <span className="font-semibold text-text-primary">Pending</span>. Use
               <span className="font-semibold text-text-primary"> Approve / Reject</span> buttons to complete approval workflow.
+            </p>
+          )}
+
+          {key === "requests" && (
+            <p className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-text-secondary">
+              Use quick actions to open priority queue, assign request owners, and close resolved batches. Each request card also supports direct lifecycle actions.
             </p>
           )}
         </article>
