@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -62,6 +62,18 @@ const DEMO_CREDENTIALS = {
 } as const;
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginPageFallback />}>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageFallback() {
+  return <div className="bg-background min-h-screen" />;
+}
+
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
