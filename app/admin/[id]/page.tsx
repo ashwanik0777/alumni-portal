@@ -58,6 +58,7 @@ type AdminSectionConfig = {
 
 type ProgramActionView = "none" | "launch" | "assign" | "report";
 type RequestActionView = "none" | "priority" | "assign" | "close";
+type FinanceActionView = "none" | "payout" | "ledger" | "audit";
 
 const sectionMeta: Record<string, AdminSectionConfig> = {
   members: {
@@ -477,6 +478,9 @@ export default function AdminSectionPage() {
   const [selectedRequestId, setSelectedRequestId] = useState("");
   const [requestAssignTeam, setRequestAssignTeam] = useState("");
   const [requestAssignNote, setRequestAssignNote] = useState("");
+  const [financeActionView, setFinanceActionView] = useState<FinanceActionView>("none");
+  const [financeActionMessage, setFinanceActionMessage] = useState("");
+  const [selectedFinanceBatchIds, setSelectedFinanceBatchIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (key === "members") {
@@ -504,6 +508,9 @@ export default function AdminSectionPage() {
     setSelectedRequestId("");
     setRequestAssignTeam("");
     setRequestAssignNote("");
+    setFinanceActionView("none");
+    setFinanceActionMessage("");
+    setSelectedFinanceBatchIds([]);
   }, [key, info.rows]);
 
   const availableStatuses = useMemo(() => ["All", ...new Set(rows.map((row) => row.status))], [rows]);
@@ -673,6 +680,55 @@ export default function AdminSectionPage() {
           ),
         );
         setRequestActionMessage(`Closed and archived ${resolvedIds.length} resolved request(s).`);
+        return;
+      }
+    }
+
+    if (key === "finance") {
+      if (action === "Approve Payout Batch") {
+        setFinanceActionView("payout");
+        const payoutCandidates = rows
+          .filter((row) => row.primaryFilterValue === "Payout" && (row.status === "Processing" || row.status === "Review"))
+          .map((row) => row.id);
+        setSelectedFinanceBatchIds(payoutCandidates);
+        if (payoutCandidates.length === 0) {
+          setFinanceActionMessage("No payout items are pending approval right now.");
+          return;
+        }
+        setFinanceActionMessage(`Selected ${payoutCandidates.length} payout record(s) for approval batch.`);
+        return;
+      }
+
+      if (action === "Download Ledger") {
+        setFinanceActionView("ledger");
+        exportFinanceLedger(rows, "full");
+        return;
+      }
+
+      if (action === "Run Audit Check") {
+        setFinanceActionView("audit");
+        const flaggedIds = rows
+          .filter((row) => row.status === "Processing" || row.status === "Review")
+          .map((row) => row.id);
+        if (flaggedIds.length === 0) {
+          setFinanceActionMessage("Audit check complete. No records were flagged.");
+          return;
+        }
+
+        setRows((prev) =>
+          prev.map((row) =>
+            flaggedIds.includes(row.id)
+              ? {
+                  ...row,
+                  status: "Review",
+                  owner: "Compliance",
+                  updatedAt: "Just now",
+                  note: "Audit check flagged this entry for manual verification.",
+                }
+              : row,
+          ),
+        );
+        setFinanceActionMessage(`Audit check complete. ${flaggedIds.length} record(s) moved to review.`);
         return;
       }
     }
@@ -943,6 +999,77 @@ export default function AdminSectionPage() {
     setActionMessage(`Request ${rowId} updated to ${nextStatus}.`);
   };
 
+  const financePayoutCandidates = useMemo(
+    () => rows.filter((row) => row.primaryFilterValue === "Payout" && (row.status === "Processing" || row.status === "Review")),
+    [rows],
+  );
+
+  const toggleFinanceBatchSelection = (rowId: string) => {
+    setSelectedFinanceBatchIds((prev) => (prev.includes(rowId) ? prev.filter((item) => item !== rowId) : [...prev, rowId]));
+  };
+
+  const approveSelectedPayoutBatch = () => {
+    if (selectedFinanceBatchIds.length === 0) {
+      setFinanceActionMessage("Please select at least one payout record.");
+      return;
+    }
+
+    setRows((prev) =>
+      prev.map((row) =>
+        selectedFinanceBatchIds.includes(row.id)
+          ? {
+              ...row,
+              status: "Settled",
+              updatedAt: "Just now",
+              note: "Approved in payout batch and marked settled.",
+            }
+          : row,
+      ),
+    );
+    setFinanceActionMessage(`Approved payout batch for ${selectedFinanceBatchIds.length} record(s).`);
+    setSelectedFinanceBatchIds([]);
+  };
+
+  const exportFinanceLedger = (sourceRows: AdminRow[], scope: "full" | "filtered") => {
+    const header = "Record ID,Entry Name,Owner,Type,Cycle,Status,Updated At,Note";
+    const csvRows = sourceRows.map((row) =>
+      [row.id, row.name, row.owner, row.primaryFilterValue, row.secondaryFilterValue, row.status, row.updatedAt, row.note]
+        .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+        .join(","),
+    );
+    const blob = new Blob([[header, ...csvRows].join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `finance-ledger-${scope}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+    setFinanceActionMessage(`Finance ledger downloaded (${sourceRows.length} row(s), ${scope} scope).`);
+  };
+
+  const updateFinanceRowStatus = (rowId: string, nextStatus: "Settled" | "Processing" | "Review") => {
+    setRows((prev) =>
+      prev.map((row) =>
+        row.id === rowId
+          ? {
+              ...row,
+              status: nextStatus,
+              updatedAt: "Just now",
+              note:
+                nextStatus === "Settled"
+                  ? "Transaction confirmed and settled."
+                  : nextStatus === "Review"
+                    ? "Entry moved to compliance review."
+                    : "Entry moved back to processing queue.",
+            }
+          : row,
+      ),
+    );
+    setActionMessage(`Finance entry ${rowId} updated to ${nextStatus}.`);
+  };
+
   return (
     <div className="space-y-6">
       <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-6">
@@ -1165,6 +1292,37 @@ export default function AdminSectionPage() {
                       className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100"
                     >
                       Escalate Review
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {key === "finance" && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {row.status !== "Settled" && (
+                    <button
+                      onClick={() => updateFinanceRowStatus(row.id, "Settled")}
+                      className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                    >
+                      Mark Settled
+                    </button>
+                  )}
+
+                  {row.status !== "Review" && (
+                    <button
+                      onClick={() => updateFinanceRowStatus(row.id, "Review")}
+                      className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+                    >
+                      Flag Review
+                    </button>
+                  )}
+
+                  {row.status !== "Processing" && (
+                    <button
+                      onClick={() => updateFinanceRowStatus(row.id, "Processing")}
+                      className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary/90"
+                    >
+                      Move To Processing
                     </button>
                   )}
                 </div>
@@ -1622,6 +1780,121 @@ export default function AdminSectionPage() {
               )}
             </div>
           )}
+
+          {key === "finance" && (
+            <div className="mt-4 rounded-2xl border border-border bg-background p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-bold text-text-primary">Finance Action Workspace</p>
+                <button
+                  onClick={() => {
+                    setFinanceActionView("none");
+                    setFinanceActionMessage("");
+                    setSelectedFinanceBatchIds([]);
+                  }}
+                  className="rounded-lg border border-border bg-card px-3 py-1 text-xs font-semibold text-text-secondary hover:border-primary/30 hover:text-primary"
+                >
+                  Reset Panel
+                </button>
+              </div>
+
+              {financeActionMessage && (
+                <p className="mt-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-xs text-text-secondary">{financeActionMessage}</p>
+              )}
+
+              {financeActionView === "payout" && (
+                <div className="mt-3 space-y-3">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <div className="rounded-xl border border-border bg-card p-3">
+                      <p className="text-xs text-text-secondary">Pending Payout Approvals</p>
+                      <p className="mt-1 text-xl font-black text-text-primary">{financePayoutCandidates.length}</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-card p-3">
+                      <p className="text-xs text-text-secondary">Selected In Batch</p>
+                      <p className="mt-1 text-xl font-black text-text-primary">{selectedFinanceBatchIds.length}</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-card p-3">
+                      <p className="text-xs text-text-secondary">Settled Entries</p>
+                      <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Settled").length}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {financePayoutCandidates.length === 0 && (
+                      <div className="rounded-xl border border-dashed border-border bg-card p-3 text-sm text-text-secondary">
+                        No payout entries are waiting for batch approval.
+                      </div>
+                    )}
+
+                    {financePayoutCandidates.map((row) => (
+                      <label key={`finance-batch-${row.id}`} className="flex items-start gap-2 rounded-xl border border-border bg-card px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedFinanceBatchIds.includes(row.id)}
+                          onChange={() => toggleFinanceBatchSelection(row.id)}
+                        />
+                        <div>
+                          <p className="text-sm font-semibold text-text-primary">
+                            {row.id} - {row.name}
+                          </p>
+                          <p className="text-xs text-text-secondary">{row.note}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      onClick={approveSelectedPayoutBatch}
+                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                    >
+                      Approve Selected Batch
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {financeActionView === "ledger" && (
+                <div className="mt-3 space-y-3">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <button
+                      onClick={() => exportFinanceLedger(rows, "full")}
+                      className="inline-flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                    >
+                      Download Full Ledger
+                      <Download className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => exportFinanceLedger(filteredRows, "filtered")}
+                      className="inline-flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                    >
+                      Download Filtered Ledger
+                      <Download className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <p className="text-xs text-text-secondary">
+                    Ledger export supports current filters so finance team can quickly share payout-only, donation-only, or cycle-specific reports.
+                  </p>
+                </div>
+              )}
+
+              {financeActionView === "audit" && (
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <div className="rounded-xl border border-border bg-card p-3">
+                    <p className="text-xs text-text-secondary">Entries In Review</p>
+                    <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Review").length}</p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-card p-3">
+                    <p className="text-xs text-text-secondary">Processing Entries</p>
+                    <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Processing").length}</p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-card p-3">
+                    <p className="text-xs text-text-secondary">Audit Safe (Settled)</p>
+                    <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Settled").length}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </article>
 
         <article className="rounded-2xl border border-border bg-card p-5">
@@ -1639,6 +1912,12 @@ export default function AdminSectionPage() {
           {key === "requests" && (
             <p className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-text-secondary">
               Use quick actions to open priority queue, assign request owners, and close resolved batches. Each request card also supports direct lifecycle actions.
+            </p>
+          )}
+
+          {key === "finance" && (
+            <p className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-text-secondary">
+              Use payout batch approvals, ledger exports, and audit checks from Quick Actions. Finance cards support instant status controls for daily reconciliation work.
             </p>
           )}
         </article>
