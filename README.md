@@ -1,190 +1,321 @@
 # Alumni Portal
 
-Alumni Portal is a community platform for JNV Farrukhabad alumni.
-It helps alumni reconnect, share opportunities, join events, and support mentorship initiatives.
+Alumni Portal is a Next.js application for JNV alumni community operations.
+It includes a public website, role-based login, admin workspace, and user workspace.
 
-This documentation explains what is implemented now, what technologies are used, and what is planned next.
+This README is fully updated to match the current codebase and workflows.
 
-## 1. Project Goals
+## 1. What This Project Does
 
-The main goals of this project are:
+The platform provides:
 
-- Build a central digital platform for alumni.
-- Make it easy to discover people, jobs, events, and mentorship programs.
-- Keep the UI clean, fast, and mobile-friendly.
-- Follow a consistent design system and code quality standards.
+- Public information pages for alumni engagement.
+- Role-protected admin and user dashboards.
+- Frontend workflow simulation for member approvals, request handling, scholarship operations, analytics monitoring, and settings governance.
+- A lightweight visitor counter API.
 
-## 2. Current Status
+## 2. Current Feature Status
 
-### Fully Implemented
+### 2.1 Public Website
 
-- Homepage with highlights, impact metrics, testimonials, and call-to-action sections.
-- About page with mission, values, milestones, and committee information.
-- Alumni Directory page with complete listing layout and filter/search interface structure.
-- Events page with featured events, timeline roadmap, and support callout.
-- Jobs page with featured opportunities and hiring-oriented sections.
-- Mentorship page with mentorship tracks, process flow, and request form UI.
-- Registration page with complete multi-field alumni registration form UI.
-- Contact page with support channels, response-time section, and support request form UI.
-- Legal pages: Privacy Policy and Terms of Service.
-- Team page.
-- Shared layout components: navbar, footer, and unique viewer counter.
-- API route for unique visitor count.
+Implemented pages:
 
-### Partially Implemented
+- Home
+- About
+- Directory
+- Events
+- Jobs
+- Mentorship
+- Scholarships
+- Donate
+- News
+- Share Story
+- Team
+- Contact
+- Register
+- Login
+- Privacy
+- Terms
 
-- Forms and filters are UI-first and not yet connected to a persistent backend.
+### 2.2 Authentication and Route Protection
 
-### Implemented Dashboard Modules
+Implemented:
 
-- Role-based login with user and admin dashboards.
-- Admin dashboard with overview and all operational tabs:
-  - members, programs, events, requests, finance, analytics, security, settings
-- User dashboard with profile, scholarships, jobs, mentorship, network, events, messages, and settings.
+- Role-aware login for admin and user.
+- Cookie-based route protection via `proxy.ts`.
+- Redirect logic for unauthorized access.
+- First-login password setup flow for approved users.
 
-## 3. Tech Stack (What We Are Using)
+### 2.3 Admin Dashboard
 
-### Core Framework
+Implemented admin sections:
 
-- Next.js 16 (App Router)
-- React 19
+- Overview
+- Members
+- Programs
+- Events
+- Requests
+- Scholarships (routed through `/admin/finance`)
+- Analytics
+- Settings
+
+Removed:
+
+- Security section has been removed from sidebar and active admin module list.
+
+### 2.4 User Dashboard
+
+Implemented user sections:
+
+- Overview
+- My Profile
+- My Network
+- Mentorship
+- Jobs
+- Events
+- Scholarships
+- Messages
+- Settings
+
+## 3. Tech Stack
+
+- Next.js 16.1.1 (App Router)
+- React 19.2.3
 - TypeScript 5
-
-### Styling and UI
-
 - Tailwind CSS v4
-- CSS variables-based design tokens defined in global styles
-- Lucide React for icons
+- Lucide React icons
+- ESLint 9 + eslint-config-next
 
-### Quality and Tooling
-
-- ESLint 9
-- eslint-config-next
-
-### Runtime and Package Management
-
-- Node.js 20+ (recommended)
-- npm (default package manager)
-
-## 4. Folder Structure
+## 4. Project Structure (Key Paths)
 
 ```text
 app/
-  about/
-  api/
-    counter/
-      route.ts
+  admin/
+    [id]/page.tsx
+    layout.tsx
+    page.tsx
+    settings/
+      page.tsx
+      AdminSettingsPanel.tsx
+  user/
+    [id]/page.tsx
+    layout.tsx
+    page.tsx
+    settings/
+      page.tsx
+      UserSettingsPanel.tsx
+  login/page.tsx
+  register/page.tsx
+  api/counter/route.ts
   components/
-    Footer.tsx
     Navbar.tsx
-    UnderConstruction.tsx
+    Footer.tsx
     UniqueViewerCounter.tsx
-  contact/
-  demo/
-  directory/
-  donate/
-  events/
-  jobs/
-  login/
-  mentorship/
-  news/
-  privacy/
-  register/
-  share-story/
-  team/
-  terms/
-  globals.css
-  layout.tsx
-  page.tsx
+proxy.ts
 public/
   counter.json
 ```
 
 ## 5. Route Map
 
-| Route | Purpose | Status |
-|---|---|---|
-| / | Home | Implemented |
-| /about | About community and leadership | Implemented |
-| /directory | Alumni directory UI | Implemented |
-| /events | Events and reunions | Implemented |
-| /jobs | Career opportunities | Implemented |
-| /mentorship | Mentorship journeys and form UI | Implemented |
-| /register | Alumni registration form UI | Implemented |
-| /contact | Support/help request UI | Implemented |
-| /privacy | Privacy policy | Implemented |
-| /terms | Terms of service | Implemented |
-| /team | Team showcase | Implemented |
-| /login | Role-based login flow | Implemented |
-| /demo | Theme and style demo | Implemented |
-| /donate | Donation page | Implemented |
-| /news | Community news page | Implemented |
-| /share-story | Story sharing page | Implemented |
-| /api/counter | Unique visitor counter API | Implemented |
+### 5.1 Public Routes
 
-## 6A. Login Guide and Demo Credentials
+| Route | Purpose |
+|---|---|
+| `/` | Homepage |
+| `/about` | About and mission |
+| `/directory` | Alumni directory |
+| `/events` | Events overview |
+| `/jobs` | Career opportunities |
+| `/mentorship` | Mentorship info and actions |
+| `/scholarships` | Scholarship engagement page |
+| `/donate` | Donation and contribution page |
+| `/news` | Community updates |
+| `/share-story` | Story sharing page |
+| `/team` | Team and leadership |
+| `/contact` | Contact and support |
+| `/register` | Alumni registration flow |
+| `/login` | Role-based login |
+| `/privacy` | Privacy policy |
+| `/terms` | Terms |
+| `/api/counter` | Visitor counter API |
 
-Use these credentials on the login page:
+### 5.2 Admin Routes
 
-- Admin Login
-  - Email: `admin@jnvportal.in`
-  - Password: `Admin@123`
-- User Login
-  - Email: `alumni@jnvportal.in`
-  - Password: `User@123`
-- Both-access Demo (choose role after login)
-  - Email: `access@jnvportal.in`
-  - Password: `Portal@123`
+| Route | Purpose |
+|---|---|
+| `/admin` | Admin overview |
+| `/admin/members` | Member approvals and management |
+| `/admin/programs` | Program management workflows |
+| `/admin/events` | Event operations |
+| `/admin/requests` | Request queue and assignment workflows |
+| `/admin/finance` | Scholarship management workflows |
+| `/admin/analytics` | Full visual analytics board |
+| `/admin/settings` | Complete admin settings control center |
 
-How admin login works:
+### 5.3 User Routes
 
-1. Open `/login`.
-2. Enter admin credentials.
-3. After successful validation, system sets auth cookies and redirects to `/admin`.
-4. Protected routing (`/admin` and `/user`) is controlled by `proxy.ts`.
+| Route | Purpose |
+|---|---|
+| `/user` | User overview |
+| `/user/profile` | Profile area |
+| `/user/network` | Alumni connections |
+| `/user/mentorship` | Mentorship space |
+| `/user/jobs` | Jobs area |
+| `/user/events` | User events area |
+| `/user/scholarships` | Scholarship area |
+| `/user/messages` | Messaging area |
+| `/user/settings` | User settings panel |
 
-## 6. Design System
+## 6. Architecture Diagrams
 
-The project follows a strict theme-token approach from global CSS.
-Hardcoded random color values should be avoided in component styles.
+### 6.1 High-Level Application Flow
 
-### Theme Tokens
+```mermaid
+flowchart LR
+  Visitor[Browser User] --> App[Next.js App Router]
+  App --> Public[Public Pages]
+  App --> Login[Login and Register]
+  Login --> Proxy[proxy.ts Route Guard]
+  Proxy --> Admin[Admin Workspace]
+  Proxy --> User[User Workspace]
+  App --> CounterAPI[/api/counter]
+  CounterAPI --> CounterStore[(public/counter.json)]
+```
 
-| Token | Light | Dark | Purpose |
-|---|---|---|---|
-| --color-primary | #1E348A | #60A5FA | Main actions and highlights |
-| --color-secondary | #C9A227 | #FBBF24 | Secondary emphasis |
-| --color-accent | #93C5FD | #38BDF8 | Accent surfaces |
-| --color-bg | #F8F9F4 | #0F172A | App background |
-| --color-card | #FFFFFF | #1E293B | Card backgrounds |
-| --color-text-primary | #1F2957 | #F1F5F9 | Primary text |
-| --color-text-secondary | #1E348A | #94A3B8 | Secondary text |
-| --color-border | #CBD5E1 | #334155 | Borders and separators |
+### 6.2 Registration to First Login
 
-### Theme Behavior
+```mermaid
+sequenceDiagram
+  participant R as Register Page
+  participant LS as localStorage
+  participant A as Admin Members
+  participant L as Login Page
 
-- Theme toggle is available in the navbar.
-- User preference is stored in localStorage with key `theme`.
-- Dark mode is enabled by toggling the `dark` class on the root HTML element.
+  R->>LS: Save pending record (admin_member_registrations_v1)
+  A->>LS: Review and approve registration
+  A->>LS: Create first-login entry (pending_first_login_users_v1)
+  L->>LS: Validate first-login credentials
+  L->>L: Force password setup
+  L->>LS: Set auth data + role
+```
 
-## 7. Shared Components
+## 7. Authentication Workflow
 
-- `Navbar`: sticky top navigation, responsive mobile menu, light/dark switch.
-- `Footer`: quick links, contact blocks, legal links, and viewer counter section.
-- `UnderConstruction`: reusable placeholder for unfinished pages.
-- `UniqueViewerCounter`: fetches visitor count and increments once per browser.
+### 7.1 Login Behavior
 
-## 8. API Documentation
+Current login behavior includes:
 
-### GET /api/counter
+- Demo admin and demo user credential handling.
+- First-login password reset for approved new members.
+- Role-based redirect to `/admin` or `/user`.
 
-Returns unique visitor count.
+### 7.2 Proxy Guards
 
-#### Query Parameters
+`proxy.ts` currently enforces:
 
-- `increment=true`: increment count before returning response.
+- Unauthenticated access to `/admin/*` or `/user/*` redirects to `/login`.
+- Authenticated users visiting `/login` are redirected to role dashboard.
+- Role mismatch redirects (`admin` trying user routes, or vice versa).
 
-#### Response
+## 8. Main Operational Workflows
+
+### 8.1 Registration to Member Approval Flow
+
+1. User submits registration on `/register`.
+2. Record is saved in browser storage as pending registration.
+3. Admin reviews in `/admin/members`.
+4. Admin approves or rejects.
+5. On approval, frontend prepares first-login credentials and a simulated email event.
+
+### 8.2 Request Queue Flow
+
+Admin request workflows include:
+
+- Open priority queue.
+- Assign team.
+- Close resolved batch.
+- Per-request lifecycle actions (start, resolve, escalate).
+
+### 8.3 Scholarship Management Flow
+
+`/admin/finance` (Scholarships) includes:
+
+- Scholarship creation.
+- Donor to scholarship mapping with amount and cycle.
+- Payment batch approval.
+- Eligibility audit actions.
+- Ledger export.
+
+### 8.4 Analytics Monitoring Flow
+
+`/admin/analytics` includes:
+
+- Fully visual analytics board.
+- Trend graph, pie chart, funnel, heatmap, and section comparison views.
+- Date-range filter type:
+  - 7d
+  - 30d
+  - 90d
+  - custom (from and to date)
+- Range-aware visualization behavior.
+
+## 9. Admin Settings (Fully Implemented)
+
+`/admin/settings` now uses `AdminSettingsPanel.tsx` and includes:
+
+- General
+- Access Control
+- Workflow
+- Notifications
+- Security
+- Data and Backup
+- Integrations
+
+Actions available:
+
+- Save all settings
+- Reset defaults
+- Export settings JSON
+
+Additional capabilities:
+
+- Settings health scoring
+- Utility controls for security and data operations
+- Frontend persistence via local storage key `admin_settings_v1`
+
+## 10. Local Storage and Cookie Keys
+
+### 10.1 Cookies
+
+- `auth_user`
+- `auth_role`
+
+### 10.2 Local Storage
+
+- `auth_user`
+- `auth_role`
+- `auth_first_name`
+- `theme`
+- `has_visited_site`
+- `admin_member_registrations_v1`
+- `admin_email_outbox_v1`
+- `pending_first_login_users_v1`
+- `admin_settings_v1`
+
+## 11. API
+
+### 11.1 Visitor Counter API
+
+Route: `/api/counter`
+
+Behavior:
+
+- Returns visitor count.
+- Supports increment mode using query `increment=true`.
+- Reads and writes `public/counter.json`.
+
+Sample response:
 
 ```json
 {
@@ -192,180 +323,88 @@ Returns unique visitor count.
 }
 ```
 
-#### Implementation Notes
+## 12. Development Setup
 
-- Counter storage file: `public/counter.json`
-- Initializes with base value `1240` if file is missing.
-- Frontend uses localStorage key `has_visited_site` to avoid repeated increments from same browser.
-
-## 9. System Diagrams
-
-This section gives a visual view of how the app is organized and how key requests move through the system.
-
-### High-Level Architecture
-
-```mermaid
-flowchart TD
-  U[User Browser] --> N[Next.js App Router]
-  N --> P[UI Pages]
-  N --> C[Shared Components]
-  N --> A[API Route /api/counter]
-  P --> C
-  C --> V[UniqueViewerCounter]
-  V --> A
-  A --> J[(public/counter.json)]
-```
-
-What this diagram shows:
-
-- Users open pages in the browser.
-- Next.js App Router serves pages and shared components.
-- Footer component uses `UniqueViewerCounter`.
-- Counter component calls `/api/counter`.
-- API reads/writes `public/counter.json`.
-
-### Unique Visitor Counter Flow
-
-```mermaid
-sequenceDiagram
-  participant B as Browser
-  participant L as localStorage
-  participant C as UniqueViewerCounter
-  participant API as /api/counter
-  participant F as counter.json
-
-  B->>C: Open site
-  C->>L: Check has_visited_site
-  alt First visit in this browser
-    C->>API: GET /api/counter?increment=true
-    API->>F: Read current count
-    API->>F: Write count + 1
-    API-->>C: Return updated count
-    C->>L: Save has_visited_site=true
-  else Already visited
-    C->>API: GET /api/counter
-    API->>F: Read current count
-    API-->>C: Return count
-  end
-  C-->>B: Show visitor count
-```
-
-Why this flow is useful:
-
-- Avoids repeated increments from the same browser.
-- Keeps API logic simple and transparent.
-- Stores count in a lightweight JSON file for now.
-
-## 10. Development Setup
-
-### Prerequisites
+### 12.1 Prerequisites
 
 - Node.js 20+
 - npm
 
-### Install Dependencies
+### 12.2 Install
 
 ```bash
 npm install
 ```
 
-### Run Development Server
+### 12.3 Run Dev Server
 
 ```bash
 npm run dev
 ```
 
-Application URL:
+URL:
 
-`http://localhost:3000`
+- `http://localhost:3000`
 
-### Production Build
+### 12.4 Build and Start
 
 ```bash
 npm run build
 npm run start
 ```
 
-### Lint
+### 12.5 Lint
 
 ```bash
 npm run lint
 ```
 
-## 11. Scripts
+## 13. Scripts
 
 | Script | Command | Description |
 |---|---|---|
-| dev | `next dev` | Start development server |
-| build | `next build` | Create production build |
-| start | `next start` | Run production server |
-| lint | `eslint` | Run static lint checks |
+| dev | `next dev` | Start dev server |
+| build | `next build` | Production build |
+| start | `next start` | Start production server |
+| lint | `eslint` | Lint project |
 
-## 12. Engineering Standards
+## 14. Design and Engineering Rules
 
-Project standards are maintained through `project_rules.md`.
+Project rules are defined in `project_rules.md`.
 
-Key rules:
+Important enforced rules:
 
-- Use only project theme variables for colors.
-- Keep dependency count minimal.
-- Use only `lucide-react` for icons.
-- Prioritize performance and avoid unnecessary UI bloat.
-- Build mobile-first and then scale to tablet/desktop.
+- Use theme tokens, avoid hardcoded random colors.
+- Keep dependency footprint minimal.
+- Use `lucide-react` for icons.
+- Prioritize performance.
+- Build mobile-first.
 
-## 13. Known Limitations
+## 15. Known Limitations
 
-- Most forms are currently presentational and not connected to persistent backend services.
-- Authentication and login logic are not fully implemented yet.
-- Search and filter controls are UI-ready but data logic is pending.
+- Core workflows are frontend-simulated and not yet backed by persistent server APIs.
+- Local storage is used for workflow continuity in development/demo mode.
+- No production-grade authentication backend yet.
 
-## 14. Future Roadmap (What We Will Use Next)
+## 16. Recommended Next Steps
 
-The following items are planned for upcoming phases.
+1. Connect admin and user workflows to real backend APIs.
+2. Replace local storage workflow state with database persistence.
+3. Add production authentication and session security.
+4. Add automated tests for auth, approval, and scholarship payment flows.
+5. Add CI pipeline for lint, build, and test checks.
 
-### Backend and Data
+## 17. Deployment
 
-- Add server-side API integration for registration, mentorship, contact, and other forms.
-- Introduce database storage for users, profiles, jobs, events, and mentorship records.
-- Add admin-level moderation and verification flows.
+Recommended target: Vercel (or any Next.js-compatible Node hosting).
 
-### Authentication and Security
+Typical flow:
 
-- Implement secure authentication flow for alumni accounts.
-- Add role-based access for user/admin/moderator actions.
-- Improve request validation, error handling, and audit-safe operations.
+1. Import repository.
+2. Install dependencies.
+3. Run build command `npm run build`.
+4. Start with `npm run start` (for non-serverless environments).
 
-### Product Features
+## 18. Maintainers
 
-- Add real search/filter logic for directory and jobs.
-- Add profile management dashboard for alumni.
-- Add content management workflows for events/news/stories.
-
-### Quality and Operations
-
-- Add test coverage for critical journeys.
-- Add CI checks for lint/build/test before deployment.
-- Add monitoring and error tracking for production stability.
-
-## 15. Recommended Next Implementation Order
-
-1. Connect forms to backend APIs and database.
-2. Build authentication and protected profile routes.
-3. Implement real search/filter on jobs and directory.
-4. Add admin dashboard for content and member verification.
-5. Add test suite and CI pipeline.
-
-## 16. Deployment
-
-This project is compatible with Vercel and other Node.js hosting providers that support Next.js App Router.
-
-### Vercel Deployment Flow
-
-1. Import repository in Vercel.
-2. Install dependencies automatically.
-3. Build command: `npm run build`
-4. Start command: `npm run start`
-
-## 17. Maintainers
-
-Designed and developed by the Alumni Tech Team.
+Alumni Tech Team.
