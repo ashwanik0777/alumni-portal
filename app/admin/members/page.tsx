@@ -43,6 +43,23 @@ type MembersApiResponse = {
   message?: string;
 };
 
+type OtpRequestResponse = {
+  message?: string;
+  verificationId?: string;
+  expiresAt?: string;
+  devOtp?: string;
+};
+
+type StatusListResponse = {
+  rows: MemberRow[];
+  message?: string;
+};
+
+type MemberView = "queue" | "approved" | "rejected";
+
+const membersResponseCache = new Map<string, { expiresAt: number; data: MembersApiResponse }>();
+const MEMBERS_CLIENT_CACHE_TTL_MS = 12_000;
+
 function statusChip(status: MemberStatus) {
   if (status === "Approved") return "border-emerald-200 bg-emerald-50 text-emerald-700";
   if (status === "Pending" || status === "Needs Info") return "border-amber-200 bg-amber-50 text-amber-700";
@@ -91,6 +108,15 @@ export default function AdminMembersPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [activeView, setActiveView] = useState<MemberView>("queue");
+  const [approvedRows, setApprovedRows] = useState<MemberRow[]>([]);
+  const [rejectedRows, setRejectedRows] = useState<MemberRow[]>([]);
+  const [statusListLoading, setStatusListLoading] = useState(false);
+  const [otpVerificationId, setOtpVerificationId] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpExpiresAt, setOtpExpiresAt] = useState("");
+  const [otpRequestedEmail, setOtpRequestedEmail] = useState("");
+  const [showCreateMember, setShowCreateMember] = useState(false);
 
   const [newMember, setNewMember] = useState({
     fullName: "",
@@ -111,11 +137,23 @@ export default function AdminMembersPage() {
     return params.toString();
   }, [batchFilter, page, pageSize, search, statusFilter]);
 
-  const loadMembers = async (signal?: AbortSignal) => {
+  const loadMembers = async (signal?: AbortSignal, forceFresh = false) => {
+    const cacheKey = queryString;
+    const cached = forceFresh ? undefined : membersResponseCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      setRows(cached.data.rows || []);
+      setSummary(cached.data.summary || { pendingCount: 0, approvedCount: 0, rejectedCount: 0 });
+      setTotalPages(cached.data.pagination?.totalPages || 1);
+      setTotal(cached.data.pagination?.total || 0);
+      setLoading(false);
+      return;
+    }
+
     try {
-      setLoading(true);
-      const response = await fetch(`/api/admin/members?${queryString}`, {
-        cache: "no-store",
+      setLoading((prev) => prev || rows.length === 0);
+      const refreshParam = forceFresh ? `&_=${Date.now()}` : "";
+      const response = await fetch(`/api/admin/members?${queryString}${refreshParam}`, {
+        cache: forceFresh ? "no-store" : "default",
         signal,
       });
       const payload = (await response.json()) as MembersApiResponse;
@@ -129,6 +167,10 @@ export default function AdminMembersPage() {
       setSummary(payload.summary || { pendingCount: 0, approvedCount: 0, rejectedCount: 0 });
       setTotalPages(payload.pagination?.totalPages || 1);
       setTotal(payload.pagination?.total || 0);
+      membersResponseCache.set(cacheKey, {
+        expiresAt: Date.now() + MEMBERS_CLIENT_CACHE_TTL_MS,
+        data: payload,
+      });
       setMessage("");
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
@@ -139,11 +181,32 @@ export default function AdminMembersPage() {
     }
   };
 
+  const loadStatusLists = async (forceFresh = false) => {
+    setStatusListLoading(true);
+    try {
+      const refreshParam = forceFresh ? `&_=${Date.now()}` : "";
+      const [approvedRes, rejectedRes] = await Promise.all([
+        fetch(`/api/admin/members/lists?type=approved${refreshParam}`, { cache: forceFresh ? "no-store" : "default" }),
+        fetch(`/api/admin/members/lists?type=rejected${refreshParam}`, { cache: forceFresh ? "no-store" : "default" }),
+      ]);
+
+      const approvedPayload = (await approvedRes.json()) as StatusListResponse;
+      const rejectedPayload = (await rejectedRes.json()) as StatusListResponse;
+
+      if (approvedRes.ok) setApprovedRows(approvedPayload.rows || []);
+      if (rejectedRes.ok) setRejectedRows(rejectedPayload.rows || []);
+    } catch {
+      setMessage("Unable to load approval/rejection lists.");
+    } finally {
+      setStatusListLoading(false);
+    }
+  };
+
   useEffect(() => {
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       void loadMembers(controller.signal);
-    }, 200);
+    }, 180);
 
     return () => {
       window.clearTimeout(timer);
@@ -151,9 +214,92 @@ export default function AdminMembersPage() {
     };
   }, [queryString]);
 
+  useEffect(() => {
+    void loadStatusLists();
+  }, []);
+
+  const applyOptimisticStatusUpdate = (memberId: string, status: MemberStatus, rejectionReason?: string) => {
+    setRows((prev) =>
+      prev.map((row) =>
+        row.id === memberId
+          ? {
+              ...row,
+              status,
+              rejectionReason: status === "Rejected" ? rejectionReason || null : null,
+              updatedAt: new Date().toISOString(),
+            }
+          : row,
+      ),
+    );
+
+    setApprovedRows((prev) => {
+      const targetInQueue = rows.find((item) => item.id === memberId);
+      const withoutTarget = prev.filter((item) => item.id !== memberId);
+      if (status !== "Approved" || !targetInQueue) {
+        return withoutTarget;
+      }
+      return [
+        {
+          ...targetInQueue,
+          status,
+          rejectionReason: null,
+          updatedAt: new Date().toISOString(),
+        },
+        ...withoutTarget,
+      ];
+    });
+
+    setRejectedRows((prev) => {
+      const targetInQueue = rows.find((item) => item.id === memberId);
+      const withoutTarget = prev.filter((item) => item.id !== memberId);
+      if (status !== "Rejected" || !targetInQueue) {
+        return withoutTarget;
+      }
+      return [
+        {
+          ...targetInQueue,
+          status,
+          rejectionReason: rejectionReason || "Rejected by admin",
+          updatedAt: new Date().toISOString(),
+        },
+        ...withoutTarget,
+      ];
+    });
+
+    setSummary((prev) => {
+      const existing = rows.find((item) => item.id === memberId);
+      if (!existing || existing.status === status) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      if (existing.status === "Pending" || existing.status === "Needs Info") {
+        next.pendingCount = Math.max(0, next.pendingCount - 1);
+      }
+      if (existing.status === "Approved") {
+        next.approvedCount = Math.max(0, next.approvedCount - 1);
+      }
+      if (existing.status === "Rejected") {
+        next.rejectedCount = Math.max(0, next.rejectedCount - 1);
+      }
+
+      if (status === "Pending" || status === "Needs Info") {
+        next.pendingCount += 1;
+      }
+      if (status === "Approved") {
+        next.approvedCount += 1;
+      }
+      if (status === "Rejected") {
+        next.rejectedCount += 1;
+      }
+
+      return next;
+    });
+  };
+
   const updateStatus = async (memberId: string, status: MemberStatus) => {
     const rejectionReason = status === "Rejected" ? window.prompt("Enter rejection reason") || "" : undefined;
-    if (status === "Rejected" && !rejectionReason.trim()) {
+    if (status === "Rejected" && !rejectionReason?.trim()) {
       setMessage("Rejection reason is required.");
       return;
     }
@@ -172,7 +318,10 @@ export default function AdminMembersPage() {
         return;
       }
 
-      await loadMembers();
+      applyOptimisticStatusUpdate(memberId, status, rejectionReason);
+      membersResponseCache.clear();
+      await loadMembers(undefined, true);
+      await loadStatusLists(true);
       setMessage(`Member status updated to ${status}.`);
     } catch {
       setMessage("Network error while updating member.");
@@ -190,7 +339,9 @@ export default function AdminMembersPage() {
         setMessage(payload.message || "Unable to run bulk approve.");
         return;
       }
-      await loadMembers();
+      membersResponseCache.clear();
+      await loadMembers(undefined, true);
+      await loadStatusLists(true);
       setMessage(`Bulk approve completed. ${payload.updatedCount || 0} record(s) updated.`);
     } catch {
       setMessage("Network error while bulk approving.");
@@ -199,14 +350,64 @@ export default function AdminMembersPage() {
     }
   };
 
+  const requestOtp = async () => {
+    const email = newMember.email.trim().toLowerCase();
+    if (!email) {
+      setMessage("Enter member email first for OTP request.");
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const response = await fetch("/api/admin/members/otp/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const payload = (await response.json()) as OtpRequestResponse;
+      if (!response.ok || !payload.verificationId) {
+        setMessage(payload.message || "Unable to request OTP.");
+        return;
+      }
+
+      setOtpVerificationId(payload.verificationId);
+      setOtpExpiresAt(payload.expiresAt || "");
+      setOtpRequestedEmail(email);
+      if (payload.devOtp) {
+        setMessage(`OTP sent. Demo OTP: ${payload.devOtp}`);
+      } else {
+        setMessage("OTP sent successfully.");
+      }
+    } catch {
+      setMessage("Network error while requesting OTP.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const createMember = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!otpVerificationId || !otpCode) {
+      setMessage("Request and verify OTP first to create member.");
+      return;
+    }
+
+    if (newMember.email.trim().toLowerCase() !== otpRequestedEmail) {
+      setMessage("OTP was generated for a different email. Please request OTP again.");
+      return;
+    }
+
     setActionLoading(true);
     try {
       const response = await fetch("/api/admin/members", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newMember),
+        body: JSON.stringify({
+          ...newMember,
+          otpVerificationId,
+          otpCode,
+        }),
       });
       const payload = (await response.json()) as { message?: string };
       if (!response.ok) {
@@ -215,8 +416,14 @@ export default function AdminMembersPage() {
       }
 
       setNewMember({ fullName: "", email: "", passingYear: "", house: "", mobile: "", fatherName: "" });
+      setOtpVerificationId("");
+      setOtpCode("");
+      setOtpExpiresAt("");
+      setOtpRequestedEmail("");
       setPage(1);
-      await loadMembers();
+      membersResponseCache.clear();
+      await loadMembers(undefined, true);
+      await loadStatusLists(true);
       setMessage("Member created successfully.");
     } catch {
       setMessage("Network error while creating member.");
@@ -259,6 +466,38 @@ export default function AdminMembersPage() {
     URL.revokeObjectURL(url);
   };
 
+  const exportApprovedList = () => {
+    if (approvedRows.length === 0) {
+      setMessage("No approved records to export.");
+      return;
+    }
+
+    const header = "ID,Full Name,Email,Batch,House,Mobile,Father Name,Approved At";
+    const lines = approvedRows.map((row) =>
+      [
+        row.id,
+        row.fullName,
+        row.email,
+        row.passingYear,
+        row.house,
+        row.mobile,
+        row.fatherName,
+        new Date(row.updatedAt).toLocaleString(),
+      ]
+        .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+        .join(","),
+    );
+    const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `approved-members-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) {
     return <MembersSkeleton />;
   }
@@ -266,8 +505,21 @@ export default function AdminMembersPage() {
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border border-border bg-card p-5 sm:p-7">
-        <h2 className="text-2xl font-black sm:text-3xl">Members Management</h2>
-        <p className="mt-2 text-sm text-text-secondary">Fully dynamic member records from database with protected admin APIs.</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-black sm:text-3xl">Members Management</h2>
+            <p className="mt-2 text-sm text-text-secondary">
+                View and manage member applications, approvals, and rejections.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowCreateMember((prev) => !prev)}
+            className="rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+          >
+            {showCreateMember ? "Close Create Member" : "Create New Member"}
+          </button>
+        </div>
         {message && <p className="mt-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-text-secondary">{message}</p>}
       </section>
 
@@ -291,6 +543,39 @@ export default function AdminMembersPage() {
           <h3 className="text-lg font-bold">Filters and Actions</h3>
           <div className="flex flex-wrap gap-2">
             <button
+              onClick={() => setActiveView("queue")}
+              className={[
+                "rounded-lg border px-3 py-2 text-xs font-semibold",
+                activeView === "queue"
+                  ? "border-primary bg-primary text-white"
+                  : "border-border bg-background text-text-primary hover:border-primary/30 hover:text-primary",
+              ].join(" ")}
+            >
+              Queue View
+            </button>
+            <button
+              onClick={() => setActiveView("approved")}
+              className={[
+                "rounded-lg border px-3 py-2 text-xs font-semibold",
+                activeView === "approved"
+                  ? "border-primary bg-primary text-white"
+                  : "border-border bg-background text-text-primary hover:border-primary/30 hover:text-primary",
+              ].join(" ")}
+            >
+              Approved List
+            </button>
+            <button
+              onClick={() => setActiveView("rejected")}
+              className={[
+                "rounded-lg border px-3 py-2 text-xs font-semibold",
+                activeView === "rejected"
+                  ? "border-primary bg-primary text-white"
+                  : "border-border bg-background text-text-primary hover:border-primary/30 hover:text-primary",
+              ].join(" ")}
+            >
+              Rejected List
+            </button>
+            <button
               onClick={bulkApprove}
               disabled={actionLoading}
               className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-70"
@@ -302,6 +587,12 @@ export default function AdminMembersPage() {
               className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
             >
               <Download className="h-3.5 w-3.5" /> Export
+            </button>
+            <button
+              onClick={exportApprovedList}
+              className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+            >
+              <Download className="h-3.5 w-3.5" /> Export Approved
             </button>
           </div>
         </div>
@@ -362,6 +653,7 @@ export default function AdminMembersPage() {
         </div>
       </section>
 
+      {showCreateMember && (
       <section className="rounded-2xl border border-border bg-card p-5">
         <h3 className="text-lg font-bold">Create New Member</h3>
         <form onSubmit={createMember} className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -371,13 +663,31 @@ export default function AdminMembersPage() {
           <input className="rounded-xl border border-border bg-background px-3 py-2 text-sm" placeholder="House" value={newMember.house} onChange={(e) => setNewMember((p) => ({ ...p, house: e.target.value }))} required />
           <input className="rounded-xl border border-border bg-background px-3 py-2 text-sm" placeholder="Mobile" value={newMember.mobile} onChange={(e) => setNewMember((p) => ({ ...p, mobile: e.target.value }))} required />
           <input className="rounded-xl border border-border bg-background px-3 py-2 text-sm" placeholder="Father Name" value={newMember.fatherName} onChange={(e) => setNewMember((p) => ({ ...p, fatherName: e.target.value }))} required />
+
+          <input
+            className="rounded-xl border border-border bg-background px-3 py-2 text-sm md:col-span-2"
+            placeholder="Enter OTP"
+            value={otpCode}
+            onChange={(event) => setOtpCode(event.target.value)}
+            required
+          />
+          <div className="rounded-xl border border-border bg-background px-3 py-2 text-xs text-text-secondary">
+            {otpVerificationId
+              ? `OTP linked • Expires: ${otpExpiresAt ? new Date(otpExpiresAt).toLocaleTimeString() : "soon"}`
+              : "Request OTP to verify member creation"}
+          </div>
+
           <div className="md:col-span-3 flex justify-end">
+            <button type="button" onClick={requestOtp} disabled={actionLoading} className="mr-2 inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary disabled:opacity-70">
+              Request OTP
+            </button>
             <button type="submit" disabled={actionLoading} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-70">
               <UserPlus className="h-4 w-4" /> Add Member
             </button>
           </div>
         </form>
       </section>
+      )}
 
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="mb-4 flex items-center justify-between">
@@ -388,7 +698,7 @@ export default function AdminMembersPage() {
         </div>
 
         <div className="space-y-3">
-          {rows.map((row) => (
+          {activeView === "queue" && rows.map((row) => (
             <article key={row.id} className="rounded-xl border border-border bg-background p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
@@ -414,34 +724,78 @@ export default function AdminMembersPage() {
               )}
 
               <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  onClick={() => updateStatus(row.id, "Approved")}
-                  disabled={actionLoading}
-                  className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-70"
-                >
-                  Approve
-                </button>
-                <button
-                  onClick={() => updateStatus(row.id, "Needs Info")}
-                  disabled={actionLoading}
-                  className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-70"
-                >
-                  Needs Info
-                </button>
-                <button
-                  onClick={() => updateStatus(row.id, "Rejected")}
-                  disabled={actionLoading}
-                  className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-70"
-                >
-                  Reject
-                </button>
+                {(row.status === "Pending" || row.status === "Needs Info") && (
+                  <button
+                    onClick={() => updateStatus(row.id, "Approved")}
+                    disabled={actionLoading}
+                    className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-70"
+                  >
+                    Approve
+                  </button>
+                )}
+
+                {row.status === "Pending" && (
+                  <button
+                    onClick={() => updateStatus(row.id, "Needs Info")}
+                    disabled={actionLoading}
+                    className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-70"
+                  >
+                    Needs Info
+                  </button>
+                )}
+
+                {(row.status === "Pending" || row.status === "Needs Info") && (
+                  <button
+                    onClick={() => updateStatus(row.id, "Rejected")}
+                    disabled={actionLoading}
+                    className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-70"
+                  >
+                    Reject
+                  </button>
+                )}
               </div>
             </article>
           ))}
 
-          {rows.length === 0 && (
+          {activeView === "approved" && !statusListLoading && approvedRows.map((row) => (
+            <article key={`approved-${row.id}`} className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+              <p className="text-sm font-black text-text-primary">{row.fullName}</p>
+              <p className="text-xs text-text-secondary">{row.id} • {row.email} • Batch {row.passingYear}</p>
+              <p className="mt-2 text-xs text-emerald-700">Approved at: {new Date(row.updatedAt).toLocaleString()}</p>
+            </article>
+          ))}
+
+          {activeView === "rejected" && !statusListLoading && rejectedRows.map((row) => (
+            <article key={`rejected-${row.id}`} className="rounded-xl border border-rose-200 bg-rose-50/40 p-4">
+              <p className="text-sm font-black text-text-primary">{row.fullName}</p>
+              <p className="text-xs text-text-secondary">{row.id} • {row.email} • Batch {row.passingYear}</p>
+              <p className="mt-2 text-xs text-rose-700">Reason: {row.rejectionReason || "Rejected by admin"}</p>
+            </article>
+          ))}
+
+          {statusListLoading && activeView !== "queue" && (
+            <div className="space-y-2 animate-pulse">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={`status-list-loading-${i}`} className="h-16 rounded-xl bg-border/50" />
+              ))}
+            </div>
+          )}
+
+          {activeView === "queue" && rows.length === 0 && (
             <div className="rounded-xl border border-dashed border-border bg-background p-8 text-center text-sm text-text-secondary">
               No records found for selected filters.
+            </div>
+          )}
+
+          {activeView === "approved" && !statusListLoading && approvedRows.length === 0 && (
+            <div className="rounded-xl border border-dashed border-border bg-background p-8 text-center text-sm text-text-secondary">
+              No approved records found.
+            </div>
+          )}
+
+          {activeView === "rejected" && !statusListLoading && rejectedRows.length === 0 && (
+            <div className="rounded-xl border border-dashed border-border bg-background p-8 text-center text-sm text-text-secondary">
+              No rejected records found.
             </div>
           )}
         </div>
@@ -451,14 +805,14 @@ export default function AdminMembersPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              disabled={page === 1}
+              disabled={activeView !== "queue" || page === 1}
               className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
             >
               Prev
             </button>
             <button
               onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={page === totalPages}
+              disabled={activeView !== "queue" || page === totalPages}
               className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
             >
               Next

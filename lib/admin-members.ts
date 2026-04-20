@@ -24,6 +24,29 @@ export type MemberListFilters = {
   pageSize?: number;
 };
 
+type MembersListResult = {
+  rows: AdminMember[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+  summary: {
+    pendingCount: number;
+    approvedCount: number;
+    rejectedCount: number;
+  };
+};
+
+type MembersListCacheEntry = {
+  expiresAt: number;
+  data: MembersListResult;
+};
+
+const MEMBERS_LIST_CACHE_TTL_MS = 12_000;
+const membersListCache = new Map<string, MembersListCacheEntry>();
+
 const seedMembers: Array<Omit<AdminMember, "id" | "submittedAt" | "updatedAt">> = [
   {
     fullName: "Ritika Verma",
@@ -113,6 +136,35 @@ export async function ensureAdminMembersTable() {
   }
 }
 
+async function ensureMemberCreateOtpTable() {
+  await postgresPool.query(`
+    CREATE TABLE IF NOT EXISTS admin_member_create_otp (
+      verification_id TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      otp_code TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_member_create_otp_email ON admin_member_create_otp(email)`);
+  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_member_create_otp_expires ON admin_member_create_otp(expires_at)`);
+}
+
+function getMembersListCacheKey(filters: MemberListFilters) {
+  return JSON.stringify({
+    search: (filters.search || "").trim().toLowerCase(),
+    status: filters.status || "All",
+    batch: filters.batch || "All",
+    page: Math.max(1, filters.page || 1),
+    pageSize: Math.min(50, Math.max(1, filters.pageSize || 10)),
+  });
+}
+
+function clearMembersListCache() {
+  membersListCache.clear();
+}
+
 function mapRow(row: {
   id: string;
   full_name: string;
@@ -143,6 +195,12 @@ function mapRow(row: {
 
 export async function listAdminMembers(filters: MemberListFilters) {
   await ensureAdminMembersTable();
+
+  const cacheKey = getMembersListCacheKey(filters);
+  const cached = membersListCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
 
   const page = Math.max(1, filters.page || 1);
   const pageSize = Math.min(50, Math.max(1, filters.pageSize || 10));
@@ -210,7 +268,7 @@ export async function listAdminMembers(filters: MemberListFilters) {
     FROM admin_members
   `);
 
-  return {
+  const result: MembersListResult = {
     rows: rows.rows.map(mapRow),
     pagination: {
       page,
@@ -224,6 +282,113 @@ export async function listAdminMembers(filters: MemberListFilters) {
       rejectedCount: Number(summary.rows[0]?.rejected_count || "0"),
     },
   };
+
+  membersListCache.set(cacheKey, {
+    expiresAt: Date.now() + MEMBERS_LIST_CACHE_TTL_MS,
+    data: result,
+  });
+
+  return result;
+}
+
+export async function listAdminMembersByStatus(status: "Approved" | "Rejected", limit = 100) {
+  await ensureAdminMembersTable();
+
+  const result = await postgresPool.query<{
+    id: string;
+    full_name: string;
+    email: string;
+    passing_year: string;
+    house: string;
+    mobile: string;
+    father_name: string;
+    status: MemberStatus;
+    rejection_reason: string | null;
+    submitted_at: string;
+    updated_at: string;
+  }>(
+    `
+    SELECT id::text, full_name, email, passing_year, house, mobile, father_name, status, rejection_reason, submitted_at::text, updated_at::text
+    FROM admin_members
+    WHERE status = $1
+    ORDER BY updated_at DESC
+    LIMIT $2
+    `,
+    [status, Math.max(1, Math.min(500, limit))],
+  );
+
+  return result.rows.map(mapRow);
+}
+
+export async function requestMemberCreateOtp(email: string) {
+  await ensureMemberCreateOtpTable();
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const verificationId = `OTP-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+  await postgresPool.query(
+    `
+    INSERT INTO admin_member_create_otp (verification_id, email, otp_code, expires_at, used)
+    VALUES ($1, $2, $3, $4, FALSE)
+    `,
+    [verificationId, normalizedEmail, otpCode, expiresAt.toISOString()],
+  );
+
+  return {
+    verificationId,
+    expiresAt: expiresAt.toISOString(),
+    otpCode,
+  };
+}
+
+export async function verifyMemberCreateOtp(payload: {
+  email: string;
+  verificationId: string;
+  otpCode: string;
+}) {
+  await ensureMemberCreateOtpTable();
+
+  const result = await postgresPool.query<{
+    verification_id: string;
+    used: boolean;
+    expires_at: string;
+    email: string;
+    otp_code: string;
+  }>(
+    `
+    SELECT verification_id, used, expires_at::text, email, otp_code
+    FROM admin_member_create_otp
+    WHERE verification_id = $1
+    LIMIT 1
+    `,
+    [payload.verificationId],
+  );
+
+  if (result.rowCount === 0) {
+    return { ok: false, reason: "invalid" as const };
+  }
+
+  const otp = result.rows[0];
+  if (otp.used) {
+    return { ok: false, reason: "used" as const };
+  }
+
+  if (otp.email !== payload.email.trim().toLowerCase()) {
+    return { ok: false, reason: "mismatch" as const };
+  }
+
+  if (otp.otp_code !== payload.otpCode.trim()) {
+    return { ok: false, reason: "incorrect" as const };
+  }
+
+  if (new Date(otp.expires_at).getTime() < Date.now()) {
+    return { ok: false, reason: "expired" as const };
+  }
+
+  await postgresPool.query(`UPDATE admin_member_create_otp SET used = TRUE WHERE verification_id = $1`, [payload.verificationId]);
+  return { ok: true as const };
 }
 
 export async function createAdminMember(payload: {
@@ -257,7 +422,9 @@ export async function createAdminMember(payload: {
     [payload.fullName, payload.email.toLowerCase(), payload.passingYear, payload.house, payload.mobile, payload.fatherName],
   );
 
-  return mapRow(result.rows[0]);
+  const created = mapRow(result.rows[0]);
+  clearMembersListCache();
+  return created;
 }
 
 export async function updateAdminMemberStatus(payload: {
@@ -296,7 +463,9 @@ export async function updateAdminMemberStatus(payload: {
     return null;
   }
 
-  return mapRow(result.rows[0]);
+  const updated = mapRow(result.rows[0]);
+  clearMembersListCache();
+  return updated;
 }
 
 export async function bulkApprovePendingMembers() {
@@ -311,5 +480,7 @@ export async function bulkApprovePendingMembers() {
     SELECT COUNT(*)::text AS count FROM updated
   `);
 
-  return Number(updated.rows[0]?.count || "0");
+  const count = Number(updated.rows[0]?.count || "0");
+  clearMembersListCache();
+  return count;
 }
