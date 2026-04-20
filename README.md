@@ -33,8 +33,14 @@ The main goals of this project are:
 
 ### Partially Implemented
 
-- Login route exists but is currently under construction.
 - Forms and filters are UI-first and not yet connected to a persistent backend.
+
+### Implemented Dashboard Modules
+
+- Role-based login with user and admin dashboards.
+- Admin dashboard with overview and all operational tabs:
+  - members, programs, events, requests, finance, analytics, security, settings
+- User dashboard with profile, scholarships, jobs, mentorship, network, events, messages, and settings.
 
 ## 3. Tech Stack (What We Are Using)
 
@@ -109,12 +115,33 @@ public/
 | /privacy | Privacy policy | Implemented |
 | /terms | Terms of service | Implemented |
 | /team | Team showcase | Implemented |
-| /login | Login flow | Under construction |
+| /login | Role-based login flow | Implemented |
 | /demo | Theme and style demo | Implemented |
 | /donate | Donation page | Implemented |
 | /news | Community news page | Implemented |
 | /share-story | Story sharing page | Implemented |
 | /api/counter | Unique visitor counter API | Implemented |
+
+## 6A. Login Guide and Demo Credentials
+
+Use these credentials on the login page:
+
+- Admin Login
+  - Email: `admin@jnvportal.in`
+  - Password: `Admin@123`
+- User Login
+  - Email: `alumni@jnvportal.in`
+  - Password: `User@123`
+- Both-access Demo (choose role after login)
+  - Email: `access@jnvportal.in`
+  - Password: `Portal@123`
+
+How admin login works:
+
+1. Open `/login`.
+2. Enter admin credentials.
+3. After successful validation, system sets auth cookies and redirects to `/admin`.
+4. Protected routing (`/admin` and `/user`) is controlled by `proxy.ts`.
 
 ## 6. Design System
 

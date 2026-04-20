@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   BookOpen,
@@ -31,8 +31,27 @@ const stats = [
 
 type FormMode = "login" | "forgot-request" | "forgot-reset" | "forgot-success";
 
+const DEMO_CREDENTIALS = {
+  admin: {
+    email: "admin@jnvportal.in",
+    password: "Admin@123",
+    firstName: "Admin",
+  },
+  user: {
+    email: "alumni@jnvportal.in",
+    password: "User@123",
+    firstName: "Alumni",
+  },
+  both: {
+    email: "access@jnvportal.in",
+    password: "admin123",
+    firstName: "Alumni",
+  },
+} as const;
+
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>("login");
@@ -89,8 +108,10 @@ export default function LoginPage() {
     localStorage.setItem("auth_first_name", firstName);
     setSuccess(true);
     setLoginMessage(`Signed in successfully. Redirecting to ${targetRole === "admin" ? "Admin" : "User"} dashboard.`);
+    const nextPath = searchParams.get("next");
+    const safeNextPath = nextPath && nextPath.startsWith("/") ? nextPath : null;
     setTimeout(() => {
-      router.push(targetRole === "admin" ? "/admin" : "/user");
+      router.push(safeNextPath || (targetRole === "admin" ? "/admin" : "/user"));
     }, 350);
   };
 
@@ -98,11 +119,52 @@ export default function LoginPage() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") || "");
+    const password = String(form.get("password") || "");
+    const normalizedEmail = email.trim().toLowerCase();
     const detectedAccess = resolveAccessFromEmail(email);
     const firstName = resolveFirstNameFromEmail(email);
     setPendingFirstName(firstName);
 
     setSuccess(false);
+
+    if (normalizedEmail === DEMO_CREDENTIALS.admin.email) {
+      if (password !== DEMO_CREDENTIALS.admin.password) {
+        setMultiAccess(false);
+        setLoginMessage("Invalid admin password. Please use the provided admin credentials.");
+        return;
+      }
+      setMultiAccess(false);
+      continueLogin("admin", DEMO_CREDENTIALS.admin.firstName);
+      return;
+    }
+
+    if (normalizedEmail === DEMO_CREDENTIALS.user.email) {
+      if (password !== DEMO_CREDENTIALS.user.password) {
+        setMultiAccess(false);
+        setLoginMessage("Invalid user password. Please use the provided user credentials.");
+        return;
+      }
+      setMultiAccess(false);
+      continueLogin("user", DEMO_CREDENTIALS.user.firstName);
+      return;
+    }
+
+    if (normalizedEmail === DEMO_CREDENTIALS.both.email) {
+      if (password !== DEMO_CREDENTIALS.both.password) {
+        setMultiAccess(false);
+        setLoginMessage("Invalid password for account chooser demo.");
+        return;
+      }
+      setMultiAccess(true);
+      setLoginMessage("Your credentials are valid for both accounts. Please choose which account you want to open.");
+      return;
+    }
+
+    if (normalizedEmail.endsWith("@jnvportal.in") || detectedAccess === "admin") {
+      setMultiAccess(false);
+      setLoginMessage("Unknown credentials. Please use one of the demo accounts shown below.");
+      return;
+    }
 
     if (detectedAccess === "both") {
       setMultiAccess(true);
@@ -290,6 +352,7 @@ export default function LoginPage() {
                     <p className="text-[11px] uppercase tracking-[0.18em] font-bold text-primary">Welcome Back</p>
                     <h2 className="mt-1 text-3xl sm:text-4xl font-black">Sign in</h2>
                     <p className="mt-2 text-sm text-text-secondary">Enter your credentials to access your dashboard.</p>
+
 
                     <form onSubmit={onLoginSubmit} className="mt-7 space-y-4">
                       <label className="block">
