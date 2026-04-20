@@ -6,12 +6,15 @@ import { useParams } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowUpDown,
   BadgeCheck,
   CheckCircle2,
   CircleHelp,
   Clock3,
+  Download,
   Filter,
   FolderKanban,
+  Printer,
   Search,
   XCircle,
 } from "lucide-react";
@@ -27,6 +30,15 @@ type AdminRow = {
   primaryFilterValue: string;
   secondaryFilterValue: string;
   note: string;
+  memberDetails?: {
+    fullName: string;
+    email: string;
+    passingYear: string;
+    house: string;
+    mobile: string;
+    fatherName: string;
+  };
+  rejectionReason?: string;
 };
 
 type AdminSectionConfig = {
@@ -54,7 +66,7 @@ const sectionMeta: Record<string, AdminSectionConfig> = {
       { label: "Approved This Month", value: "286", trend: "+12%" },
       { label: "Rejected / Hold", value: "18", trend: "-3 this week" },
     ],
-    actions: ["Bulk Approve", "Export Pending List", "Send Reminder Email"],
+    actions: ["Bulk Approve", "Export Pending List", "Send Reminder Email", "View Approved List"],
     tableTitle: "Registration Approval Queue",
     primaryFilterLabel: "Batch",
     secondaryFilterLabel: "Category",
@@ -62,11 +74,72 @@ const sectionMeta: Record<string, AdminSectionConfig> = {
     secondaryFilterOptions: ["All", "Student", "Alumni", "Mentor"],
     pageSize: 6,
     rows: [
-      { id: "M-101", name: "Ritika Verma", owner: "Admissions Team", status: "Pending", updatedAt: "10 mins ago", primaryFilterValue: "2024", secondaryFilterValue: "Student", note: "Registration completed, docs verified." },
-      { id: "M-102", name: "Arjun Singh", owner: "Admin Desk", status: "Approved", updatedAt: "28 mins ago", primaryFilterValue: "2015", secondaryFilterValue: "Alumni", note: "Profile approved with mentor preference." },
-      { id: "M-103", name: "Sana Khan", owner: "Community Team", status: "Needs Info", updatedAt: "1 hour ago", primaryFilterValue: "2021", secondaryFilterValue: "Student", note: "Passing certificate pending upload." },
+      {
+        id: "M-101",
+        name: "Ritika Verma",
+        owner: "Admissions Team",
+        status: "Pending",
+        updatedAt: "10 mins ago",
+        primaryFilterValue: "2024",
+        secondaryFilterValue: "Student",
+        note: "Registration completed, docs verified.",
+        memberDetails: {
+          fullName: "Ritika Verma",
+          email: "ritika.verma@example.com",
+          passingYear: "2024",
+          house: "Arawali",
+          mobile: "9876500123",
+          fatherName: "Suresh Verma",
+        },
+      },
+      {
+        id: "M-102",
+        name: "Arjun Singh",
+        owner: "Admin Desk",
+        status: "Approved",
+        updatedAt: "28 mins ago",
+        primaryFilterValue: "2015",
+        secondaryFilterValue: "Alumni",
+        note: "Profile approved with mentor preference.",
+        memberDetails: {
+          fullName: "Arjun Singh",
+          email: "arjun.singh@example.com",
+          passingYear: "2015",
+          house: "Neelgiri",
+          mobile: "9876500456",
+          fatherName: "Mahesh Singh",
+        },
+      },
+      {
+        id: "M-103",
+        name: "Sana Khan",
+        owner: "Community Team",
+        status: "Needs Info",
+        updatedAt: "1 hour ago",
+        primaryFilterValue: "2021",
+        secondaryFilterValue: "Student",
+        note: "Passing certificate pending upload.",
+        memberDetails: {
+          fullName: "Sana Khan",
+          email: "sana.khan@example.com",
+          passingYear: "2021",
+          house: "Shiwalik",
+          mobile: "9876500789",
+          fatherName: "Irfan Khan",
+        },
+      },
       { id: "M-104", name: "Devansh Tomar", owner: "Admissions Team", status: "Pending", updatedAt: "2 hours ago", primaryFilterValue: "2018", secondaryFilterValue: "Mentor", note: "Requested to join mentorship as volunteer." },
-      { id: "M-105", name: "Meenal Sharma", owner: "Admin Desk", status: "Rejected", updatedAt: "Today", primaryFilterValue: "2012", secondaryFilterValue: "Alumni", note: "Duplicate account found." },
+      {
+        id: "M-105",
+        name: "Meenal Sharma",
+        owner: "Admin Desk",
+        status: "Rejected",
+        updatedAt: "Today",
+        primaryFilterValue: "2012",
+        secondaryFilterValue: "Alumni",
+        note: "Duplicate account found.",
+        rejectionReason: "Duplicate profile detected against already approved member ID.",
+      },
       { id: "M-106", name: "Aman Chaturvedi", owner: "Admissions Team", status: "Pending", updatedAt: "Today", primaryFilterValue: "2024", secondaryFilterValue: "Student", note: "Mobile verified, email pending." },
       { id: "M-107", name: "Kriti Maurya", owner: "Community Team", status: "Approved", updatedAt: "Yesterday", primaryFilterValue: "2018", secondaryFilterValue: "Alumni", note: "Approved and added to network circles." },
       { id: "M-108", name: "Rohan Mishra", owner: "Admin Desk", status: "Pending", updatedAt: "Yesterday", primaryFilterValue: "2021", secondaryFilterValue: "Student", note: "Documents uploaded; awaiting final review." },
@@ -257,6 +330,8 @@ const defaultSection: AdminSectionConfig = {
 };
 
 const MEMBER_REGISTRATION_STORAGE_KEY = "admin_member_registrations_v1";
+const FRONTEND_EMAIL_OUTBOX_KEY = "admin_email_outbox_v1";
+const FIRST_LOGIN_USERS_KEY = "pending_first_login_users_v1";
 
 type PendingMemberRegistration = {
   id: string;
@@ -267,8 +342,50 @@ type PendingMemberRegistration = {
   mobile: string;
   fatherName: string;
   status: "Pending" | "Approved" | "Rejected" | "Needs Info";
+  rejectionReason?: string;
   submittedAt: string;
 };
+
+type FrontendEmailEvent = {
+  id: string;
+  to: string;
+  subject: string;
+  body: string;
+  createdAt: string;
+};
+
+type PendingFirstLoginUser = {
+  email: string;
+  role: "user";
+  firstName: string;
+  tempPassword: string;
+  currentPassword: string;
+  mustSetPassword: boolean;
+  createdAt: string;
+};
+
+function createTempPassword() {
+  const seed = Math.random().toString(36).slice(-5).toUpperCase();
+  return `Temp@${seed}9`;
+}
+
+function pushFrontendEmail(event: Omit<FrontendEmailEvent, "id" | "createdAt">) {
+  const raw = localStorage.getItem(FRONTEND_EMAIL_OUTBOX_KEY);
+  const existing = raw ? (JSON.parse(raw) as FrontendEmailEvent[]) : [];
+  const payload: FrontendEmailEvent = {
+    id: `MAIL-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    ...event,
+  };
+  localStorage.setItem(FRONTEND_EMAIL_OUTBOX_KEY, JSON.stringify([payload, ...existing].slice(0, 50)));
+}
+
+function saveFirstLoginUser(payload: PendingFirstLoginUser) {
+  const raw = localStorage.getItem(FIRST_LOGIN_USERS_KEY);
+  const existing = raw ? (JSON.parse(raw) as PendingFirstLoginUser[]) : [];
+  const withoutSameEmail = existing.filter((item) => item.email !== payload.email);
+  localStorage.setItem(FIRST_LOGIN_USERS_KEY, JSON.stringify([payload, ...withoutSameEmail]));
+}
 
 function getMemberRowsWithRegistrations(baseRows: AdminRow[]) {
   const raw = localStorage.getItem(MEMBER_REGISTRATION_STORAGE_KEY);
@@ -285,6 +402,15 @@ function getMemberRowsWithRegistrations(baseRows: AdminRow[]) {
       primaryFilterValue: item.passingYear,
       secondaryFilterValue: "Student",
       note: `${item.house} house • ${item.mobile} • ${item.email}`,
+      memberDetails: {
+        fullName: item.fullName,
+        email: item.email,
+        passingYear: item.passingYear,
+        house: item.house,
+        mobile: item.mobile,
+        fatherName: item.fatherName,
+      },
+      rejectionReason: item.rejectionReason,
     }));
 
     const existingIds = new Set(dynamicRows.map((row) => row.id));
@@ -334,6 +460,12 @@ export default function AdminSectionPage() {
   const [primaryFilter, setPrimaryFilter] = useState("All");
   const [secondaryFilter, setSecondaryFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
+  const [rejectingRowId, setRejectingRowId] = useState<string | null>(null);
+  const [rejectReasonText, setRejectReasonText] = useState("");
+  const [actionMessage, setActionMessage] = useState("");
+  const [showApprovedView, setShowApprovedView] = useState(false);
+  const [approvedSortField, setApprovedSortField] = useState<"name" | "batch" | "updatedAt">("name");
+  const [approvedSortDirection, setApprovedSortDirection] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
     if (key === "members") {
@@ -346,9 +478,15 @@ export default function AdminSectionPage() {
     setPrimaryFilter("All");
     setSecondaryFilter("All");
     setCurrentPage(1);
+    setRejectingRowId(null);
+    setRejectReasonText("");
+    setActionMessage("");
+    setShowApprovedView(false);
+    setApprovedSortField("name");
+    setApprovedSortDirection("asc");
   }, [key, info.rows]);
 
-  const availableStatuses = useMemo(() => ["All", ...new Set(info.rows.map((row) => row.status))], [info.rows]);
+  const availableStatuses = useMemo(() => ["All", ...new Set(rows.map((row) => row.status))], [rows]);
 
   const filteredRows = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();
@@ -377,7 +515,27 @@ export default function AdminSectionPage() {
     return filteredRows.slice(start, start + info.pageSize);
   }, [currentPage, filteredRows, info.pageSize, totalPages]);
 
-  const handleApprovalAction = (rowId: string, nextStatus: "Approved" | "Rejected" | "Needs Info") => {
+  const approvedRows = useMemo(() => {
+    const approvedOnly = rows.filter((row) => row.status === "Approved");
+    const sorted = [...approvedOnly].sort((a, b) => {
+      if (approvedSortField === "batch") {
+        const first = Number(a.memberDetails?.passingYear || a.primaryFilterValue || 0);
+        const second = Number(b.memberDetails?.passingYear || b.primaryFilterValue || 0);
+        return approvedSortDirection === "asc" ? first - second : second - first;
+      }
+      const first = approvedSortField === "updatedAt" ? a.updatedAt : a.name.toLowerCase();
+      const second = approvedSortField === "updatedAt" ? b.updatedAt : b.name.toLowerCase();
+      if (first < second) return approvedSortDirection === "asc" ? -1 : 1;
+      if (first > second) return approvedSortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }, [approvedSortDirection, approvedSortField, rows]);
+
+  const handleApprovalAction = (rowId: string, nextStatus: "Approved" | "Rejected", rejectionReason?: string) => {
+    const targetRow = rows.find((row) => row.id === rowId);
+    if (!targetRow) return;
+
     setRows((prev) =>
       prev.map((row) => {
         if (row.id !== rowId) return row;
@@ -385,15 +543,47 @@ export default function AdminSectionPage() {
           ...row,
           status: nextStatus,
           updatedAt: "Just now",
+          rejectionReason: nextStatus === "Rejected" ? rejectionReason || "Rejected by admin." : undefined,
           note:
             nextStatus === "Approved"
               ? "Registration approved by admin."
-              : nextStatus === "Rejected"
-                ? "Registration rejected after verification review."
-                : "Requested additional details from applicant.",
+              : "Registration rejected after verification review.",
         };
       }),
     );
+
+    const recipientEmail = targetRow.memberDetails?.email;
+
+    if (nextStatus === "Approved" && recipientEmail) {
+      const generatedPassword = createTempPassword();
+      saveFirstLoginUser({
+        email: recipientEmail.toLowerCase(),
+        role: "user",
+        firstName: (targetRow.memberDetails?.fullName || targetRow.name).split(" ")[0] || "Alumni",
+        tempPassword: generatedPassword,
+        currentPassword: generatedPassword,
+        mustSetPassword: true,
+        createdAt: new Date().toISOString(),
+      });
+
+      pushFrontendEmail({
+        to: recipientEmail,
+        subject: "Alumni Portal Registration Approved",
+        body: `Your registration is approved. Login email: ${recipientEmail}. Temporary password: ${generatedPassword}. On first login, you must set a new password.`,
+      });
+
+      setActionMessage(`Approved. Frontend email prepared for ${recipientEmail} with temporary password.`);
+    }
+
+    if (nextStatus === "Rejected" && recipientEmail) {
+      pushFrontendEmail({
+        to: recipientEmail,
+        subject: "Alumni Portal Registration Rejected",
+        body: `Your registration was rejected. Reason: ${rejectionReason || "Rejected by admin."}`,
+      });
+
+      setActionMessage(`Rejected. Frontend email prepared for ${recipientEmail} with rejection reason.`);
+    }
 
     if (key === "members") {
       const raw = localStorage.getItem(MEMBER_REGISTRATION_STORAGE_KEY);
@@ -401,12 +591,159 @@ export default function AdminSectionPage() {
 
       try {
         const parsed = JSON.parse(raw) as PendingMemberRegistration[];
-        const updated = parsed.map((item) => (item.id === rowId ? { ...item, status: nextStatus } : item));
+        const updated = parsed.map((item) =>
+          item.id === rowId ? { ...item, status: nextStatus, rejectionReason: nextStatus === "Rejected" ? rejectionReason || "Rejected by admin." : undefined } : item,
+        );
         localStorage.setItem(MEMBER_REGISTRATION_STORAGE_KEY, JSON.stringify(updated));
       } catch {
         // Ignore storage parse errors and keep UI state intact.
       }
     }
+  };
+
+  const handleQuickAction = (action: string) => {
+    if (key !== "members") {
+      setActionMessage(`${action} is prepared for this section. Backend/API connection can be added next.`);
+      return;
+    }
+
+    if (action === "View Approved List") {
+      setShowApprovedView(true);
+      setActionMessage("Opened approved members sub-view.");
+      return;
+    }
+
+    if (action === "Bulk Approve") {
+      const pendingIds = rows.filter((row) => row.status === "Pending").map((row) => row.id);
+      if (pendingIds.length === 0) {
+        setActionMessage("No pending registrations available for bulk approval.");
+        return;
+      }
+
+      setRows((prev) =>
+        prev.map((row) =>
+          pendingIds.includes(row.id)
+            ? { ...row, status: "Approved", updatedAt: "Just now", note: "Approved in bulk by admin.", rejectionReason: undefined }
+            : row,
+        ),
+      );
+
+      const raw = localStorage.getItem(MEMBER_REGISTRATION_STORAGE_KEY);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as PendingMemberRegistration[];
+          const updated = parsed.map((item) =>
+            pendingIds.includes(item.id) ? { ...item, status: "Approved", rejectionReason: undefined } : item,
+          );
+          localStorage.setItem(MEMBER_REGISTRATION_STORAGE_KEY, JSON.stringify(updated));
+        } catch {
+          // Keep UI update even if storage parsing fails.
+        }
+      }
+
+      setActionMessage(`${pendingIds.length} pending registrations approved.`);
+      return;
+    }
+
+    if (action === "Export Pending List") {
+      const pendingRows = rows.filter((row) => row.status === "Pending");
+      if (pendingRows.length === 0) {
+        setActionMessage("No pending records to export.");
+        return;
+      }
+
+      const csvHeader = "ID,Full Name,Email,Batch/Passing Year,House,Mobile,Father's Name,Status,Updated At";
+      const csvRows = pendingRows.map((row) => {
+        const details = row.memberDetails;
+        return [
+          row.id,
+          details?.fullName || row.name,
+          details?.email || "N/A",
+          details?.passingYear || row.primaryFilterValue,
+          details?.house || "N/A",
+          details?.mobile || "N/A",
+          details?.fatherName || "N/A",
+          row.status,
+          row.updatedAt,
+        ]
+          .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+          .join(",");
+      });
+
+      const blob = new Blob([[csvHeader, ...csvRows].join("\n")], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `pending-members-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+
+      setActionMessage(`Pending list exported successfully (${pendingRows.length} records).`);
+      return;
+    }
+
+    if (action === "Send Reminder Email") {
+      const pendingCount = rows.filter((row) => row.status === "Pending").length;
+      setActionMessage(`Reminder workflow triggered for ${pendingCount} pending member(s).`);
+      return;
+    }
+
+    setActionMessage(`${action} completed.`);
+  };
+
+  const exportApprovedList = () => {
+    if (approvedRows.length === 0) {
+      setActionMessage("No approved records available to export.");
+      return;
+    }
+
+    const csvHeader = "ID,Full Name,Email,Batch/Passing Year,House,Mobile,Father's Name,Updated At";
+    const csvRows = approvedRows.map((row) => {
+      const details = row.memberDetails;
+      return [
+        row.id,
+        details?.fullName || row.name,
+        details?.email || "N/A",
+        details?.passingYear || row.primaryFilterValue,
+        details?.house || "N/A",
+        details?.mobile || "N/A",
+        details?.fatherName || "N/A",
+        row.updatedAt,
+      ]
+        .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+        .join(",");
+    });
+
+    const blob = new Blob([[csvHeader, ...csvRows].join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `approved-members-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+
+    setActionMessage(`Approved list exported successfully (${approvedRows.length} records).`);
+  };
+
+  const printApprovedList = () => {
+    if (approvedRows.length === 0) {
+      setActionMessage("No approved records available to print.");
+      return;
+    }
+    window.print();
+  };
+
+  const updateApprovedSort = (field: "name" | "batch" | "updatedAt") => {
+    if (approvedSortField === field) {
+      setApprovedSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setApprovedSortField(field);
+    setApprovedSortDirection("asc");
   };
 
   const resetFilters = () => {
@@ -468,6 +805,12 @@ export default function AdminSectionPage() {
           </button>
         </div>
 
+        {actionMessage && (
+          <div className="mt-3 rounded-xl border border-primary/25 bg-primary/5 px-4 py-2.5 text-sm text-text-secondary">
+            {actionMessage}
+          </div>
+        )}
+
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
           <label className="xl:col-span-2">
             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary">Search</span>
@@ -517,11 +860,75 @@ export default function AdminSectionPage() {
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-3">
-          {paginatedRows.map((row) => (
+          {key === "members" && showApprovedView ? (
+            <div className="rounded-xl border border-border bg-background p-3">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h4 className="text-sm font-bold text-text-primary">Approved Members List</h4>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setShowApprovedView(false)}
+                    className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                  >
+                    Back To Queue
+                  </button>
+                  <button
+                    onClick={exportApprovedList}
+                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                  >
+                    <Download className="h-3.5 w-3.5" /> Export
+                  </button>
+                  <button
+                    onClick={printApprovedList}
+                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                  >
+                    <Printer className="h-3.5 w-3.5" /> Print
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+                  <thead>
+                    <tr>
+                      <SortableHeader label="Full Name" onClick={() => updateApprovedSort("name")} active={approvedSortField === "name"} direction={approvedSortDirection} />
+                      <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Email</th>
+                      <SortableHeader label="Batch" onClick={() => updateApprovedSort("batch")} active={approvedSortField === "batch"} direction={approvedSortDirection} />
+                      <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">House</th>
+                      <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Mobile</th>
+                      <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Father's Name</th>
+                      <SortableHeader label="Updated" onClick={() => updateApprovedSort("updatedAt")} active={approvedSortField === "updatedAt"} direction={approvedSortDirection} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {approvedRows.map((row) => (
+                      <tr key={`approved-${row.id}`}>
+                        <td className="border-b border-border/70 px-3 py-2 font-semibold text-text-primary">{row.memberDetails?.fullName || row.name}</td>
+                        <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.memberDetails?.email || "N/A"}</td>
+                        <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.memberDetails?.passingYear || row.primaryFilterValue}</td>
+                        <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.memberDetails?.house || "N/A"}</td>
+                        <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.memberDetails?.mobile || "N/A"}</td>
+                        <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.memberDetails?.fatherName || "N/A"}</td>
+                        <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.updatedAt}</td>
+                      </tr>
+                    ))}
+                    {approvedRows.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="px-3 py-8 text-center text-sm text-text-secondary">
+                          No approved members found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : paginatedRows.map((row) => (
             <article key={row.id} className="rounded-xl border border-border bg-background p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-black text-text-primary">{row.name}</p>
+                  <p className="text-sm font-black text-text-primary">
+                    {key === "members" ? `Full Name: ${row.memberDetails?.fullName || row.name}` : row.name}
+                  </p>
                   <p className="mt-0.5 text-xs text-text-secondary">
                     {row.id} • Owner: {row.owner}
                   </p>
@@ -533,13 +940,26 @@ export default function AdminSectionPage() {
                 </span>
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-text-secondary">
-                <span className="rounded-full border border-border bg-card px-2.5 py-1">{info.primaryFilterLabel}: {row.primaryFilterValue}</span>
-                <span className="rounded-full border border-border bg-card px-2.5 py-1">{info.secondaryFilterLabel}: {row.secondaryFilterValue}</span>
-                <span className="rounded-full border border-border bg-card px-2.5 py-1">Updated: {row.updatedAt}</span>
-              </div>
+              
+
+              {key === "members" && row.memberDetails && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-text-secondary">
+                  <span className="rounded-full border border-border bg-card px-2.5 py-1">Email: {row.memberDetails.email}</span>
+                  <span className="rounded-full border border-border bg-card px-2.5 py-1">Batch: {row.memberDetails.passingYear}</span>
+                  <span className="rounded-full border border-border bg-card px-2.5 py-1">House: {row.memberDetails.house}</span>
+                  <span className="rounded-full border border-border bg-card px-2.5 py-1">Mobile Number: {row.memberDetails.mobile}</span>
+                  <span className="rounded-full border border-border bg-card px-2.5 py-1">Father's Name: {row.memberDetails.fatherName}</span>
+                   <span className="rounded-full border border-border bg-card px-2.5 py-1">Updated: {row.updatedAt}</span>
+                </div>
+              )}
 
               <p className="mt-3 text-sm text-text-secondary">{row.note}</p>
+
+              {key === "members" && row.status === "Rejected" && row.rejectionReason && (
+                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                  <span className="font-semibold">Rejection Reason:</span> {row.rejectionReason}
+                </div>
+              )}
 
               {key === "members" && row.status === "Pending" && (
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -550,23 +970,64 @@ export default function AdminSectionPage() {
                     Approve Registration
                   </button>
                   <button
-                    onClick={() => handleApprovalAction(row.id, "Needs Info")}
-                    className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
-                  >
-                    Request More Info
-                  </button>
-                  <button
-                    onClick={() => handleApprovalAction(row.id, "Rejected")}
+                    onClick={() => {
+                      setRejectingRowId(row.id);
+                      setRejectReasonText("");
+                    }}
                     className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"
                   >
                     Reject
                   </button>
                 </div>
               )}
+
+              {key === "members" && rejectingRowId === row.id && (
+                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3">
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-rose-700">
+                      Reason For Rejection (Required)
+                    </span>
+                    <textarea
+                      value={rejectReasonText}
+                      onChange={(event) => setRejectReasonText(event.target.value)}
+                      rows={3}
+                      placeholder="Write why this application is being rejected..."
+                      className="w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-rose-400"
+                    />
+                  </label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => {
+                        const reason = rejectReasonText.trim();
+                        if (!reason) {
+                          setActionMessage("Please enter rejection reason before rejecting application.");
+                          return;
+                        }
+                        handleApprovalAction(row.id, "Rejected", reason);
+                        setRejectingRowId(null);
+                        setRejectReasonText("");
+                        setActionMessage("Application rejected with reason.");
+                      }}
+                      className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-700"
+                    >
+                      Confirm Reject
+                    </button>
+                    <button
+                      onClick={() => {
+                        setRejectingRowId(null);
+                        setRejectReasonText("");
+                      }}
+                      className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </article>
           ))}
 
-          {paginatedRows.length === 0 && (
+          {!showApprovedView && paginatedRows.length === 0 && (
             <div className="rounded-xl border border-dashed border-border bg-background p-8 text-center">
               <p className="text-sm font-semibold text-text-primary">No records found for selected filters.</p>
               <p className="mt-1 text-xs text-text-secondary">Try changing filters or clearing search.</p>
@@ -574,7 +1035,8 @@ export default function AdminSectionPage() {
           )}
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+        {!showApprovedView && (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
           <p className="text-xs text-text-secondary">
             Showing {paginatedRows.length === 0 ? 0 : (currentPage - 1) * info.pageSize + 1}-
             {Math.min(currentPage * info.pageSize, filteredRows.length)} of {filteredRows.length} records
@@ -612,7 +1074,8 @@ export default function AdminSectionPage() {
               Next <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </div>
-        </div>
+          </div>
+        )}
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -623,6 +1086,7 @@ export default function AdminSectionPage() {
             {info.actions.map((action) => (
               <button
                 key={action}
+                onClick={() => handleQuickAction(action)}
                 className="flex items-center justify-between rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
               >
                 {action}
@@ -640,7 +1104,7 @@ export default function AdminSectionPage() {
           {key === "members" && (
             <p className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-text-secondary">
               New user registrations appear in <span className="font-semibold text-text-primary">Pending</span>. Use
-              <span className="font-semibold text-text-primary"> Approve / Request More Info / Reject</span> buttons to complete approval workflow.
+              <span className="font-semibold text-text-primary"> Approve / Reject</span> buttons to complete approval workflow.
             </p>
           )}
         </article>
@@ -675,5 +1139,27 @@ function SelectFilter({
         ))}
       </select>
     </label>
+  );
+}
+
+function SortableHeader({
+  label,
+  onClick,
+  active,
+  direction,
+}: {
+  label: string;
+  onClick: () => void;
+  active: boolean;
+  direction: "asc" | "desc";
+}) {
+  return (
+    <th className="border-b border-border px-3 py-2 text-left font-semibold text-text-secondary">
+      <button onClick={onClick} className="inline-flex items-center gap-1 hover:text-primary">
+        {label}
+        <ArrowUpDown className={["h-3.5 w-3.5", active ? "text-primary" : "text-text-secondary"].join(" ")} />
+        {active && <span className="text-[10px] uppercase">{direction}</span>}
+      </button>
+    </th>
   );
 }

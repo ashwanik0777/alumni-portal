@@ -29,7 +29,19 @@ const stats = [
   { value: "89%", label: "Positive outcomes", icon: TrendingUp },
 ];
 
-type FormMode = "login" | "forgot-request" | "forgot-reset" | "forgot-success";
+type FormMode = "login" | "forgot-request" | "forgot-reset" | "forgot-success" | "set-password";
+
+const FIRST_LOGIN_USERS_KEY = "pending_first_login_users_v1";
+
+type PendingFirstLoginUser = {
+  email: string;
+  role: "user";
+  firstName: string;
+  tempPassword: string;
+  currentPassword: string;
+  mustSetPassword: boolean;
+  createdAt: string;
+};
 
 const DEMO_CREDENTIALS = {
   admin: {
@@ -61,6 +73,8 @@ export default function LoginPage() {
   const [loginMessage, setLoginMessage] = useState("");
   const [multiAccess, setMultiAccess] = useState(false);
   const [pendingFirstName, setPendingFirstName] = useState("");
+  const [firstLoginEmail, setFirstLoginEmail] = useState("");
+  const [firstLoginFirstName, setFirstLoginFirstName] = useState("Alumni");
 
   const resolveFirstNameFromEmail = (email: string) => {
     const localPart = email.trim().split("@")[0] || "Alumni";
@@ -81,8 +95,25 @@ export default function LoginPage() {
       setSuccess(false);
       setLoginMessage("");
       setMultiAccess(false);
+      if (next !== "set-password") {
+        setFirstLoginEmail("");
+      }
       setFormVisible(true);
     }, 220);
+  };
+
+  const getPendingUsers = () => {
+    const raw = localStorage.getItem(FIRST_LOGIN_USERS_KEY);
+    if (!raw) return [] as PendingFirstLoginUser[];
+    try {
+      return JSON.parse(raw) as PendingFirstLoginUser[];
+    } catch {
+      return [] as PendingFirstLoginUser[];
+    }
+  };
+
+  const savePendingUsers = (users: PendingFirstLoginUser[]) => {
+    localStorage.setItem(FIRST_LOGIN_USERS_KEY, JSON.stringify(users));
   };
 
   const resolveAccessFromEmail = (email: string): "user" | "admin" | "both" => {
@@ -126,6 +157,29 @@ export default function LoginPage() {
     setPendingFirstName(firstName);
 
     setSuccess(false);
+
+    const pendingUsers = getPendingUsers();
+    const pendingAccount = pendingUsers.find((item) => item.email === normalizedEmail);
+    if (pendingAccount) {
+      if (password !== pendingAccount.currentPassword) {
+        setMultiAccess(false);
+        setLoginMessage("Invalid password. Please use the temporary password sent on approval email.");
+        return;
+      }
+
+      if (pendingAccount.mustSetPassword) {
+        setMultiAccess(false);
+        setFirstLoginEmail(pendingAccount.email);
+        setFirstLoginFirstName(pendingAccount.firstName || "Alumni");
+        setLoginMessage("First login detected. Please set your new password.");
+        switchMode("set-password");
+        return;
+      }
+
+      setMultiAccess(false);
+      continueLogin("user", pendingAccount.firstName || "Alumni");
+      return;
+    }
 
     if (normalizedEmail === DEMO_CREDENTIALS.admin.email) {
       if (password !== DEMO_CREDENTIALS.admin.password) {
@@ -187,6 +241,38 @@ export default function LoginPage() {
   const onForgotReset = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     switchMode("forgot-success");
+  };
+
+  const onSetPasswordSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const newPassword = String(form.get("newPassword") || "");
+    const confirmPassword = String(form.get("confirmPassword") || "");
+
+    if (newPassword.length < 8) {
+      setLoginMessage("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setLoginMessage("Password and confirm password do not match.");
+      return;
+    }
+
+    const pendingUsers = getPendingUsers();
+    const updated = pendingUsers.map((item) =>
+      item.email === firstLoginEmail
+        ? {
+            ...item,
+            currentPassword: newPassword,
+            mustSetPassword: false,
+          }
+        : item,
+    );
+    savePendingUsers(updated);
+
+    setLoginMessage("Password set successfully. Redirecting to user dashboard.");
+    continueLogin("user", firstLoginFirstName || "Alumni");
   };
 
   return (
@@ -534,6 +620,56 @@ export default function LoginPage() {
                       <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
+                )}
+
+                {formMode === "set-password" && (
+                  <>
+                    <p className="text-[11px] uppercase tracking-[0.18em] font-bold text-primary">First Login Security</p>
+                    <h2 className="mt-1 text-3xl sm:text-4xl font-black">Set Your Password</h2>
+                    <p className="mt-2 text-sm text-text-secondary">
+                      You are signing in for the first time with temporary credentials.
+                      Please set a new password for <span className="font-semibold text-text-primary">{firstLoginEmail || "your account"}</span>.
+                    </p>
+
+                    <form onSubmit={onSetPasswordSubmit} className="mt-7 space-y-4">
+                      <label className="block">
+                        <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-text-secondary">New Password</span>
+                        <input
+                          name="newPassword"
+                          type="password"
+                          placeholder="Minimum 8 characters"
+                          className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                          required
+                        />
+                      </label>
+
+                      <label className="block">
+                        <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-text-secondary">Confirm New Password</span>
+                        <input
+                          name="confirmPassword"
+                          type="password"
+                          placeholder="Re-enter new password"
+                          className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                          required
+                        />
+                      </label>
+
+                      {!!loginMessage && (
+                        <div className="flex items-center gap-2 rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-3 text-sm text-text-primary">
+                          <Check className="h-4 w-4 text-secondary" />
+                          {loginMessage}
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
+                      >
+                        Save Password And Continue
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+                    </form>
+                  </>
                 )}
 
                 <div className="mt-8 rounded-2xl border border-border bg-background/80 p-4 sm:p-5">
