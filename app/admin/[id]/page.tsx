@@ -60,6 +60,7 @@ type ProgramActionView = "none" | "launch" | "assign" | "report";
 type RequestActionView = "none" | "priority" | "assign" | "close";
 type FinanceActionView = "none" | "create" | "mapping" | "payout" | "ledger" | "audit";
 type AnalyticsActionView = "none" | "pattern" | "funnel" | "channel";
+type AnalyticsDateRange = "7d" | "30d" | "90d" | "custom";
 
 type ScholarshipFundingMapping = {
   id: string;
@@ -267,7 +268,7 @@ const sectionMeta: Record<string, AdminSectionConfig> = {
   },
   analytics: {
     title: "Analytics Intelligence Center",
-    subtitle: "Track full website patterns, growth signals, conversion drops, and channel quality from one visual workspace.",
+    subtitle: "Visualize patterns, growth, conversions, and channel quality in one place.",
     searchPlaceholder: "Search by funnel or team",
     kpis: [
       { label: "Weekly Active Users", value: "1,942", trend: "+3.6%" },
@@ -529,6 +530,9 @@ export default function AdminSectionPage() {
   const [scholarshipFundingMap, setScholarshipFundingMap] = useState<ScholarshipFundingMapping[]>(defaultScholarshipFundingMap);
   const [analyticsActionView, setAnalyticsActionView] = useState<AnalyticsActionView>("none");
   const [analyticsActionMessage, setAnalyticsActionMessage] = useState("");
+  const [analyticsDateRange, setAnalyticsDateRange] = useState<AnalyticsDateRange>("30d");
+  const [analyticsCustomFrom, setAnalyticsCustomFrom] = useState("");
+  const [analyticsCustomTo, setAnalyticsCustomTo] = useState("");
 
   useEffect(() => {
     if (key === "members") {
@@ -562,6 +566,9 @@ export default function AdminSectionPage() {
     setScholarshipFundingMap(defaultScholarshipFundingMap);
     setAnalyticsActionView("none");
     setAnalyticsActionMessage("");
+    setAnalyticsDateRange("30d");
+    setAnalyticsCustomFrom("");
+    setAnalyticsCustomTo("");
   }, [key, info.rows]);
 
   const availableStatuses = useMemo(() => ["All", ...new Set(rows.map((row) => row.status))], [rows]);
@@ -1277,30 +1284,110 @@ export default function AdminSectionPage() {
     setAnalyticsActionMessage(`Analytics CSV exported (${sourceRows.length} row(s)).`);
   };
 
-  const analyticsTrafficTrend = [
-    { day: "Mon", visits: 820, active: 430 },
-    { day: "Tue", visits: 910, active: 472 },
-    { day: "Wed", visits: 980, active: 520 },
-    { day: "Thu", visits: 1080, active: 566 },
-    { day: "Fri", visits: 1190, active: 612 },
-    { day: "Sat", visits: 1010, active: 534 },
-    { day: "Sun", visits: 940, active: 501 },
-  ];
+  const analyticsRangeData = useMemo(
+    () => ({
+      "7d": {
+        traffic: [
+          { day: "Mon", visits: 820, active: 430 },
+          { day: "Tue", visits: 910, active: 472 },
+          { day: "Wed", visits: 980, active: 520 },
+          { day: "Thu", visits: 1080, active: 566 },
+          { day: "Fri", visits: 1190, active: 612 },
+          { day: "Sat", visits: 1010, active: 534 },
+          { day: "Sun", visits: 940, active: 501 },
+        ],
+        channels: [
+          { channel: "Organic", value: 39, color: "#0f766e" },
+          { channel: "Referral", value: 24, color: "#2563eb" },
+          { channel: "Campaign", value: 25, color: "#d97706" },
+          { channel: "Direct", value: 12, color: "#7c3aed" },
+        ],
+        funnel: [
+          { step: "Landing Visit", count: 100, note: "Base traffic" },
+          { step: "Account Login", count: 76, note: "24% drop" },
+          { step: "Profile View", count: 61, note: "15% drop" },
+          { step: "Action Intent", count: 47, note: "14% drop" },
+          { step: "Final Submit", count: 34, note: "13% drop" },
+        ],
+      },
+      "30d": {
+        traffic: [
+          { day: "W1", visits: 5120, active: 2450 },
+          { day: "W2", visits: 5480, active: 2610 },
+          { day: "W3", visits: 5890, active: 2790 },
+          { day: "W4", visits: 6210, active: 2960 },
+        ],
+        channels: [
+          { channel: "Organic", value: 41, color: "#0f766e" },
+          { channel: "Referral", value: 22, color: "#2563eb" },
+          { channel: "Campaign", value: 27, color: "#d97706" },
+          { channel: "Direct", value: 10, color: "#7c3aed" },
+        ],
+        funnel: [
+          { step: "Landing Visit", count: 100, note: "Base traffic" },
+          { step: "Account Login", count: 74, note: "26% drop" },
+          { step: "Profile View", count: 58, note: "16% drop" },
+          { step: "Action Intent", count: 44, note: "14% drop" },
+          { step: "Final Submit", count: 31, note: "13% drop" },
+        ],
+      },
+      "90d": {
+        traffic: [
+          { day: "M1", visits: 18400, active: 9020 },
+          { day: "M2", visits: 19650, active: 9510 },
+          { day: "M3", visits: 20920, active: 10180 },
+        ],
+        channels: [
+          { channel: "Organic", value: 44, color: "#0f766e" },
+          { channel: "Referral", value: 19, color: "#2563eb" },
+          { channel: "Campaign", value: 29, color: "#d97706" },
+          { channel: "Direct", value: 8, color: "#7c3aed" },
+        ],
+        funnel: [
+          { step: "Landing Visit", count: 100, note: "Base traffic" },
+          { step: "Account Login", count: 72, note: "28% drop" },
+          { step: "Profile View", count: 54, note: "18% drop" },
+          { step: "Action Intent", count: 39, note: "15% drop" },
+          { step: "Final Submit", count: 27, note: "12% drop" },
+        ],
+      },
+    }),
+    [],
+  );
 
-  const analyticsChannelMix = [
-    { channel: "Organic", value: 41, color: "#0f766e" },
-    { channel: "Referral", value: 22, color: "#2563eb" },
-    { channel: "Campaign", value: 27, color: "#d97706" },
-    { channel: "Direct", value: 10, color: "#7c3aed" },
-  ];
+  const customWindowDays = useMemo(() => {
+    if (analyticsDateRange !== "custom" || !analyticsCustomFrom || !analyticsCustomTo) return 30;
+    const from = new Date(analyticsCustomFrom);
+    const to = new Date(analyticsCustomTo);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to < from) return 30;
+    return Math.max(1, Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+  }, [analyticsCustomFrom, analyticsCustomTo, analyticsDateRange]);
 
-  const analyticsFunnel = [
-    { step: "Landing Visit", count: 100, note: "Base traffic" },
-    { step: "Account Login", count: 74, note: "26% drop" },
-    { step: "Profile View", count: 58, note: "16% drop" },
-    { step: "Action Intent", count: 44, note: "14% drop" },
-    { step: "Final Submit", count: 31, note: "13% drop" },
-  ];
+  const analyticsRangeKey = useMemo<"7d" | "30d" | "90d">(() => {
+    if (analyticsDateRange !== "custom") return analyticsDateRange;
+    if (customWindowDays <= 14) return "7d";
+    if (customWindowDays <= 45) return "30d";
+    return "90d";
+  }, [analyticsDateRange, customWindowDays]);
+
+  const analyticsRangeMultiplier = useMemo(() => {
+    if (analyticsDateRange !== "custom") return 1;
+    return Math.min(3, Math.max(0.4, customWindowDays / 30));
+  }, [analyticsDateRange, customWindowDays]);
+
+  const analyticsTrafficTrend = useMemo(() => {
+    const source = analyticsRangeData[analyticsRangeKey].traffic;
+    if (analyticsDateRange !== "custom") return source;
+    return source.map((item) => ({
+      ...item,
+      visits: Math.round(item.visits * analyticsRangeMultiplier),
+      active: Math.round(item.active * analyticsRangeMultiplier),
+    }));
+  }, [analyticsDateRange, analyticsRangeData, analyticsRangeKey, analyticsRangeMultiplier]);
+
+  const analyticsChannelMix = useMemo(() => analyticsRangeData[analyticsRangeKey].channels, [analyticsRangeData, analyticsRangeKey]);
+
+  const analyticsFunnel = useMemo(() => analyticsRangeData[analyticsRangeKey].funnel, [analyticsRangeData, analyticsRangeKey]);
 
   const analyticsHeatmapRows = ["00-04", "04-08", "08-12", "12-16", "16-20", "20-24"];
   const analyticsHeatmapDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -1313,12 +1400,67 @@ export default function AdminSectionPage() {
     [44, 41, 46, 48, 54, 39, 33],
   ];
 
-  const analyticsPatterns = [
-    "Referral users complete profile faster than campaign users.",
-    "Scholarship application intent peaks on Thu evening.",
-    "Event conversion drops when reminders are delayed.",
-    "Jobs page has high revisit but lower final submit.",
-  ];
+  const analyticsPatterns = useMemo(() => {
+    const base = [
+      "Referral users complete profile faster than campaign users.",
+      "Scholarship application intent peaks on Thu evening.",
+      "Event conversion drops when reminders are delayed.",
+      "Jobs page has high revisit but lower final submit.",
+    ];
+
+    if (analyticsDateRange === "custom") {
+      return [
+        `Custom window active for ${customWindowDays} day(s).`,
+        ...base,
+      ];
+    }
+    return base;
+  }, [analyticsDateRange, customWindowDays]);
+
+  const analyticsRangeLabel = analyticsDateRange === "custom" ? `Custom (${customWindowDays}d)` : analyticsDateRange.toUpperCase();
+
+  const analyticsBoardScale = useMemo(() => {
+    if (analyticsDateRange === "custom") return analyticsRangeMultiplier;
+    if (analyticsRangeKey === "7d") return 0.92;
+    if (analyticsRangeKey === "90d") return 1.08;
+    return 1;
+  }, [analyticsDateRange, analyticsRangeKey, analyticsRangeMultiplier]);
+
+  const analyticsSectionHealth = useMemo(
+    () =>
+      [
+        { name: "Home", value: 92, color: "bg-emerald-500" },
+        { name: "Directory", value: 78, color: "bg-sky-500" },
+        { name: "Jobs", value: 61, color: "bg-amber-500" },
+        { name: "Scholarships", value: 73, color: "bg-violet-500" },
+        { name: "Mentorship", value: 85, color: "bg-primary" },
+      ].map((item) => ({ ...item, value: Math.min(99, Math.max(35, Math.round(item.value * analyticsBoardScale))) })),
+    [analyticsBoardScale],
+  );
+
+  const analyticsGoalProgress = useMemo(
+    () =>
+      [
+        { goal: "Profile Completion", done: 79, target: 90 },
+        { goal: "Event Registration", done: 42, target: 55 },
+        { goal: "Mentorship Request", done: 64, target: 70 },
+        { goal: "Scholarship Apply", done: 58, target: 68 },
+      ].map((item) => ({ ...item, done: Math.min(98, Math.max(18, Math.round(item.done * analyticsBoardScale))) })),
+    [analyticsBoardScale],
+  );
+
+  const analyticsEngagementSeries = useMemo(
+    () =>
+      [
+        { name: "Login", value: 88 },
+        { name: "Profile Update", value: 64 },
+        { name: "Event Register", value: 42 },
+        { name: "Mentorship Request", value: 57 },
+        { name: "Scholarship Apply", value: 51 },
+        { name: "Job Apply", value: 37 },
+      ].map((item) => ({ ...item, value: Math.min(99, Math.max(12, Math.round(item.value * analyticsBoardScale))) })),
+    [analyticsBoardScale],
+  );
 
   const trafficPolyline = useMemo(() => {
     const maxValue = Math.max(...analyticsTrafficTrend.map((item) => item.visits));
@@ -1395,11 +1537,71 @@ export default function AdminSectionPage() {
 
       {key === "analytics" && (
         <section className="space-y-4">
+          <article className="rounded-2xl border border-border bg-card p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-text-primary">Date Range Filter</p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {([
+                  { label: "7D", value: "7d" },
+                  { label: "30D", value: "30d" },
+                  { label: "90D", value: "90d" },
+                  { label: "Custom", value: "custom" },
+                ] as const).map((item) => (
+                  <button
+                    key={item.value}
+                    onClick={() => setAnalyticsDateRange(item.value)}
+                    className={[
+                      "rounded-lg border px-3 py-1.5 text-xs font-semibold",
+                      analyticsDateRange === item.value
+                        ? "border-primary bg-primary text-white"
+                        : "border-border bg-background text-text-primary hover:border-primary/30 hover:text-primary",
+                    ].join(" ")}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {analyticsDateRange === "custom" && (
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <label>
+                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary">From Date</span>
+                  <input
+                    type="date"
+                    value={analyticsCustomFrom}
+                    onChange={(event) => setAnalyticsCustomFrom(event.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                  />
+                </label>
+
+                <label>
+                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary">To Date</span>
+                  <input
+                    type="date"
+                    value={analyticsCustomTo}
+                    onChange={(event) => setAnalyticsCustomTo(event.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                  />
+                </label>
+ <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary">Applied Window
+                <div className="rounded-xl border border-border bg-background px-3 py-2 text-xs text-text-secondary">
+                  <p className="mt-1">{customWindowDays} day(s)</p>
+                </div>
+                </span>
+              </div>
+              
+            )}
+          </article>
+
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             <article className="rounded-2xl border border-border bg-card p-5 xl:col-span-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-black text-text-primary">Website Traffic Pattern Graph</h3>
-                <span className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-semibold text-text-secondary">7-day live trend</span>
+                <span className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-semibold text-text-secondary">{analyticsRangeLabel} trend</span>
               </div>
 
               <div className="mt-4 rounded-xl border border-border bg-background p-3">
@@ -1857,20 +2059,17 @@ export default function AdminSectionPage() {
       {key === "analytics" ? (
         <section className="grid grid-cols-1 gap-4">
           <article className="rounded-2xl border border-border bg-card p-5">
-            <h3 className="text-lg font-bold">Full Website Analysis Board</h3>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-lg font-bold">Full Website Analysis Board</h3>
+              <span className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-semibold text-text-secondary">Range: {analyticsRangeLabel}</span>
+            </div>
             <p className="mt-1 text-sm text-text-secondary">Everything is visualized here so you can monitor growth, risk, and conversion without leaving this page.</p>
 
             <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-3">
               <div className="rounded-2xl border border-border bg-background p-4 xl:col-span-2">
                 <p className="text-sm font-bold text-text-primary">Section Performance Comparison</p>
                 <div className="mt-3 space-y-3 text-xs">
-                  {[
-                    { name: "Home", value: 92, color: "bg-emerald-500" },
-                    { name: "Directory", value: 78, color: "bg-sky-500" },
-                    { name: "Jobs", value: 61, color: "bg-amber-500" },
-                    { name: "Scholarships", value: 73, color: "bg-violet-500" },
-                    { name: "Mentorship", value: 85, color: "bg-primary" },
-                  ].map((item) => (
+                  {analyticsSectionHealth.map((item) => (
                     <div key={item.name}>
                       <div className="mb-1 flex items-center justify-between">
                         <span className="font-semibold text-text-primary">{item.name}</span>
@@ -1887,12 +2086,7 @@ export default function AdminSectionPage() {
               <div className="rounded-2xl border border-border bg-background p-4">
                 <p className="text-sm font-bold text-text-primary">Conversion Goal Progress</p>
                 <div className="mt-3 space-y-3 text-xs">
-                  {[
-                    { goal: "Profile Completion", done: 79, target: 90 },
-                    { goal: "Event Registration", done: 42, target: 55 },
-                    { goal: "Mentorship Request", done: 64, target: 70 },
-                    { goal: "Scholarship Apply", done: 58, target: 68 },
-                  ].map((item) => (
+                  {analyticsGoalProgress.map((item) => (
                     <div key={item.goal} className="rounded-xl border border-border bg-card p-3">
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-text-primary">{item.goal}</span>
@@ -1927,14 +2121,7 @@ export default function AdminSectionPage() {
               <div className="rounded-2xl border border-border bg-background p-4">
                 <p className="text-sm font-bold text-text-primary">Action-wise Engagement Chart</p>
                 <div className="mt-3 space-y-2 text-xs">
-                  {[
-                    { name: "Login", value: 88 },
-                    { name: "Profile Update", value: 64 },
-                    { name: "Event Register", value: 42 },
-                    { name: "Mentorship Request", value: 57 },
-                    { name: "Scholarship Apply", value: 51 },
-                    { name: "Job Apply", value: 37 },
-                  ].map((item) => (
+                  {analyticsEngagementSeries.map((item) => (
                     <div key={item.name} className="flex items-center gap-2">
                       <div className="w-28 shrink-0 font-semibold text-text-primary">{item.name}</div>
                       <div className="h-2.5 flex-1 rounded-full bg-card">
