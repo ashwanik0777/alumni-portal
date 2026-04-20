@@ -5,11 +5,24 @@ declare global {
 }
 
 function getDatabaseUrl() {
-  const url = process.env.DATABASE_URL;
-  if (!url) {
+  const rawUrl = process.env.DATABASE_URL;
+  if (!rawUrl) {
     throw new Error("DATABASE_URL is not configured.");
   }
-  return url;
+
+  try {
+    const parsed = new URL(rawUrl);
+    const sslMode = parsed.searchParams.get("sslmode");
+
+    // pg-connection-string warns for legacy alias modes; keep current secure behavior explicitly.
+    if (sslMode === "prefer" || sslMode === "require" || sslMode === "verify-ca") {
+      parsed.searchParams.set("sslmode", "verify-full");
+    }
+
+    return parsed.toString();
+  } catch {
+    return rawUrl;
+  }
 }
 
 export const postgresPool =
@@ -17,9 +30,6 @@ export const postgresPool =
   new Pool({
     connectionString: getDatabaseUrl(),
     max: 5,
-    ssl: {
-      rejectUnauthorized: false,
-    },
   });
 
 if (process.env.NODE_ENV !== "production") {
