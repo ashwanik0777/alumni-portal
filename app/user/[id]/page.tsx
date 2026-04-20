@@ -36,9 +36,9 @@ const sectionMeta: Record<string, { title: string; subtitle: string }> = {
   },
 };
 
-export default async function UserSectionPage({ params }: { params: Promise<{ slug: string[] }> }) {
-  const { slug } = await params;
-  const key = slug[0] || "profile";
+export default async function UserSectionPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const key = id || "profile";
   const info = sectionMeta[key] || {
     title: "User Section",
     subtitle: "This section is ready for live data integration.",

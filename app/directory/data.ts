@@ -1,5 +1,5 @@
 export type AlumniProfile = {
-  slug: string;
+  id: string;
   name: string;
   batch: string;
   role: string;
@@ -15,7 +15,7 @@ export type AlumniProfile = {
 
 export const alumniProfiles: AlumniProfile[] = [
   {
-    slug: "aditi-verma",
+    id: "aditi-verma",
     name: "Aditi Verma",
     batch: "2015",
     role: "Senior Software Engineer",
@@ -35,7 +35,7 @@ export const alumniProfiles: AlumniProfile[] = [
     contactPolicy: "Public profile shows professional details only. Direct contact is shared after mutual consent.",
   },
   {
-    slug: "rohit-mishra",
+    id: "rohit-mishra",
     name: "Rohit Mishra",
     batch: "2012",
     role: "Product Manager",
@@ -55,7 +55,7 @@ export const alumniProfiles: AlumniProfile[] = [
     contactPolicy: "Public profile includes role and mentorship focus. Personal contact is private.",
   },
   {
-    slug: "sneha-dubey",
+    id: "sneha-dubey",
     name: "Sneha Dubey",
     batch: "2018",
     role: "Data Scientist",
@@ -75,7 +75,7 @@ export const alumniProfiles: AlumniProfile[] = [
     contactPolicy: "Only approved professional profile information is public.",
   },
   {
-    slug: "anurag-singh",
+    id: "anurag-singh",
     name: "Anurag Singh",
     batch: "2010",
     role: "Founder",
@@ -95,7 +95,7 @@ export const alumniProfiles: AlumniProfile[] = [
     contactPolicy: "Public page is limited to approved professional and community details.",
   },
   {
-    slug: "nidhi-chauhan",
+    id: "nidhi-chauhan",
     name: "Nidhi Chauhan",
     batch: "2016",
     role: "UX Designer",
@@ -115,7 +115,7 @@ export const alumniProfiles: AlumniProfile[] = [
     contactPolicy: "Only consented public information is displayed.",
   },
   {
-    slug: "kunal-saxena",
+    id: "kunal-saxena",
     name: "Kunal Saxena",
     batch: "2014",
     role: "DevOps Lead",

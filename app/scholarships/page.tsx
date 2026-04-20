@@ -22,7 +22,7 @@ type ModalType = "none" | "alumni" | "student";
 
 type Recipient = {
   student: string;
-  slug: string;
+  id: string;
   scholarship: string;
   year: string;
   provider: string;
@@ -32,7 +32,7 @@ type Recipient = {
 type Testimonial = {
   quote: string;
   student: string;
-  slug: string;
+  id: string;
   note: string;
 };
 
@@ -63,7 +63,7 @@ const runningScholarships = [
 const recipients: Recipient[] = [
   {
     student: "Aditi Verma (Public Consent Shared)",
-    slug: "aditi-verma",
+    id: "aditi-verma",
     scholarship: "Merit Excellence Scholarship",
     year: "2025",
     provider: "Aman Tiwari",
@@ -71,7 +71,7 @@ const recipients: Recipient[] = [
   },
   {
     student: "Rohit Mishra (Public Consent Shared)",
-    slug: "rohit-mishra",
+    id: "rohit-mishra",
     scholarship: "STEM Future Grant",
     year: "2025",
     provider: "Nidhi Sharma",
@@ -79,7 +79,7 @@ const recipients: Recipient[] = [
   },
   {
     student: "Nidhi Chauhan (Public Consent Shared)",
-    slug: "nidhi-chauhan",
+    id: "nidhi-chauhan",
     scholarship: "Girls Higher Education Fund",
     year: "2024",
     provider: "Ruchi Verma",
@@ -92,35 +92,35 @@ const testimonials: Testimonial[] = [
     quote:
       "The scholarship reduced my financial stress. I could focus on exams and secure admission in my preferred college.",
     student: "Aditi Verma",
-    slug: "aditi-verma",
+    id: "aditi-verma",
     note: "Scholarship Recipient",
   },
   {
     quote:
       "I received support at the right time. The alumni mentors also guided me during entrance preparation.",
     student: "Rohit Mishra",
-    slug: "rohit-mishra",
+    id: "rohit-mishra",
     note: "Scholarship Recipient",
   },
   {
     quote:
       "This support helped my family continue my education journey without interruption.",
     student: "Nidhi Chauhan",
-    slug: "nidhi-chauhan",
+    id: "nidhi-chauhan",
     note: "Scholarship Recipient",
   },
   {
     quote:
       "The process was transparent and simple. I got both financial support and academic direction.",
     student: "Sneha Dubey",
-    slug: "sneha-dubey",
+    id: "sneha-dubey",
     note: "Scholarship Recipient",
   },
   {
     quote:
       "I felt supported by the alumni network. The scholarship gave me confidence to continue higher studies.",
     student: "Kunal Saxena",
-    slug: "kunal-saxena",
+    id: "kunal-saxena",
     note: "Scholarship Recipient",
   },
 ];
@@ -452,9 +452,9 @@ export default function ScholarshipsPage() {
               </thead>
               <tbody>
                 {recipients.map((row) => (
-                  <tr key={`${row.slug}-${row.year}`} className="border-b border-border last:border-0">
+                  <tr key={`${row.id}-${row.year}`} className="border-b border-border last:border-0">
                     <td className="px-4 py-3">
-                      <Link href={`/directory/${row.slug}`} className="text-primary hover:underline font-medium">
+                      <Link href={`/directory/${row.id}`} className="text-primary hover:underline font-medium">
                         {row.student}
                       </Link>
                     </td>
@@ -490,7 +490,7 @@ export default function ScholarshipsPage() {
               const isCenterCard = itemsPerView === 3 && index === 1;
               return (
                 <article
-                  key={`${item.slug}-${activeIndex}-${index}`}
+                  key={`${item.id}-${activeIndex}-${index}`}
                   className={`rounded-2xl border p-5 transition-all duration-500 ${
                     isCenterCard
                       ? "scale-100 border-primary/30 bg-card shadow-xl lg:scale-[1.06]"
@@ -501,7 +501,7 @@ export default function ScholarshipsPage() {
                     <Quote className="h-5 w-5" />
                   </div>
                   <p className="mt-4 text-sm leading-relaxed text-text-secondary">{item.quote}</p>
-                  <Link href={`/directory/${item.slug}`} className="mt-4 inline-flex text-sm font-semibold text-primary hover:underline">
+                  <Link href={`/directory/${item.id}`} className="mt-4 inline-flex text-sm font-semibold text-primary hover:underline">
                     {item.student}
                   </Link>
                   <p className="mt-1 text-xs text-text-secondary">{item.note}</p>

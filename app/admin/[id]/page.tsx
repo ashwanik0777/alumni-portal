@@ -450,9 +450,8 @@ function statusIcon(status: AdminRow["status"]) {
 }
 
 export default function AdminSectionPage() {
-  const params = useParams<{ slug?: string[] }>();
-  const slug = params?.slug || [];
-  const key = slug[0] || "members";
+  const params = useParams<{ id?: string }>();
+  const key = params?.id || "members";
 
   const info = sectionMeta[key] || defaultSection;
 

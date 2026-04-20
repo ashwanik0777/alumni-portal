@@ -3,9 +3,9 @@ import { notFound } from "next/navigation";
 import { Briefcase, GraduationCap, MapPin, ShieldCheck, Star, Users } from "lucide-react";
 import { alumniProfiles } from "../data";
 
-export default async function AlumniProfilePage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const profile = alumniProfiles.find((item) => item.slug === slug);
+export default async function AlumniProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const profile = alumniProfiles.find((item) => item.id === id);
 
   if (!profile) {
     notFound();

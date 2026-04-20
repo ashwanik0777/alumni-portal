@@ -81,7 +81,7 @@ export default function DirectoryPage() {
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
           {alumniProfiles.map((person) => (
             <article
-              key={person.slug}
+              key={person.id}
               className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all"
             >
               <div className="flex items-start justify-between gap-3">
@@ -111,7 +111,7 @@ export default function DirectoryPage() {
 
               <div className="mt-6 grid grid-cols-2 gap-2">
                 <Link
-                  href={`/directory/${person.slug}`}
+                  href={`/directory/${person.id}`}
                   className="inline-flex items-center justify-center rounded-xl border border-border bg-background py-2.5 text-sm font-semibold text-text-primary hover:border-primary/30 transition-colors"
                 >
                   View Profile
