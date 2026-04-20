@@ -59,6 +59,7 @@ type AdminSectionConfig = {
 type ProgramActionView = "none" | "launch" | "assign" | "report";
 type RequestActionView = "none" | "priority" | "assign" | "close";
 type FinanceActionView = "none" | "create" | "mapping" | "payout" | "ledger" | "audit";
+type AnalyticsActionView = "none" | "pattern" | "funnel" | "channel";
 
 type ScholarshipFundingMapping = {
   id: string;
@@ -265,15 +266,15 @@ const sectionMeta: Record<string, AdminSectionConfig> = {
     ],
   },
   analytics: {
-    title: "Analytics",
-    subtitle: "Understand growth, retention, and conversion patterns.",
+    title: "Analytics Intelligence Center",
+    subtitle: "Track full website patterns, growth signals, conversion drops, and channel quality from one visual workspace.",
     searchPlaceholder: "Search by funnel or team",
     kpis: [
       { label: "Weekly Active Users", value: "1,942", trend: "+3.6%" },
       { label: "Profile Completion", value: "79%", trend: "+2.1%" },
       { label: "Event Conversion", value: "42%", trend: "+5.4%" },
     ],
-    actions: ["Open Retention View", "Compare Monthly Trends", "Export CSV"],
+    actions: ["Open Pattern Studio", "View Drop-off Funnel", "Export Analytics CSV"],
     tableTitle: "Top Performing Funnels",
     primaryFilterLabel: "Time Range",
     secondaryFilterLabel: "Channel",
@@ -526,6 +527,8 @@ export default function AdminSectionPage() {
   const [financeActionMessage, setFinanceActionMessage] = useState("");
   const [selectedFinanceBatchIds, setSelectedFinanceBatchIds] = useState<string[]>([]);
   const [scholarshipFundingMap, setScholarshipFundingMap] = useState<ScholarshipFundingMapping[]>(defaultScholarshipFundingMap);
+  const [analyticsActionView, setAnalyticsActionView] = useState<AnalyticsActionView>("none");
+  const [analyticsActionMessage, setAnalyticsActionMessage] = useState("");
 
   useEffect(() => {
     if (key === "members") {
@@ -557,6 +560,8 @@ export default function AdminSectionPage() {
     setFinanceActionMessage("");
     setSelectedFinanceBatchIds([]);
     setScholarshipFundingMap(defaultScholarshipFundingMap);
+    setAnalyticsActionView("none");
+    setAnalyticsActionMessage("");
   }, [key, info.rows]);
 
   const availableStatuses = useMemo(() => ["All", ...new Set(rows.map((row) => row.status))], [rows]);
@@ -787,6 +792,30 @@ export default function AdminSectionPage() {
           ),
         );
         setFinanceActionMessage(`Eligibility audit complete. ${flaggedIds.length} record(s) moved to review.`);
+        return;
+      }
+    }
+
+    if (key === "analytics") {
+      if (action === "Open Pattern Studio") {
+        setAnalyticsActionView("pattern");
+        setAnalyticsActionMessage("Pattern studio loaded: retention, session depth, and behavior clusters are highlighted.");
+        setStatusFilter("All");
+        setPrimaryFilter("Last 30 days");
+        setSecondaryFilter("All");
+        setCurrentPage(1);
+        return;
+      }
+
+      if (action === "View Drop-off Funnel") {
+        setAnalyticsActionView("funnel");
+        setAnalyticsActionMessage("Drop-off funnel loaded: identify where users leave the flow.");
+        return;
+      }
+
+      if (action === "Export Analytics CSV") {
+        setAnalyticsActionView("channel");
+        exportAnalyticsCsv(filteredRows.length > 0 ? filteredRows : rows);
         return;
       }
     }
@@ -1229,6 +1258,107 @@ export default function AdminSectionPage() {
     setActionMessage(`Finance entry ${rowId} updated to ${nextStatus}.`);
   };
 
+  const exportAnalyticsCsv = (sourceRows: AdminRow[]) => {
+    const header = "Funnel ID,Funnel Name,Owner,Status,Time Range,Channel,Updated At,Insight";
+    const csvRows = sourceRows.map((row) =>
+      [row.id, row.name, row.owner, row.status, row.primaryFilterValue, row.secondaryFilterValue, row.updatedAt, row.note]
+        .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+        .join(","),
+    );
+    const blob = new Blob([[header, ...csvRows].join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `analytics-insights-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+    setAnalyticsActionMessage(`Analytics CSV exported (${sourceRows.length} row(s)).`);
+  };
+
+  const analyticsTrafficTrend = [
+    { day: "Mon", visits: 820, active: 430 },
+    { day: "Tue", visits: 910, active: 472 },
+    { day: "Wed", visits: 980, active: 520 },
+    { day: "Thu", visits: 1080, active: 566 },
+    { day: "Fri", visits: 1190, active: 612 },
+    { day: "Sat", visits: 1010, active: 534 },
+    { day: "Sun", visits: 940, active: 501 },
+  ];
+
+  const analyticsChannelMix = [
+    { channel: "Organic", value: 41, color: "#0f766e" },
+    { channel: "Referral", value: 22, color: "#2563eb" },
+    { channel: "Campaign", value: 27, color: "#d97706" },
+    { channel: "Direct", value: 10, color: "#7c3aed" },
+  ];
+
+  const analyticsFunnel = [
+    { step: "Landing Visit", count: 100, note: "Base traffic" },
+    { step: "Account Login", count: 74, note: "26% drop" },
+    { step: "Profile View", count: 58, note: "16% drop" },
+    { step: "Action Intent", count: 44, note: "14% drop" },
+    { step: "Final Submit", count: 31, note: "13% drop" },
+  ];
+
+  const analyticsHeatmapRows = ["00-04", "04-08", "08-12", "12-16", "16-20", "20-24"];
+  const analyticsHeatmapDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const analyticsHeatmapValues = [
+    [28, 24, 26, 29, 31, 22, 20],
+    [36, 34, 32, 37, 40, 27, 25],
+    [52, 49, 55, 58, 63, 42, 38],
+    [61, 59, 64, 68, 72, 51, 46],
+    [66, 62, 69, 74, 79, 57, 50],
+    [44, 41, 46, 48, 54, 39, 33],
+  ];
+
+  const analyticsPatterns = [
+    "Referral users complete profile faster than campaign users.",
+    "Scholarship application intent peaks on Thu evening.",
+    "Event conversion drops when reminders are delayed.",
+    "Jobs page has high revisit but lower final submit.",
+  ];
+
+  const trafficPolyline = useMemo(() => {
+    const maxValue = Math.max(...analyticsTrafficTrend.map((item) => item.visits));
+    return analyticsTrafficTrend
+      .map((item, index) => {
+        const x = (index / (analyticsTrafficTrend.length - 1)) * 100;
+        const y = 100 - (item.visits / maxValue) * 100;
+        return `${x},${y}`;
+      })
+      .join(" ");
+  }, [analyticsTrafficTrend]);
+
+  const activePolyline = useMemo(() => {
+    const maxValue = Math.max(...analyticsTrafficTrend.map((item) => item.visits));
+    return analyticsTrafficTrend
+      .map((item, index) => {
+        const x = (index / (analyticsTrafficTrend.length - 1)) * 100;
+        const y = 100 - (item.active / maxValue) * 100;
+        return `${x},${y}`;
+      })
+      .join(" ");
+  }, [analyticsTrafficTrend]);
+
+  const channelPieGradient = useMemo(() => {
+    let cursor = 0;
+    const pieces = analyticsChannelMix.map((item) => {
+      const start = cursor;
+      cursor += item.value;
+      return `${item.color} ${start}% ${cursor}%`;
+    });
+    return `conic-gradient(${pieces.join(",")})`;
+  }, [analyticsChannelMix]);
+
+  const heatValueClass = (value: number) => {
+    if (value >= 70) return "bg-emerald-600 text-white";
+    if (value >= 55) return "bg-emerald-500 text-white";
+    if (value >= 40) return "bg-emerald-200 text-emerald-900";
+    return "bg-emerald-50 text-emerald-700";
+  };
+
   return (
     <div className="space-y-6">
       <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-6">
@@ -1263,6 +1393,113 @@ export default function AdminSectionPage() {
         ))}
       </section>
 
+      {key === "analytics" && (
+        <section className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            <article className="rounded-2xl border border-border bg-card p-5 xl:col-span-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-black text-text-primary">Website Traffic Pattern Graph</h3>
+                <span className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-semibold text-text-secondary">7-day live trend</span>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-border bg-background p-3">
+                <svg viewBox="0 0 100 100" className="h-56 w-full">
+                  <polyline points="0,100 100,100" fill="none" stroke="#e5e7eb" strokeWidth="0.8" />
+                  <polyline points={trafficPolyline} fill="none" stroke="#0f766e" strokeWidth="2.5" strokeLinecap="round" />
+                  <polyline points={activePolyline} fill="none" stroke="#d97706" strokeWidth="2.5" strokeLinecap="round" />
+                </svg>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                <span className="rounded-full border border-border bg-background px-2.5 py-1 font-semibold text-text-secondary">Visits: Teal line</span>
+                <span className="rounded-full border border-border bg-background px-2.5 py-1 font-semibold text-text-secondary">Active users: Amber line</span>
+                {analyticsTrafficTrend.map((point) => (
+                  <span key={`trend-${point.day}`} className="rounded-full border border-border bg-background px-2.5 py-1 text-text-secondary">
+                    {point.day}: {point.visits}
+                  </span>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-2xl border border-border bg-card p-5">
+              <h3 className="text-base font-black text-text-primary">Traffic Channel Pie Chart</h3>
+              <div className="mt-4 flex items-center gap-4">
+                <div className="h-36 w-36 rounded-full border border-border" style={{ background: channelPieGradient }} />
+                <div className="space-y-2 text-xs">
+                  {analyticsChannelMix.map((item) => (
+                    <div key={item.channel} className="flex items-center gap-2 text-text-secondary">
+                      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="font-semibold text-text-primary">{item.channel}</span>
+                      <span>{item.value}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-text-secondary">Organic leads volume, while campaign is strong but needs better retention after first session.</p>
+            </article>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            <article className="rounded-2xl border border-border bg-card p-5 xl:col-span-2">
+              <h3 className="text-base font-black text-text-primary">User Journey Drop-off Funnel</h3>
+              <div className="mt-4 space-y-3">
+                {analyticsFunnel.map((step) => (
+                  <div key={step.step}>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="font-semibold text-text-primary">{step.step}</span>
+                      <span className="text-text-secondary">{step.count}% • {step.note}</span>
+                    </div>
+                    <div className="h-3 rounded-full bg-background">
+                      <div className="h-3 rounded-full bg-linear-to-r from-primary to-secondary" style={{ width: `${step.count}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-2xl border border-border bg-card p-5">
+              <h3 className="text-base font-black text-text-primary">Pattern Alerts</h3>
+              <div className="mt-3 space-y-2">
+                {analyticsPatterns.map((pattern) => (
+                  <div key={pattern} className="rounded-xl border border-border bg-background p-3 text-xs text-text-secondary">
+                    {pattern}
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+
+          <article className="rounded-2xl border border-border bg-card p-5">
+            <h3 className="text-base font-black text-text-primary">Weekly Activity Heatmap</h3>
+            <div className="mt-4 overflow-x-auto">
+              <table className="min-w-full border-separate border-spacing-1 text-center text-xs">
+                <thead>
+                  <tr>
+                    <th className="px-2 py-1 text-left text-text-secondary">Time</th>
+                    {analyticsHeatmapDays.map((day) => (
+                      <th key={day} className="px-2 py-1 text-text-secondary">{day}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {analyticsHeatmapRows.map((slot, rowIndex) => (
+                    <tr key={slot}>
+                      <td className="px-2 py-1 text-left font-semibold text-text-secondary">{slot}</td>
+                      {analyticsHeatmapValues[rowIndex].map((value, cellIndex) => (
+                        <td key={`${slot}-${analyticsHeatmapDays[cellIndex]}`} className={`rounded-md px-2 py-1 font-semibold ${heatValueClass(value)}`}>
+                          {value}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      )}
+
+      {key !== "analytics" && (
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-lg font-bold">{info.tableTitle}</h3>
@@ -1615,7 +1852,103 @@ export default function AdminSectionPage() {
           </div>
         )}
       </section>
+      )}
 
+      {key === "analytics" ? (
+        <section className="grid grid-cols-1 gap-4">
+          <article className="rounded-2xl border border-border bg-card p-5">
+            <h3 className="text-lg font-bold">Full Website Analysis Board</h3>
+            <p className="mt-1 text-sm text-text-secondary">Everything is visualized here so you can monitor growth, risk, and conversion without leaving this page.</p>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-3">
+              <div className="rounded-2xl border border-border bg-background p-4 xl:col-span-2">
+                <p className="text-sm font-bold text-text-primary">Section Performance Comparison</p>
+                <div className="mt-3 space-y-3 text-xs">
+                  {[
+                    { name: "Home", value: 92, color: "bg-emerald-500" },
+                    { name: "Directory", value: 78, color: "bg-sky-500" },
+                    { name: "Jobs", value: 61, color: "bg-amber-500" },
+                    { name: "Scholarships", value: 73, color: "bg-violet-500" },
+                    { name: "Mentorship", value: 85, color: "bg-primary" },
+                  ].map((item) => (
+                    <div key={item.name}>
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="font-semibold text-text-primary">{item.name}</span>
+                        <span className="text-text-secondary">{item.value}% health</span>
+                      </div>
+                      <div className="h-2.5 rounded-full bg-card">
+                        <div className={`h-2.5 rounded-full ${item.color}`} style={{ width: `${item.value}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-background p-4">
+                <p className="text-sm font-bold text-text-primary">Conversion Goal Progress</p>
+                <div className="mt-3 space-y-3 text-xs">
+                  {[
+                    { goal: "Profile Completion", done: 79, target: 90 },
+                    { goal: "Event Registration", done: 42, target: 55 },
+                    { goal: "Mentorship Request", done: 64, target: 70 },
+                    { goal: "Scholarship Apply", done: 58, target: 68 },
+                  ].map((item) => (
+                    <div key={item.goal} className="rounded-xl border border-border bg-card p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-text-primary">{item.goal}</span>
+                        <span className="text-text-secondary">{item.done}% / {item.target}%</span>
+                      </div>
+                      <div className="mt-2 h-2.5 rounded-full bg-background">
+                        <div className="h-2.5 rounded-full bg-linear-to-r from-secondary to-primary" style={{ width: `${item.done}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+              <div className="rounded-2xl border border-border bg-background p-4">
+                <p className="text-sm font-bold text-text-primary">Device Distribution Pie View</p>
+                <div className="mt-3 flex items-center gap-4">
+                  <div
+                    className="h-36 w-36 rounded-full border border-border"
+                    style={{ background: "conic-gradient(#0f766e 0% 54%, #2563eb 54% 82%, #d97706 82% 94%, #7c3aed 94% 100%)" }}
+                  />
+                  <div className="space-y-2 text-xs text-text-secondary">
+                    <p><span className="font-semibold text-text-primary">Mobile</span> 54%</p>
+                    <p><span className="font-semibold text-text-primary">Desktop</span> 28%</p>
+                    <p><span className="font-semibold text-text-primary">Tablet</span> 12%</p>
+                    <p><span className="font-semibold text-text-primary">Other</span> 6%</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-background p-4">
+                <p className="text-sm font-bold text-text-primary">Action-wise Engagement Chart</p>
+                <div className="mt-3 space-y-2 text-xs">
+                  {[
+                    { name: "Login", value: 88 },
+                    { name: "Profile Update", value: 64 },
+                    { name: "Event Register", value: 42 },
+                    { name: "Mentorship Request", value: 57 },
+                    { name: "Scholarship Apply", value: 51 },
+                    { name: "Job Apply", value: 37 },
+                  ].map((item) => (
+                    <div key={item.name} className="flex items-center gap-2">
+                      <div className="w-28 shrink-0 font-semibold text-text-primary">{item.name}</div>
+                      <div className="h-2.5 flex-1 rounded-full bg-card">
+                        <div className="h-2.5 rounded-full bg-primary" style={{ width: `${item.value}%` }} />
+                      </div>
+                      <div className="w-10 text-right text-text-secondary">{item.value}%</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+      ) : (
       <section className={key === "finance" ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 gap-4 lg:grid-cols-3"}>
         <article className={key === "finance" ? "rounded-2xl border border-border bg-card p-5" : "rounded-2xl border border-border bg-card p-5 lg:col-span-2"}>
           <h3 className="text-lg font-bold">Quick Actions</h3>
@@ -2207,9 +2540,10 @@ export default function AdminSectionPage() {
               )}
             </div>
           )}
+
         </article>
 
-        {key !== "finance" && (
+        {key !== "finance" && key !== "analytics" && (
         <article className="rounded-2xl border border-border bg-card p-5">
           <h3 className="text-lg font-bold">Management Notes</h3>
           <p className="mt-1 text-sm text-text-secondary">
@@ -2231,6 +2565,7 @@ export default function AdminSectionPage() {
         </article>
         )}
       </section>
+      )}
     </div>
   );
 }
