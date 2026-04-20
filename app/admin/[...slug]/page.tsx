@@ -56,6 +56,8 @@ type AdminSectionConfig = {
   pageSize: number;
 };
 
+type ProgramActionView = "none" | "launch" | "assign" | "report";
+
 const sectionMeta: Record<string, AdminSectionConfig> = {
   members: {
     title: "Member Management",
@@ -466,6 +468,10 @@ export default function AdminSectionPage() {
   const [showApprovedView, setShowApprovedView] = useState(false);
   const [approvedSortField, setApprovedSortField] = useState<"name" | "batch" | "updatedAt">("name");
   const [approvedSortDirection, setApprovedSortDirection] = useState<"asc" | "desc">("asc");
+  const [programActionView, setProgramActionView] = useState<ProgramActionView>("none");
+  const [programActionMessage, setProgramActionMessage] = useState("");
+  const [selectedProgramForMentor, setSelectedProgramForMentor] = useState("");
+  const [selectedMentors, setSelectedMentors] = useState<string[]>([]);
 
   useEffect(() => {
     if (key === "members") {
@@ -484,6 +490,10 @@ export default function AdminSectionPage() {
     setShowApprovedView(false);
     setApprovedSortField("name");
     setApprovedSortDirection("asc");
+    setProgramActionView("none");
+    setProgramActionMessage("");
+    setSelectedProgramForMentor("");
+    setSelectedMentors([]);
   }, [key, info.rows]);
 
   const availableStatuses = useMemo(() => ["All", ...new Set(rows.map((row) => row.status))], [rows]);
@@ -602,6 +612,26 @@ export default function AdminSectionPage() {
   };
 
   const handleQuickAction = (action: string) => {
+    if (key === "programs") {
+      if (action === "Launch New Program") {
+        setProgramActionView("launch");
+        setProgramActionMessage("Fill details and create a new program draft.");
+        return;
+      }
+
+      if (action === "Assign Mentors") {
+        setProgramActionView("assign");
+        setProgramActionMessage("Choose a program and assign mentors.");
+        return;
+      }
+
+      if (action === "Export Weekly Report") {
+        setProgramActionView("report");
+        setProgramActionMessage("Weekly report preview is ready. Export or print it.");
+        return;
+      }
+    }
+
     if (key !== "members") {
       setActionMessage(`${action} is prepared for this section. Backend/API connection can be added next.`);
       return;
@@ -757,6 +787,61 @@ export default function AdminSectionPage() {
   const goToPage = (nextPage: number) => {
     if (nextPage < 1 || nextPage > totalPages) return;
     setCurrentPage(nextPage);
+  };
+
+  const mentorPool = [
+    "Ritika Verma",
+    "Arjun Singh",
+    "Sana Khan",
+    "Kriti Maurya",
+    "Harshit Gupta",
+    "Neha Dwivedi",
+  ];
+
+  const assignMentorsToProgram = () => {
+    if (!selectedProgramForMentor) {
+      setProgramActionMessage("Please select a program first.");
+      return;
+    }
+    if (selectedMentors.length === 0) {
+      setProgramActionMessage("Please select at least one mentor.");
+      return;
+    }
+
+    setRows((prev) =>
+      prev.map((row) =>
+        row.id === selectedProgramForMentor
+          ? {
+              ...row,
+              status: row.status === "Draft" ? "In Progress" : row.status,
+              updatedAt: "Just now",
+              note: `Mentors assigned: ${selectedMentors.join(", ")}.`,
+            }
+          : row,
+      ),
+    );
+    setProgramActionMessage(`Mentors assigned successfully to ${selectedProgramForMentor}.`);
+    setSelectedMentors([]);
+  };
+
+  const exportProgramWeeklyReport = () => {
+    const header = "Program ID,Program Name,Track,Mode,Status,Updated At,Note";
+    const content = rows.map((row) => [row.id, row.name, row.primaryFilterValue, row.secondaryFilterValue, row.status, row.updatedAt, row.note]);
+    const csvRows = content.map((line) => line.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","));
+    const blob = new Blob([[header, ...csvRows].join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `program-weekly-report-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+    setProgramActionMessage("Weekly report exported successfully.");
+  };
+
+  const printProgramWeeklyReport = () => {
+    window.print();
   };
 
   return (
@@ -1094,6 +1179,216 @@ export default function AdminSectionPage() {
               </button>
             ))}
           </div>
+
+          {key === "programs" && (
+            <div className="mt-4 rounded-2xl border border-border bg-background p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-bold text-text-primary">Program Action Workspace</p>
+                <button
+                  onClick={() => {
+                    setProgramActionView("none");
+                    setProgramActionMessage("");
+                    setSelectedProgramForMentor("");
+                    setSelectedMentors([]);
+                  }}
+                  className="rounded-lg border border-border bg-card px-3 py-1 text-xs font-semibold text-text-secondary hover:border-primary/30 hover:text-primary"
+                >
+                  Reset Panel
+                </button>
+              </div>
+
+              {programActionMessage && (
+                <p className="mt-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-xs text-text-secondary">{programActionMessage}</p>
+              )}
+
+              {programActionView === "launch" && (
+                <form
+                  className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const form = new FormData(event.currentTarget);
+                    const name = String(form.get("name") || "").trim();
+                    const track = String(form.get("track") || "").trim();
+                    const mode = String(form.get("mode") || "").trim();
+                    const owner = String(form.get("owner") || "").trim();
+                    const goal = String(form.get("goal") || "").trim();
+
+                    if (!name || !track || !mode || !owner) {
+                      setProgramActionMessage("Please fill all required fields.");
+                      return;
+                    }
+
+                    const generatedId = `P-${Math.floor(Date.now() / 1000).toString().slice(-4)}`;
+                    setRows((prev) => [
+                      {
+                        id: generatedId,
+                        name,
+                        owner,
+                        status: "Draft",
+                        updatedAt: "Just now",
+                        primaryFilterValue: track,
+                        secondaryFilterValue: mode,
+                        note: goal || "New program draft created from Quick Actions.",
+                      },
+                      ...prev,
+                    ]);
+                    setProgramActionMessage(`Program ${name} created as draft.`);
+                    (event.currentTarget as HTMLFormElement).reset();
+                  }}
+                >
+                  <InputField label="Program Name" name="name" placeholder="Example: Data Science Sprint" required />
+                  <InputField label="Owner Team" name="owner" placeholder="Example: Mentorship Cell" required />
+
+                  <SelectField
+                    label="Track"
+                    name="track"
+                    options={info.primaryFilterOptions.filter((item) => item !== "All")}
+                    required
+                  />
+
+                  <SelectField
+                    label="Mode"
+                    name="mode"
+                    options={info.secondaryFilterOptions.filter((item) => item !== "All")}
+                    required
+                  />
+
+                  <label className="sm:col-span-2">
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Program Goal</span>
+                    <textarea
+                      name="goal"
+                      rows={3}
+                      placeholder="Write a short goal and scope"
+                      className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                    />
+                  </label>
+
+                  <div className="sm:col-span-2 flex justify-end">
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                    >
+                      Create Program
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {programActionView === "assign" && (
+                <div className="mt-3 space-y-3">
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Select Program</span>
+                    <select
+                      value={selectedProgramForMentor}
+                      onChange={(event) => setSelectedProgramForMentor(event.target.value)}
+                      className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                    >
+                      <option value="">Choose program</option>
+                      {rows.map((row) => (
+                        <option key={`assign-${row.id}`} value={row.id}>
+                          {row.id} - {row.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <div>
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Mentor Pool</p>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {mentorPool.map((mentor) => (
+                        <label key={mentor} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-text-primary">
+                          <input
+                            type="checkbox"
+                            checked={selectedMentors.includes(mentor)}
+                            onChange={(event) => {
+                              if (event.target.checked) {
+                                setSelectedMentors((prev) => [...prev, mentor]);
+                                return;
+                              }
+                              setSelectedMentors((prev) => prev.filter((item) => item !== mentor));
+                            }}
+                          />
+                          {mentor}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      onClick={assignMentorsToProgram}
+                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                    >
+                      Save Mentor Assignment
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {programActionView === "report" && (
+                <div className="mt-3 space-y-3">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <div className="rounded-xl border border-border bg-card p-3">
+                      <p className="text-xs text-text-secondary">Total Programs</p>
+                      <p className="mt-1 text-xl font-black text-text-primary">{rows.length}</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-card p-3">
+                      <p className="text-xs text-text-secondary">Live / In Progress</p>
+                      <p className="mt-1 text-xl font-black text-text-primary">
+                        {rows.filter((row) => row.status === "Live" || row.status === "In Progress").length}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-card p-3">
+                      <p className="text-xs text-text-secondary">Draft / Review</p>
+                      <p className="mt-1 text-xl font-black text-text-primary">
+                        {rows.filter((row) => row.status === "Draft" || row.status === "Review").length}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-border">
+                    <table className="min-w-full text-left text-sm">
+                      <thead>
+                        <tr className="bg-card">
+                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Program</th>
+                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Track</th>
+                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Mode</th>
+                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Status</th>
+                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Updated</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((row) => (
+                          <tr key={`weekly-${row.id}`}>
+                            <td className="border-b border-border/60 px-3 py-2 text-text-primary">{row.name}</td>
+                            <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{row.primaryFilterValue}</td>
+                            <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{row.secondaryFilterValue}</td>
+                            <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{row.status}</td>
+                            <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{row.updatedAt}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <button
+                      onClick={exportProgramWeeklyReport}
+                      className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                    >
+                      <Download className="h-4 w-4" /> Download CSV
+                    </button>
+                    <button
+                      onClick={printProgramWeeklyReport}
+                      className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                    >
+                      <Printer className="h-4 w-4" /> Print Summary
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </article>
 
         <article className="rounded-2xl border border-border bg-card p-5">
@@ -1132,6 +1427,63 @@ function SelectFilter({
         onChange={(event) => onChange(event.target.value)}
         className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text-primary outline-none focus:border-primary"
       >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function InputField({
+  label,
+  name,
+  placeholder,
+  required,
+}: {
+  label: string;
+  name: string;
+  placeholder?: string;
+  required?: boolean;
+}) {
+  return (
+    <label>
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">{label}</span>
+      <input
+        name={name}
+        placeholder={placeholder}
+        required={required}
+        className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+      />
+    </label>
+  );
+}
+
+function SelectField({
+  label,
+  name,
+  options,
+  required,
+}: {
+  label: string;
+  name: string;
+  options: string[];
+  required?: boolean;
+}) {
+  return (
+    <label>
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">{label}</span>
+      <select
+        name={name}
+        required={required}
+        defaultValue=""
+        className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+      >
+        <option value="" disabled>
+          Select {label.toLowerCase()}
+        </option>
         {options.map((option) => (
           <option key={option} value={option}>
             {option}
