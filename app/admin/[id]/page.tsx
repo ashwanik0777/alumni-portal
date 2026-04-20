@@ -58,7 +58,18 @@ type AdminSectionConfig = {
 
 type ProgramActionView = "none" | "launch" | "assign" | "report";
 type RequestActionView = "none" | "priority" | "assign" | "close";
-type FinanceActionView = "none" | "payout" | "ledger" | "audit";
+type FinanceActionView = "none" | "create" | "mapping" | "payout" | "ledger" | "audit";
+
+type ScholarshipFundingMapping = {
+  id: string;
+  donorName: string;
+  scholarshipName: string;
+  amount: number;
+  cycle: "Monthly" | "Quarterly" | "Annual" | "One Time";
+  status: "Committed" | "Transferred";
+  note: string;
+  updatedAt: string;
+};
 
 const sectionMeta: Record<string, AdminSectionConfig> = {
   members: {
@@ -230,27 +241,27 @@ const sectionMeta: Record<string, AdminSectionConfig> = {
     ],
   },
   finance: {
-    title: "Finance Overview",
-    subtitle: "Track donations, payouts, reconciliation, and audit-safe activity.",
-    searchPlaceholder: "Search by transaction or team",
+    title: "Scholarship Management",
+    subtitle: "Manage scholarship programs, verification, payment release, and compliance from one panel.",
+    searchPlaceholder: "Search by scholarship, owner, or record id",
     kpis: [
-      { label: "This Month Inflow", value: "₹3.8L", trend: "+11%" },
-      { label: "Scholarship Payouts", value: "₹1.6L", trend: "+7%" },
-      { label: "Pending Reconciliation", value: "6", trend: "-2" },
+      { label: "Active Scholarships", value: "9", trend: "+2 this month" },
+      { label: "Verified Applications", value: "124", trend: "+18 this week" },
+      { label: "Pending Payments", value: "11", trend: "-3" },
     ],
-    actions: ["Approve Payout Batch", "Download Ledger", "Run Audit Check"],
-    tableTitle: "Finance Snapshots",
-    primaryFilterLabel: "Type",
+    actions: ["Create Scholarship", "Manage Donor Mapping", "Approve Scholarship Payment Batch", "Export Scholarship Ledger", "Run Eligibility Audit"],
+    tableTitle: "Scholarship Operations Queue",
+    primaryFilterLabel: "Category",
     secondaryFilterLabel: "Cycle",
-    primaryFilterOptions: ["All", "Donation", "Payout", "Refund"],
-    secondaryFilterOptions: ["All", "Weekly", "Monthly", "Quarterly"],
+    primaryFilterOptions: ["All", "Merit", "Need Based", "Payment", "Emergency"],
+    secondaryFilterOptions: ["All", "Monthly", "Quarterly", "Annual"],
     pageSize: 5,
     rows: [
-      { id: "F-601", name: "Scholarship Cycle A", owner: "Finance Team", status: "Settled", updatedAt: "Today", primaryFilterValue: "Payout", secondaryFilterValue: "Monthly", note: "All beneficiary transfers completed." },
-      { id: "F-602", name: "Event Sponsorship", owner: "Treasury", status: "Processing", updatedAt: "Yesterday", primaryFilterValue: "Donation", secondaryFilterValue: "Weekly", note: "Two donations awaiting confirmation." },
-      { id: "F-603", name: "Donor Refund", owner: "Compliance", status: "Review", updatedAt: "2 days ago", primaryFilterValue: "Refund", secondaryFilterValue: "Monthly", note: "Manual validation in progress." },
-      { id: "F-604", name: "Campus Grant Disbursal", owner: "Finance Team", status: "Settled", updatedAt: "3 days ago", primaryFilterValue: "Payout", secondaryFilterValue: "Quarterly", note: "Reconciliation done successfully." },
-      { id: "F-605", name: "Emergency Fund", owner: "Treasury", status: "Processing", updatedAt: "4 days ago", primaryFilterValue: "Donation", secondaryFilterValue: "Weekly", note: "Bank callback pending." },
+      { id: "SC-801", name: "Merit Excellence 2026", owner: "Scholarship Desk", status: "Processing", updatedAt: "10 mins ago", primaryFilterValue: "Merit", secondaryFilterValue: "Annual", note: "42 applications received, 18 verified." },
+      { id: "SC-802", name: "Need Support Cycle Q2", owner: "Finance Team", status: "Review", updatedAt: "1 hour ago", primaryFilterValue: "Need Based", secondaryFilterValue: "Quarterly", note: "Family income documents under manual check." },
+      { id: "SC-803", name: "Girls STEM Booster", owner: "Scholarship Desk", status: "Settled", updatedAt: "Today", primaryFilterValue: "Payment", secondaryFilterValue: "Monthly", note: "Current month scholarship payment completed for all approved students." },
+      { id: "SC-804", name: "Emergency Relief Fund", owner: "Compliance", status: "Processing", updatedAt: "Yesterday", primaryFilterValue: "Emergency", secondaryFilterValue: "Monthly", note: "Priority verification due to urgent requests." },
+      { id: "SC-805", name: "Rural Scholars Program", owner: "Finance Team", status: "Review", updatedAt: "2 days ago", primaryFilterValue: "Payment", secondaryFilterValue: "Quarterly", note: "Bank account validation pending for 6 students." },
     ],
   },
   analytics: {
@@ -336,6 +347,39 @@ const defaultSection: AdminSectionConfig = {
 const MEMBER_REGISTRATION_STORAGE_KEY = "admin_member_registrations_v1";
 const FRONTEND_EMAIL_OUTBOX_KEY = "admin_email_outbox_v1";
 const FIRST_LOGIN_USERS_KEY = "pending_first_login_users_v1";
+
+const defaultScholarshipFundingMap: ScholarshipFundingMapping[] = [
+  {
+    id: "MAP-901",
+    donorName: "Aditi Sharma",
+    scholarshipName: "Merit Excellence 2026",
+    amount: 150000,
+    cycle: "Annual",
+    status: "Committed",
+    note: "Support for top-performing batch toppers.",
+    updatedAt: "Today",
+  },
+  {
+    id: "MAP-902",
+    donorName: "Rohit Gupta",
+    scholarshipName: "Girls STEM Booster",
+    amount: 80000,
+    cycle: "Quarterly",
+    status: "Transferred",
+    note: "Q2 transfer completed for selected recipients.",
+    updatedAt: "Yesterday",
+  },
+  {
+    id: "MAP-903",
+    donorName: "Nikhil Jain",
+    scholarshipName: "Emergency Relief Fund",
+    amount: 50000,
+    cycle: "One Time",
+    status: "Committed",
+    note: "Emergency fund reserved for urgent requests.",
+    updatedAt: "2 days ago",
+  },
+];
 
 type PendingMemberRegistration = {
   id: string;
@@ -481,6 +525,7 @@ export default function AdminSectionPage() {
   const [financeActionView, setFinanceActionView] = useState<FinanceActionView>("none");
   const [financeActionMessage, setFinanceActionMessage] = useState("");
   const [selectedFinanceBatchIds, setSelectedFinanceBatchIds] = useState<string[]>([]);
+  const [scholarshipFundingMap, setScholarshipFundingMap] = useState<ScholarshipFundingMapping[]>(defaultScholarshipFundingMap);
 
   useEffect(() => {
     if (key === "members") {
@@ -511,6 +556,7 @@ export default function AdminSectionPage() {
     setFinanceActionView("none");
     setFinanceActionMessage("");
     setSelectedFinanceBatchIds([]);
+    setScholarshipFundingMap(defaultScholarshipFundingMap);
   }, [key, info.rows]);
 
   const availableStatuses = useMemo(() => ["All", ...new Set(rows.map((row) => row.status))], [rows]);
@@ -685,27 +731,39 @@ export default function AdminSectionPage() {
     }
 
     if (key === "finance") {
-      if (action === "Approve Payout Batch") {
-        setFinanceActionView("payout");
-        const payoutCandidates = rows
-          .filter((row) => row.primaryFilterValue === "Payout" && (row.status === "Processing" || row.status === "Review"))
-          .map((row) => row.id);
-        setSelectedFinanceBatchIds(payoutCandidates);
-        if (payoutCandidates.length === 0) {
-          setFinanceActionMessage("No payout items are pending approval right now.");
-          return;
-        }
-        setFinanceActionMessage(`Selected ${payoutCandidates.length} payout record(s) for approval batch.`);
+      if (action === "Create Scholarship") {
+        setFinanceActionView("create");
+        setFinanceActionMessage("Fill details below to create a new scholarship record.");
         return;
       }
 
-      if (action === "Download Ledger") {
+      if (action === "Manage Donor Mapping") {
+        setFinanceActionView("mapping");
+        setFinanceActionMessage("Manage donor-to-scholarship mapping with committed amounts.");
+        return;
+      }
+
+      if (action === "Approve Scholarship Payment Batch") {
+        setFinanceActionView("payout");
+        const payoutCandidates = rows
+          .filter((row) => row.primaryFilterValue === "Payment" && (row.status === "Processing" || row.status === "Review"))
+          .map((row) => row.id);
+        setSelectedFinanceBatchIds(payoutCandidates);
+        if (payoutCandidates.length === 0) {
+          setFinanceActionMessage("No scholarship payment items are pending approval right now.");
+          return;
+        }
+        setFinanceActionMessage(`Selected ${payoutCandidates.length} scholarship payment record(s) for approval batch.`);
+        return;
+      }
+
+      if (action === "Export Scholarship Ledger") {
         setFinanceActionView("ledger");
         exportFinanceLedger(rows, "full");
         return;
       }
 
-      if (action === "Run Audit Check") {
+      if (action === "Run Eligibility Audit") {
         setFinanceActionView("audit");
         const flaggedIds = rows
           .filter((row) => row.status === "Processing" || row.status === "Review")
@@ -723,12 +781,12 @@ export default function AdminSectionPage() {
                   status: "Review",
                   owner: "Compliance",
                   updatedAt: "Just now",
-                  note: "Audit check flagged this entry for manual verification.",
+                  note: "Eligibility audit flagged this record for manual verification.",
                 }
               : row,
           ),
         );
-        setFinanceActionMessage(`Audit check complete. ${flaggedIds.length} record(s) moved to review.`);
+        setFinanceActionMessage(`Eligibility audit complete. ${flaggedIds.length} record(s) moved to review.`);
         return;
       }
     }
@@ -1000,9 +1058,110 @@ export default function AdminSectionPage() {
   };
 
   const financePayoutCandidates = useMemo(
-    () => rows.filter((row) => row.primaryFilterValue === "Payout" && (row.status === "Processing" || row.status === "Review")),
+    () => rows.filter((row) => row.primaryFilterValue === "Payment" && (row.status === "Processing" || row.status === "Review")),
     [rows],
   );
+
+  const totalCommittedFunding = useMemo(
+    () => scholarshipFundingMap.reduce((sum, item) => sum + item.amount, 0),
+    [scholarshipFundingMap],
+  );
+
+  const totalTransferredFunding = useMemo(
+    () => scholarshipFundingMap.filter((item) => item.status === "Transferred").reduce((sum, item) => sum + item.amount, 0),
+    [scholarshipFundingMap],
+  );
+
+  const fundingByScholarship = useMemo(() => {
+    const map = new Map<string, number>();
+    scholarshipFundingMap.forEach((item) => {
+      map.set(item.scholarshipName, (map.get(item.scholarshipName) || 0) + item.amount);
+    });
+    return map;
+  }, [scholarshipFundingMap]);
+
+  const createScholarshipRecord = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const name = String(form.get("name") || "").trim();
+    const owner = String(form.get("owner") || "").trim();
+    const category = String(form.get("category") || "").trim();
+    const cycle = String(form.get("cycle") || "").trim();
+    const note = String(form.get("note") || "").trim();
+
+    if (!name || !owner || !category || !cycle) {
+      setFinanceActionMessage("Please fill all required scholarship fields.");
+      return;
+    }
+
+    const generatedId = `SC-${Math.floor(Date.now() / 1000).toString().slice(-4)}`;
+    setRows((prev) => [
+      {
+        id: generatedId,
+        name,
+        owner,
+        status: "Processing",
+        updatedAt: "Just now",
+        primaryFilterValue: category,
+        secondaryFilterValue: cycle,
+        note: note || "New scholarship created from admin quick actions.",
+      },
+      ...prev,
+    ]);
+
+    setFinanceActionMessage(`Scholarship ${name} created successfully with id ${generatedId}.`);
+    event.currentTarget.reset();
+  };
+
+  const addDonorScholarshipMapping = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const donorName = String(form.get("donorName") || "").trim();
+    const scholarshipName = String(form.get("scholarshipName") || "").trim();
+    const amountValue = String(form.get("amount") || "").trim();
+    const cycle = String(form.get("cycle") || "").trim() as ScholarshipFundingMapping["cycle"];
+    const note = String(form.get("note") || "").trim();
+
+    const amount = Number(amountValue);
+    if (!donorName || !scholarshipName || !cycle || Number.isNaN(amount) || amount <= 0) {
+      setFinanceActionMessage("Please enter donor, scholarship, cycle, and valid amount.");
+      return;
+    }
+
+    const generatedId = `MAP-${Math.floor(Date.now() / 1000).toString().slice(-4)}`;
+    setScholarshipFundingMap((prev) => [
+      {
+        id: generatedId,
+        donorName,
+        scholarshipName,
+        amount,
+        cycle,
+        status: "Committed",
+        note: note || "New donor commitment added.",
+        updatedAt: "Just now",
+      },
+      ...prev,
+    ]);
+
+    setFinanceActionMessage(`Mapping created: ${donorName} committed ₹${amount.toLocaleString("en-IN")} for ${scholarshipName}.`);
+    event.currentTarget.reset();
+  };
+
+  const updateMappingStatus = (mappingId: string, nextStatus: ScholarshipFundingMapping["status"]) => {
+    setScholarshipFundingMap((prev) =>
+      prev.map((item) =>
+        item.id === mappingId
+          ? {
+              ...item,
+              status: nextStatus,
+              updatedAt: "Just now",
+              note: nextStatus === "Transferred" ? "Amount transferred and logged." : item.note,
+            }
+          : item,
+      ),
+    );
+    setFinanceActionMessage(`Donor mapping ${mappingId} marked as ${nextStatus}.`);
+  };
 
   const toggleFinanceBatchSelection = (rowId: string) => {
     setSelectedFinanceBatchIds((prev) => (prev.includes(rowId) ? prev.filter((item) => item !== rowId) : [...prev, rowId]));
@@ -1021,12 +1180,12 @@ export default function AdminSectionPage() {
               ...row,
               status: "Settled",
               updatedAt: "Just now",
-              note: "Approved in payout batch and marked settled.",
+              note: "Approved in scholarship payment batch and marked settled.",
             }
           : row,
       ),
     );
-    setFinanceActionMessage(`Approved payout batch for ${selectedFinanceBatchIds.length} record(s).`);
+    setFinanceActionMessage(`Approved scholarship payment batch for ${selectedFinanceBatchIds.length} record(s).`);
     setSelectedFinanceBatchIds([]);
   };
 
@@ -1041,12 +1200,12 @@ export default function AdminSectionPage() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `finance-ledger-${scope}-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.download = `scholarship-ledger-${scope}-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
-    setFinanceActionMessage(`Finance ledger downloaded (${sourceRows.length} row(s), ${scope} scope).`);
+    setFinanceActionMessage(`Scholarship ledger downloaded (${sourceRows.length} row(s), ${scope} scope).`);
   };
 
   const updateFinanceRowStatus = (rowId: string, nextStatus: "Settled" | "Processing" | "Review") => {
@@ -1266,6 +1425,12 @@ export default function AdminSectionPage() {
 
               <p className="mt-3 text-sm text-text-secondary">{row.note}</p>
 
+              {key === "finance" && (
+                <p className="mt-2 text-xs font-semibold text-text-secondary">
+                  Mapped Funding: ₹{(fundingByScholarship.get(row.name) || 0).toLocaleString("en-IN")}
+                </p>
+              )}
+
               {key === "requests" && (
                 <div className="mt-4 flex flex-wrap gap-2">
                   {(row.status === "Open" || row.status === "Review") && (
@@ -1304,7 +1469,7 @@ export default function AdminSectionPage() {
                       onClick={() => updateFinanceRowStatus(row.id, "Settled")}
                       className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
                     >
-                      Mark Settled
+                      Approve Payment
                     </button>
                   )}
 
@@ -1313,7 +1478,7 @@ export default function AdminSectionPage() {
                       onClick={() => updateFinanceRowStatus(row.id, "Review")}
                       className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100"
                     >
-                      Flag Review
+                      Flag Eligibility Review
                     </button>
                   )}
 
@@ -1322,7 +1487,7 @@ export default function AdminSectionPage() {
                       onClick={() => updateFinanceRowStatus(row.id, "Processing")}
                       className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary/90"
                     >
-                      Move To Processing
+                      Move To Verification
                     </button>
                   )}
                 </div>
@@ -1451,8 +1616,8 @@ export default function AdminSectionPage() {
         )}
       </section>
 
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <article className="rounded-2xl border border-border bg-card p-5 lg:col-span-2">
+      <section className={key === "finance" ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 gap-4 lg:grid-cols-3"}>
+        <article className={key === "finance" ? "rounded-2xl border border-border bg-card p-5" : "rounded-2xl border border-border bg-card p-5 lg:col-span-2"}>
           <h3 className="text-lg font-bold">Quick Actions</h3>
           <p className="mt-1 text-sm text-text-secondary">Section-specific shortcuts to speed up daily operations.</p>
           <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -1784,7 +1949,7 @@ export default function AdminSectionPage() {
           {key === "finance" && (
             <div className="mt-4 rounded-2xl border border-border bg-background p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-bold text-text-primary">Finance Action Workspace</p>
+                <p className="text-sm font-bold text-text-primary">Scholarship Action Workspace</p>
                 <button
                   onClick={() => {
                     setFinanceActionView("none");
@@ -1801,11 +1966,158 @@ export default function AdminSectionPage() {
                 <p className="mt-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-xs text-text-secondary">{financeActionMessage}</p>
               )}
 
-              {financeActionView === "payout" && (
+              {financeActionView === "mapping" && (
                 <div className="mt-3 space-y-3">
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <div className="rounded-xl border border-border bg-card p-3">
-                      <p className="text-xs text-text-secondary">Pending Payout Approvals</p>
+                      <p className="text-xs text-text-secondary">Donor Mappings</p>
+                      <p className="mt-1 text-xl font-black text-text-primary">{scholarshipFundingMap.length}</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-card p-3">
+                      <p className="text-xs text-text-secondary">Total Committed</p>
+                      <p className="mt-1 text-xl font-black text-text-primary">₹{totalCommittedFunding.toLocaleString("en-IN")}</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-card p-3">
+                      <p className="text-xs text-text-secondary">Total Transferred</p>
+                      <p className="mt-1 text-xl font-black text-text-primary">₹{totalTransferredFunding.toLocaleString("en-IN")}</p>
+                    </div>
+                  </div>
+
+                  <form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={addDonorScholarshipMapping}>
+                    <InputField label="Donor Name" name="donorName" placeholder="Example: Vikram Joshi" required />
+
+                    <label>
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Scholarship</span>
+                      <select
+                        name="scholarshipName"
+                        required
+                        defaultValue=""
+                        className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                      >
+                        <option value="" disabled>
+                          Select scholarship
+                        </option>
+                        {rows.map((row) => (
+                          <option key={`mapping-sch-${row.id}`} value={row.name}>
+                            {row.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <InputField label="Amount (INR)" name="amount" placeholder="Example: 75000" required />
+
+                    <SelectField label="Commitment Cycle" name="cycle" options={["Monthly", "Quarterly", "Annual", "One Time"]} required />
+
+                    <label className="sm:col-span-2">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Mapping Note</span>
+                      <textarea
+                        name="note"
+                        rows={2}
+                        placeholder="Mention donor intent, tranche plan, or verification notes"
+                        className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                      />
+                    </label>
+
+                    <div className="sm:col-span-2 flex justify-end">
+                      <button
+                        type="submit"
+                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                      >
+                        Save Donor Mapping
+                      </button>
+                    </div>
+                  </form>
+
+                  <div className="overflow-x-auto rounded-xl border border-border">
+                    <table className="min-w-full text-left text-sm">
+                      <thead>
+                        <tr className="bg-card">
+                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Donor</th>
+                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Scholarship</th>
+                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Amount</th>
+                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Cycle</th>
+                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Status</th>
+                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {scholarshipFundingMap.map((item) => (
+                          <tr key={item.id}>
+                            <td className="border-b border-border/60 px-3 py-2 text-text-primary">{item.donorName}</td>
+                            <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{item.scholarshipName}</td>
+                            <td className="border-b border-border/60 px-3 py-2 text-text-secondary">₹{item.amount.toLocaleString("en-IN")}</td>
+                            <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{item.cycle}</td>
+                            <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{item.status}</td>
+                            <td className="border-b border-border/60 px-3 py-2">
+                              {item.status !== "Transferred" ? (
+                                <button
+                                  onClick={() => updateMappingStatus(item.id, "Transferred")}
+                                  className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                                >
+                                  Mark Transferred
+                                </button>
+                              ) : (
+                                <span className="text-xs font-semibold text-emerald-700">Completed</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {financeActionView === "create" && (
+                <form className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={createScholarshipRecord}>
+                  <InputField label="Scholarship Name" name="name" placeholder="Example: Merit Plus 2026" required />
+                  <InputField label="Owner Team" name="owner" placeholder="Example: Scholarship Desk" required />
+
+                  <SelectField
+                    label="Category"
+                    name="category"
+                    options={info.primaryFilterOptions.filter((item) => item !== "All")}
+                    required
+                  />
+
+                  <SelectField
+                    label="Cycle"
+                    name="cycle"
+                    options={info.secondaryFilterOptions.filter((item) => item !== "All")}
+                    required
+                  />
+
+                  <label className="sm:col-span-2">
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Scholarship Note</span>
+                    <textarea
+                      name="note"
+                      rows={3}
+                      placeholder="Add eligibility, fund source, and processing remarks"
+                      className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                    />
+                  </label>
+
+                  <div className="sm:col-span-2 flex justify-end">
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                    >
+                      Create Scholarship
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {financeActionView === "payout" && (
+                <div className="mt-3 space-y-3">
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-text-secondary">
+                    <span className="font-semibold text-text-primary">Simple meaning:</span> Scholarship Payment means scholarship amount transfer to student account.
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <div className="rounded-xl border border-border bg-card p-3">
+                      <p className="text-xs text-text-secondary">Pending Scholarship Payments</p>
                       <p className="mt-1 text-xl font-black text-text-primary">{financePayoutCandidates.length}</p>
                     </div>
                     <div className="rounded-xl border border-border bg-card p-3">
@@ -1813,7 +2125,7 @@ export default function AdminSectionPage() {
                       <p className="mt-1 text-xl font-black text-text-primary">{selectedFinanceBatchIds.length}</p>
                     </div>
                     <div className="rounded-xl border border-border bg-card p-3">
-                      <p className="text-xs text-text-secondary">Settled Entries</p>
+                      <p className="text-xs text-text-secondary">Payments Completed</p>
                       <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Settled").length}</p>
                     </div>
                   </div>
@@ -1821,7 +2133,7 @@ export default function AdminSectionPage() {
                   <div className="space-y-2">
                     {financePayoutCandidates.length === 0 && (
                       <div className="rounded-xl border border-dashed border-border bg-card p-3 text-sm text-text-secondary">
-                        No payout entries are waiting for batch approval.
+                        No scholarship payment entries are waiting for batch approval.
                       </div>
                     )}
 
@@ -1847,7 +2159,7 @@ export default function AdminSectionPage() {
                       onClick={approveSelectedPayoutBatch}
                       className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
                     >
-                      Approve Selected Batch
+                      Approve Selected Payment Batch
                     </button>
                   </div>
                 </div>
@@ -1872,7 +2184,7 @@ export default function AdminSectionPage() {
                     </button>
                   </div>
                   <p className="text-xs text-text-secondary">
-                    Ledger export supports current filters so finance team can quickly share payout-only, donation-only, or cycle-specific reports.
+                    Ledger export supports current filters so scholarship team can quickly share category-wise and cycle-wise reports.
                   </p>
                 </div>
               )}
@@ -1884,7 +2196,7 @@ export default function AdminSectionPage() {
                     <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Review").length}</p>
                   </div>
                   <div className="rounded-xl border border-border bg-card p-3">
-                    <p className="text-xs text-text-secondary">Processing Entries</p>
+                    <p className="text-xs text-text-secondary">Verification In Progress</p>
                     <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Processing").length}</p>
                   </div>
                   <div className="rounded-xl border border-border bg-card p-3">
@@ -1897,6 +2209,7 @@ export default function AdminSectionPage() {
           )}
         </article>
 
+        {key !== "finance" && (
         <article className="rounded-2xl border border-border bg-card p-5">
           <h3 className="text-lg font-bold">Management Notes</h3>
           <p className="mt-1 text-sm text-text-secondary">
@@ -1915,12 +2228,8 @@ export default function AdminSectionPage() {
             </p>
           )}
 
-          {key === "finance" && (
-            <p className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-text-secondary">
-              Use payout batch approvals, ledger exports, and audit checks from Quick Actions. Finance cards support instant status controls for daily reconciliation work.
-            </p>
-          )}
         </article>
+        )}
       </section>
     </div>
   );

@@ -32,7 +32,7 @@ const navItems: NavItem[] = [
   { label: "Programs", href: "/admin/programs", icon: BookOpen },
   { label: "Events", href: "/admin/events", icon: Calendar },
   { label: "Requests", href: "/admin/requests", icon: ClipboardList },
-  { label: "Finance", href: "/admin/finance", icon: CreditCard },
+  { label: "Scholarships", href: "/admin/finance", icon: CreditCard },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { label: "Security", href: "/admin/security", icon: ShieldCheck },
   { label: "Settings", href: "/admin/settings", icon: Settings },
