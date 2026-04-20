@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -71,6 +71,14 @@ type ScholarshipFundingMapping = {
   status: "Committed" | "Transferred";
   note: string;
   updatedAt: string;
+};
+
+type AdminPersistedSectionState = {
+  rows?: AdminRow[];
+  scholarshipFundingMap?: ScholarshipFundingMapping[];
+  analyticsDateRange?: AnalyticsDateRange;
+  analyticsCustomFrom?: string;
+  analyticsCustomTo?: string;
 };
 
 const sectionMeta: Record<string, AdminSectionConfig> = {
@@ -509,13 +517,14 @@ export default function AdminSectionPage() {
   const [analyticsDateRange, setAnalyticsDateRange] = useState<AnalyticsDateRange>("30d");
   const [analyticsCustomFrom, setAnalyticsCustomFrom] = useState("");
   const [analyticsCustomTo, setAnalyticsCustomTo] = useState("");
+  const [isSectionStateLoaded, setIsSectionStateLoaded] = useState(false);
+  const saveDebounceTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    if (key === "members") {
-      setRows(getMemberRowsWithRegistrations(info.rows));
-    } else {
-      setRows(info.rows);
-    }
+    let isCancelled = false;
+
+    const baseRows = key === "members" ? getMemberRowsWithRegistrations(info.rows) : info.rows;
+    setRows(baseRows);
     setSearchTerm("");
     setStatusFilter("All");
     setPrimaryFilter("All");
@@ -545,7 +554,98 @@ export default function AdminSectionPage() {
     setAnalyticsDateRange("30d");
     setAnalyticsCustomFrom("");
     setAnalyticsCustomTo("");
+    setIsSectionStateLoaded(false);
+
+    const loadSectionState = async () => {
+      try {
+        const response = await fetch(`/api/admin/state/${key}`, { cache: "no-store" });
+        if (!response.ok) {
+          if (!isCancelled) setActionMessage("Unable to load saved admin state. Using default view.");
+          return;
+        }
+
+        const payload = (await response.json()) as { state?: AdminPersistedSectionState | null };
+        const state = payload.state;
+        if (!state || isCancelled) {
+          return;
+        }
+
+        if (Array.isArray(state.rows) && state.rows.length > 0) {
+          setRows(state.rows);
+        }
+
+        if (key === "finance" && Array.isArray(state.scholarshipFundingMap) && state.scholarshipFundingMap.length > 0) {
+          setScholarshipFundingMap(state.scholarshipFundingMap);
+        }
+
+        if (key === "analytics") {
+          if (state.analyticsDateRange === "7d" || state.analyticsDateRange === "30d" || state.analyticsDateRange === "90d" || state.analyticsDateRange === "custom") {
+            setAnalyticsDateRange(state.analyticsDateRange);
+          }
+          if (typeof state.analyticsCustomFrom === "string") {
+            setAnalyticsCustomFrom(state.analyticsCustomFrom);
+          }
+          if (typeof state.analyticsCustomTo === "string") {
+            setAnalyticsCustomTo(state.analyticsCustomTo);
+          }
+        }
+      } catch {
+        if (!isCancelled) setActionMessage("Network error while loading admin state. Using default view.");
+      } finally {
+        if (!isCancelled) {
+          setIsSectionStateLoaded(true);
+        }
+      }
+    };
+
+    void loadSectionState();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [key, info.rows]);
+
+  useEffect(() => {
+    if (!isSectionStateLoaded) return;
+
+    if (saveDebounceTimer.current) {
+      window.clearTimeout(saveDebounceTimer.current);
+    }
+
+    const stateToPersist: AdminPersistedSectionState = { rows };
+
+    if (key === "finance") {
+      stateToPersist.scholarshipFundingMap = scholarshipFundingMap;
+    }
+
+    if (key === "analytics") {
+      stateToPersist.analyticsDateRange = analyticsDateRange;
+      stateToPersist.analyticsCustomFrom = analyticsCustomFrom;
+      stateToPersist.analyticsCustomTo = analyticsCustomTo;
+    }
+
+    saveDebounceTimer.current = window.setTimeout(() => {
+      void fetch(`/api/admin/state/${key}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: stateToPersist }),
+      });
+    }, 450);
+
+    return () => {
+      if (saveDebounceTimer.current) {
+        window.clearTimeout(saveDebounceTimer.current);
+      }
+    };
+  }, [
+    analyticsCustomFrom,
+    analyticsCustomTo,
+    analyticsDateRange,
+    isSectionStateLoaded,
+    key,
+    rows,
+    scholarshipFundingMap,
+  ]);
 
   const availableStatuses = useMemo(() => ["All", ...new Set(rows.map((row) => row.status))], [rows]);
 
@@ -1476,6 +1576,29 @@ export default function AdminSectionPage() {
     if (value >= 40) return "bg-emerald-200 text-emerald-900";
     return "bg-emerald-50 text-emerald-700";
   };
+
+  if (!isSectionStateLoaded) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <section className="rounded-2xl border border-border bg-card p-6">
+          <div className="h-7 w-64 rounded bg-border/60" />
+          <div className="mt-3 h-4 w-96 max-w-full rounded bg-border/50" />
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={`kpi-loading-${i}`} className="h-28 rounded-2xl border border-border bg-card" />
+          ))}
+        </section>
+
+        <section className="rounded-2xl border border-border bg-card p-5 space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={`row-loading-${i}`} className="h-20 rounded-xl bg-border/50" />
+          ))}
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

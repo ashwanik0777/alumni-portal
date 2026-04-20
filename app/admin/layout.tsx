@@ -27,7 +27,7 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { label: "Overview", href: "/admin", icon: LayoutDashboard },
+  { label: "Overview", href: "/admin/overview", icon: LayoutDashboard },
   { label: "Members", href: "/admin/members", icon: Users },
   { label: "Programs", href: "/admin/programs", icon: BookOpen },
   { label: "Events", href: "/admin/events", icon: Calendar },
@@ -38,7 +38,9 @@ const navItems: NavItem[] = [
 ];
 
 function isActivePath(pathname: string, href: string) {
-  if (href === "/admin") return pathname === href;
+  if (href === "/admin/overview") {
+    return pathname === "/admin" || pathname === href || pathname.startsWith(`${href}/`);
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

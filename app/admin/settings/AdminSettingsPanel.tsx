@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
   Bell,
@@ -139,6 +139,8 @@ export default function AdminSettingsPanel() {
   const [settings, setSettings] = useState<AdminSettingsState>(defaultSettings);
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const [statusMessage, setStatusMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const update = <K extends keyof AdminSettingsState>(field: K, value: AdminSettingsState[K]) => {
     setSettings((prev) => ({ ...prev, [field]: value }));
@@ -158,9 +160,58 @@ export default function AdminSettingsPanel() {
     return score;
   }, [settings]);
 
-  const saveSettings = () => {
-    localStorage.setItem("admin_settings_v1", JSON.stringify(settings));
-    setStatusMessage("All admin settings saved successfully. API sync layer can be connected next.");
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadSettings = async () => {
+      try {
+        const response = await fetch("/api/admin/settings", { cache: "no-store" });
+        if (!response.ok) return;
+
+        const payload = (await response.json()) as { settings?: Partial<AdminSettingsState> | null };
+        if (!payload.settings || isCancelled) return;
+
+        setSettings((prev) => ({ ...prev, ...payload.settings }));
+      } catch {
+        if (!isCancelled) {
+          setStatusMessage("Could not load saved settings from server. Default values are shown.");
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsInitialLoading(false);
+        }
+      }
+    };
+
+    void loadSettings();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  const saveSettings = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ settings }),
+      });
+
+      if (!response.ok) {
+        setStatusMessage("Save failed. Please check admin access and try again.");
+        return;
+      }
+
+      setStatusMessage("All admin settings saved successfully to backend.");
+    } catch {
+      setStatusMessage("Network error while saving settings.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const resetToDefaults = () => {
@@ -180,6 +231,38 @@ export default function AdminSettingsPanel() {
     URL.revokeObjectURL(url);
     setStatusMessage("Settings exported as JSON.");
   };
+
+  if (isInitialLoading) {
+    return (
+      <div className="space-y-5 animate-pulse">
+        <section className="rounded-2xl border border-border bg-card p-6">
+          <div className="h-5 w-48 rounded bg-border/60" />
+          <div className="mt-3 h-8 w-80 rounded bg-border/60" />
+        </section>
+
+        <section className="rounded-2xl border border-border bg-card p-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={`settings-tab-loading-${i}`} className="h-9 rounded-xl bg-border/50" />
+            ))}
+          </div>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-2">
+          <article className="rounded-2xl border border-border bg-card p-4 space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={`settings-left-loading-${i}`} className="h-11 rounded-xl bg-border/50" />
+            ))}
+          </article>
+          <article className="rounded-2xl border border-border bg-card p-4 space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={`settings-right-loading-${i}`} className="h-11 rounded-xl bg-border/50" />
+            ))}
+          </article>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -206,9 +289,10 @@ export default function AdminSettingsPanel() {
           <button
             type="button"
             onClick={saveSettings}
+            disabled={isSaving}
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
           >
-            <Save className="h-4 w-4" /> Save All
+            <Save className="h-4 w-4" /> {isSaving ? "Saving..." : "Save All"}
           </button>
           <button
             type="button"
