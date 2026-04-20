@@ -31,6 +31,20 @@ const passingYears = Array.from({ length: currentYear - 1986 + 1 }, (_, index) =
 
 const houseOptions = ["Arawali", "Neelgiri", "Shiwalik", "Udayagiri"];
 
+const MEMBER_REGISTRATION_STORAGE_KEY = "admin_member_registrations_v1";
+
+type PendingMemberRegistration = {
+  id: string;
+  fullName: string;
+  email: string;
+  passingYear: string;
+  house: string;
+  mobile: string;
+  fatherName: string;
+  status: "Pending" | "Approved" | "Rejected" | "Needs Info";
+  submittedAt: string;
+};
+
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -80,7 +94,36 @@ export default function RegisterPage() {
       return;
     }
 
-    setSubmitMessage("Registration form submitted successfully. You can complete profile details after dashboard access.");
+    const formData = new FormData(event.currentTarget);
+    const payload: PendingMemberRegistration = {
+      id: `REG-${Date.now()}`,
+      fullName: String(formData.get("fullName") || "").trim(),
+      email: String(formData.get("email") || "").trim().toLowerCase(),
+      passingYear: String(formData.get("passingYear") || "").trim(),
+      house: String(formData.get("house") || "").trim(),
+      mobile: String(formData.get("mobile") || "").trim(),
+      fatherName: String(formData.get("fatherName") || "").trim(),
+      status: "Pending",
+      submittedAt: new Date().toISOString(),
+    };
+
+    if (!payload.fullName || !payload.email || !payload.passingYear || !payload.house || !payload.mobile || !payload.fatherName) {
+      setSubmitMessage("Please fill all required details before submitting.");
+      return;
+    }
+
+    const existingRaw = localStorage.getItem(MEMBER_REGISTRATION_STORAGE_KEY);
+    const existing = existingRaw ? (JSON.parse(existingRaw) as PendingMemberRegistration[]) : [];
+    const withoutSameEmail = existing.filter((item) => item.email !== payload.email);
+    localStorage.setItem(MEMBER_REGISTRATION_STORAGE_KEY, JSON.stringify([payload, ...withoutSameEmail]));
+
+    event.currentTarget.reset();
+    setEmail("");
+    setOtp("");
+    setIsOtpSent(false);
+    setIsOtpVerified(false);
+    setOtpMessage("");
+    setSubmitMessage("Registration submitted successfully. Admin will review and approve from Member Management panel.");
   };
 
   return (
@@ -151,9 +194,11 @@ export default function RegisterPage() {
               <label>
                 <span className="mb-1.5 block text-sm font-medium">Full Name</span>
                 <input
+                  name="fullName"
                   type="text"
                   placeholder="Enter your full name"
                   className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary"
+                  required
                 />
               </label>
 
@@ -162,6 +207,7 @@ export default function RegisterPage() {
                 <div className="relative">
                   <Mail className="h-4 w-4 text-text-secondary absolute left-4 top-1/2 -translate-y-1/2" />
                   <input
+                    name="email"
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
@@ -177,6 +223,7 @@ export default function RegisterPage() {
                 <div className="relative">
                   <Calendar className="h-4 w-4 text-text-secondary absolute left-4 top-1/2 -translate-y-1/2" />
                   <select
+                    name="passingYear"
                     defaultValue=""
                     className="w-full appearance-none rounded-xl border border-border bg-background pl-10 pr-4 py-3 text-text-primary outline-none focus:border-primary"
                     required
@@ -196,6 +243,7 @@ export default function RegisterPage() {
               <label>
                 <span className="mb-1.5 block text-sm font-medium">House</span>
                 <select
+                  name="house"
                   defaultValue=""
                   className="w-full appearance-none rounded-xl border border-border bg-background px-4 py-3 text-text-primary outline-none focus:border-primary"
                   required
@@ -214,6 +262,7 @@ export default function RegisterPage() {
               <label>
                 <span className="mb-1.5 block text-sm font-medium">Mobile Number</span>
                 <input
+                  name="mobile"
                   type="tel"
                   placeholder="Enter mobile number"
                   className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary"
@@ -224,6 +273,7 @@ export default function RegisterPage() {
               <label>
                 <span className="mb-1.5 block text-sm font-medium">Father's Name</span>
                 <input
+                  name="fatherName"
                   type="text"
                   placeholder="Enter father's name"
                   className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary"
