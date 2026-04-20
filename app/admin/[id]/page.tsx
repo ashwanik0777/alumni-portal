@@ -290,30 +290,6 @@ const sectionMeta: Record<string, AdminSectionConfig> = {
       { id: "A-705", name: "Scholarship View to Apply", owner: "Community Team", status: "Improving", updatedAt: "2 days ago", primaryFilterValue: "Quarter", secondaryFilterValue: "Campaign", note: "Login-gated flow stabilized results." },
     ],
   },
-  security: {
-    title: "Security Center",
-    subtitle: "Access logs, suspicious activity, and policy actions.",
-    searchPlaceholder: "Search by activity or source",
-    kpis: [
-      { label: "Role Conflicts", value: "2", trend: "Needs review" },
-      { label: "Failed Logins", value: "14", trend: "Last 24h" },
-      { label: "MFA Coverage", value: "68%", trend: "+9%" },
-    ],
-    actions: ["Review Access Logs", "Force Session Logout", "Rotate Admin Password"],
-    tableTitle: "Security Activity",
-    primaryFilterLabel: "Risk",
-    secondaryFilterLabel: "Source",
-    primaryFilterOptions: ["All", "High", "Medium", "Low"],
-    secondaryFilterOptions: ["All", "Web", "Mobile", "API"],
-    pageSize: 5,
-    rows: [
-      { id: "S-801", name: "Admin Login Attempt", owner: "Security Bot", status: "Allowed", updatedAt: "3 mins ago", primaryFilterValue: "Low", secondaryFilterValue: "Web", note: "Known trusted device." },
-      { id: "S-802", name: "Permission Change", owner: "Super Admin", status: "Logged", updatedAt: "40 mins ago", primaryFilterValue: "Medium", secondaryFilterValue: "Web", note: "Role updated for support user." },
-      { id: "S-803", name: "Suspicious IP Flag", owner: "Security Bot", status: "Investigating", updatedAt: "2 hours ago", primaryFilterValue: "High", secondaryFilterValue: "API", note: "Rate limit spike detected." },
-      { id: "S-804", name: "Token Refresh Failure", owner: "Security Bot", status: "Review", updatedAt: "Today", primaryFilterValue: "Medium", secondaryFilterValue: "Mobile", note: "Multiple retries from same session." },
-      { id: "S-805", name: "Forced Logout", owner: "Ops Team", status: "Logged", updatedAt: "Yesterday", primaryFilterValue: "Low", secondaryFilterValue: "Web", note: "Executed after password reset." },
-    ],
-  },
 };
 
 const defaultSection: AdminSectionConfig = {
@@ -789,12 +765,12 @@ export default function AdminSectionPage() {
           prev.map((row) =>
             flaggedIds.includes(row.id)
               ? {
-                  ...row,
-                  status: "Review",
-                  owner: "Compliance",
-                  updatedAt: "Just now",
-                  note: "Eligibility audit flagged this record for manual verification.",
-                }
+                ...row,
+                status: "Review",
+                owner: "Compliance",
+                updatedAt: "Just now",
+                note: "Eligibility audit flagged this record for manual verification.",
+              }
               : row,
           ),
         );
@@ -1007,11 +983,11 @@ export default function AdminSectionPage() {
       prev.map((row) =>
         row.id === selectedProgramForMentor
           ? {
-              ...row,
-              status: row.status === "Draft" ? "In Progress" : row.status,
-              updatedAt: "Just now",
-              note: `Mentors assigned: ${selectedMentors.join(", ")}.`,
-            }
+            ...row,
+            status: row.status === "Draft" ? "In Progress" : row.status,
+            updatedAt: "Just now",
+            note: `Mentors assigned: ${selectedMentors.join(", ")}.`,
+          }
           : row,
       ),
     );
@@ -1055,15 +1031,15 @@ export default function AdminSectionPage() {
       prev.map((row) =>
         row.id === selectedRequestId
           ? {
-              ...row,
-              owner: `${requestAssignTeam} Team`,
-              status: row.status === "Open" || row.status === "Review" ? "In Progress" : row.status,
-              secondaryFilterValue: requestAssignTeam,
-              updatedAt: "Just now",
-              note: requestAssignNote.trim()
-                ? `Assigned to ${requestAssignTeam} Team. Note: ${requestAssignNote.trim()}`
-                : `Assigned to ${requestAssignTeam} Team for handling.`,
-            }
+            ...row,
+            owner: `${requestAssignTeam} Team`,
+            status: row.status === "Open" || row.status === "Review" ? "In Progress" : row.status,
+            secondaryFilterValue: requestAssignTeam,
+            updatedAt: "Just now",
+            note: requestAssignNote.trim()
+              ? `Assigned to ${requestAssignTeam} Team. Note: ${requestAssignNote.trim()}`
+              : `Assigned to ${requestAssignTeam} Team for handling.`,
+          }
           : row,
       ),
     );
@@ -1077,16 +1053,16 @@ export default function AdminSectionPage() {
       prev.map((row) =>
         row.id === rowId
           ? {
-              ...row,
-              status: nextStatus,
-              updatedAt: "Just now",
-              note:
-                nextStatus === "Resolved"
-                  ? "Request resolved and marked complete by admin."
-                  : nextStatus === "Review"
-                    ? "Request escalated for review."
-                    : "Request accepted and moved to in-progress queue.",
-            }
+            ...row,
+            status: nextStatus,
+            updatedAt: "Just now",
+            note:
+              nextStatus === "Resolved"
+                ? "Request resolved and marked complete by admin."
+                : nextStatus === "Review"
+                  ? "Request escalated for review."
+                  : "Request accepted and moved to in-progress queue.",
+          }
           : row,
       ),
     );
@@ -1188,11 +1164,11 @@ export default function AdminSectionPage() {
       prev.map((item) =>
         item.id === mappingId
           ? {
-              ...item,
-              status: nextStatus,
-              updatedAt: "Just now",
-              note: nextStatus === "Transferred" ? "Amount transferred and logged." : item.note,
-            }
+            ...item,
+            status: nextStatus,
+            updatedAt: "Just now",
+            note: nextStatus === "Transferred" ? "Amount transferred and logged." : item.note,
+          }
           : item,
       ),
     );
@@ -1213,11 +1189,11 @@ export default function AdminSectionPage() {
       prev.map((row) =>
         selectedFinanceBatchIds.includes(row.id)
           ? {
-              ...row,
-              status: "Settled",
-              updatedAt: "Just now",
-              note: "Approved in scholarship payment batch and marked settled.",
-            }
+            ...row,
+            status: "Settled",
+            updatedAt: "Just now",
+            note: "Approved in scholarship payment batch and marked settled.",
+          }
           : row,
       ),
     );
@@ -1249,16 +1225,16 @@ export default function AdminSectionPage() {
       prev.map((row) =>
         row.id === rowId
           ? {
-              ...row,
-              status: nextStatus,
-              updatedAt: "Just now",
-              note:
-                nextStatus === "Settled"
-                  ? "Transaction confirmed and settled."
-                  : nextStatus === "Review"
-                    ? "Entry moved to compliance review."
-                    : "Entry moved back to processing queue.",
-            }
+            ...row,
+            status: nextStatus,
+            updatedAt: "Just now",
+            note:
+              nextStatus === "Settled"
+                ? "Transaction confirmed and settled."
+                : nextStatus === "Review"
+                  ? "Entry moved to compliance review."
+                  : "Entry moved back to processing queue.",
+          }
           : row,
       ),
     );
@@ -1587,13 +1563,13 @@ export default function AdminSectionPage() {
                     className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
                   />
                 </label>
- <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary">Applied Window
-                <div className="rounded-xl border border-border bg-background px-3 py-2 text-xs text-text-secondary">
-                  <p className="mt-1">{customWindowDays} day(s)</p>
-                </div>
+                <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary">Applied Window
+                  <div className="rounded-xl border border-border bg-background px-3 py-2 text-xs text-text-secondary">
+                    <p className="mt-1">{customWindowDays} day(s)</p>
+                  </div>
                 </span>
               </div>
-              
+
             )}
           </article>
 
@@ -1702,358 +1678,358 @@ export default function AdminSectionPage() {
       )}
 
       {key !== "analytics" && (
-      <section className="rounded-2xl border border-border bg-card p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-lg font-bold">{info.tableTitle}</h3>
-          <button
-            onClick={resetFilters}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-primary/30 hover:text-primary"
-          >
-            <Filter className="h-3.5 w-3.5" />
-            Reset Filters
-          </button>
-        </div>
-
-        {actionMessage && (
-          <div className="mt-3 rounded-xl border border-primary/25 bg-primary/5 px-4 py-2.5 text-sm text-text-secondary">
-            {actionMessage}
+        <section className="rounded-2xl border border-border bg-card p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-lg font-bold">{info.tableTitle}</h3>
+            <button
+              onClick={resetFilters}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-primary/30 hover:text-primary"
+            >
+              <Filter className="h-3.5 w-3.5" />
+              Reset Filters
+            </button>
           </div>
-        )}
 
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <label className="xl:col-span-2">
-            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary">Search</span>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
-              <input
-                value={searchTerm}
-                onChange={(event) => {
-                  setSearchTerm(event.target.value);
-                  setCurrentPage(1);
-                }}
-                placeholder={info.searchPlaceholder}
-                className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-3 text-sm text-text-primary outline-none focus:border-primary"
-              />
+          {actionMessage && (
+            <div className="mt-3 rounded-xl border border-primary/25 bg-primary/5 px-4 py-2.5 text-sm text-text-secondary">
+              {actionMessage}
             </div>
-          </label>
+          )}
 
-          <SelectFilter
-            label="Status"
-            value={statusFilter}
-            options={availableStatuses}
-            onChange={(value) => {
-              setStatusFilter(value);
-              setCurrentPage(1);
-            }}
-          />
-
-          <SelectFilter
-            label={info.primaryFilterLabel}
-            value={primaryFilter}
-            options={info.primaryFilterOptions}
-            onChange={(value) => {
-              setPrimaryFilter(value);
-              setCurrentPage(1);
-            }}
-          />
-
-          <SelectFilter
-            label={info.secondaryFilterLabel}
-            value={secondaryFilter}
-            options={info.secondaryFilterOptions}
-            onChange={(value) => {
-              setSecondaryFilter(value);
-              setCurrentPage(1);
-            }}
-          />
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-3">
-          {key === "members" && showApprovedView ? (
-            <div className="rounded-xl border border-border bg-background p-3">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h4 className="text-sm font-bold text-text-primary">Approved Members List</h4>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => setShowApprovedView(false)}
-                    className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
-                  >
-                    Back To Queue
-                  </button>
-                  <button
-                    onClick={exportApprovedList}
-                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
-                  >
-                    <Download className="h-3.5 w-3.5" /> Export
-                  </button>
-                  <button
-                    onClick={printApprovedList}
-                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
-                  >
-                    <Printer className="h-3.5 w-3.5" /> Print
-                  </button>
-                </div>
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <label className="xl:col-span-2">
+              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary">Search</span>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
+                <input
+                  value={searchTerm}
+                  onChange={(event) => {
+                    setSearchTerm(event.target.value);
+                    setCurrentPage(1);
+                  }}
+                  placeholder={info.searchPlaceholder}
+                  className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-3 text-sm text-text-primary outline-none focus:border-primary"
+                />
               </div>
+            </label>
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
-                  <thead>
-                    <tr>
-                      <SortableHeader label="Full Name" onClick={() => updateApprovedSort("name")} active={approvedSortField === "name"} direction={approvedSortDirection} />
-                      <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Email</th>
-                      <SortableHeader label="Batch" onClick={() => updateApprovedSort("batch")} active={approvedSortField === "batch"} direction={approvedSortDirection} />
-                      <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">House</th>
-                      <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Mobile</th>
-                      <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Father's Name</th>
-                      <SortableHeader label="Updated" onClick={() => updateApprovedSort("updatedAt")} active={approvedSortField === "updatedAt"} direction={approvedSortDirection} />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {approvedRows.map((row) => (
-                      <tr key={`approved-${row.id}`}>
-                        <td className="border-b border-border/70 px-3 py-2 font-semibold text-text-primary">{row.memberDetails?.fullName || row.name}</td>
-                        <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.memberDetails?.email || "N/A"}</td>
-                        <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.memberDetails?.passingYear || row.primaryFilterValue}</td>
-                        <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.memberDetails?.house || "N/A"}</td>
-                        <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.memberDetails?.mobile || "N/A"}</td>
-                        <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.memberDetails?.fatherName || "N/A"}</td>
-                        <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.updatedAt}</td>
-                      </tr>
-                    ))}
-                    {approvedRows.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className="px-3 py-8 text-center text-sm text-text-secondary">
-                          No approved members found.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : paginatedRows.map((row) => (
-            <article key={row.id} className="rounded-xl border border-border bg-background p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-black text-text-primary">
-                    {key === "members" ? `Full Name: ${row.memberDetails?.fullName || row.name}` : row.name}
-                  </p>
-                  <p className="mt-0.5 text-xs text-text-secondary">
-                    {row.id} • Owner: {row.owner}
-                  </p>
-                </div>
+            <SelectFilter
+              label="Status"
+              value={statusFilter}
+              options={availableStatuses}
+              onChange={(value) => {
+                setStatusFilter(value);
+                setCurrentPage(1);
+              }}
+            />
 
-                <span className={["inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold", statusChip(row.status)].join(" ")}>
-                  {statusIcon(row.status)}
-                  {row.status}
-                </span>
-              </div>
+            <SelectFilter
+              label={info.primaryFilterLabel}
+              value={primaryFilter}
+              options={info.primaryFilterOptions}
+              onChange={(value) => {
+                setPrimaryFilter(value);
+                setCurrentPage(1);
+              }}
+            />
 
-              
+            <SelectFilter
+              label={info.secondaryFilterLabel}
+              value={secondaryFilter}
+              options={info.secondaryFilterOptions}
+              onChange={(value) => {
+                setSecondaryFilter(value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
 
-              {key === "members" && row.memberDetails && (
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-text-secondary">
-                  <span className="rounded-full border border-border bg-card px-2.5 py-1">Email: {row.memberDetails.email}</span>
-                  <span className="rounded-full border border-border bg-card px-2.5 py-1">Batch: {row.memberDetails.passingYear}</span>
-                  <span className="rounded-full border border-border bg-card px-2.5 py-1">House: {row.memberDetails.house}</span>
-                  <span className="rounded-full border border-border bg-card px-2.5 py-1">Mobile Number: {row.memberDetails.mobile}</span>
-                  <span className="rounded-full border border-border bg-card px-2.5 py-1">Father's Name: {row.memberDetails.fatherName}</span>
-                   <span className="rounded-full border border-border bg-card px-2.5 py-1">Updated: {row.updatedAt}</span>
-                </div>
-              )}
-
-              <p className="mt-3 text-sm text-text-secondary">{row.note}</p>
-
-              {key === "finance" && (
-                <p className="mt-2 text-xs font-semibold text-text-secondary">
-                  Mapped Funding: ₹{(fundingByScholarship.get(row.name) || 0).toLocaleString("en-IN")}
-                </p>
-              )}
-
-              {key === "requests" && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {(row.status === "Open" || row.status === "Review") && (
+          <div className="mt-4 grid grid-cols-1 gap-3">
+            {key === "members" && showApprovedView ? (
+              <div className="rounded-xl border border-border bg-background p-3">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <h4 className="text-sm font-bold text-text-primary">Approved Members List</h4>
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
-                      onClick={() => updateRequestStatus(row.id, "In Progress")}
-                      className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary/90"
+                      onClick={() => setShowApprovedView(false)}
+                      className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
                     >
-                      Start Processing
-                    </button>
-                  )}
-
-                  {row.status !== "Resolved" && (
-                    <button
-                      onClick={() => updateRequestStatus(row.id, "Resolved")}
-                      className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                    >
-                      Mark Resolved
-                    </button>
-                  )}
-
-                  {row.status !== "Review" && (
-                    <button
-                      onClick={() => updateRequestStatus(row.id, "Review")}
-                      className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100"
-                    >
-                      Escalate Review
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {key === "finance" && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {row.status !== "Settled" && (
-                    <button
-                      onClick={() => updateFinanceRowStatus(row.id, "Settled")}
-                      className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                    >
-                      Approve Payment
-                    </button>
-                  )}
-
-                  {row.status !== "Review" && (
-                    <button
-                      onClick={() => updateFinanceRowStatus(row.id, "Review")}
-                      className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100"
-                    >
-                      Flag Eligibility Review
-                    </button>
-                  )}
-
-                  {row.status !== "Processing" && (
-                    <button
-                      onClick={() => updateFinanceRowStatus(row.id, "Processing")}
-                      className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary/90"
-                    >
-                      Move To Verification
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {key === "members" && row.status === "Rejected" && row.rejectionReason && (
-                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-                  <span className="font-semibold">Rejection Reason:</span> {row.rejectionReason}
-                </div>
-              )}
-
-              {key === "members" && row.status === "Pending" && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    onClick={() => handleApprovalAction(row.id, "Approved")}
-                    className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary/90"
-                  >
-                    Approve Registration
-                  </button>
-                  <button
-                    onClick={() => {
-                      setRejectingRowId(row.id);
-                      setRejectReasonText("");
-                    }}
-                    className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"
-                  >
-                    Reject
-                  </button>
-                </div>
-              )}
-
-              {key === "members" && rejectingRowId === row.id && (
-                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3">
-                  <label className="block">
-                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-rose-700">
-                      Reason For Rejection (Required)
-                    </span>
-                    <textarea
-                      value={rejectReasonText}
-                      onChange={(event) => setRejectReasonText(event.target.value)}
-                      rows={3}
-                      placeholder="Write why this application is being rejected..."
-                      className="w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-rose-400"
-                    />
-                  </label>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <button
-                      onClick={() => {
-                        const reason = rejectReasonText.trim();
-                        if (!reason) {
-                          setActionMessage("Please enter rejection reason before rejecting application.");
-                          return;
-                        }
-                        handleApprovalAction(row.id, "Rejected", reason);
-                        setRejectingRowId(null);
-                        setRejectReasonText("");
-                        setActionMessage("Application rejected with reason.");
-                      }}
-                      className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-700"
-                    >
-                      Confirm Reject
+                      Back To Queue
                     </button>
                     <button
-                      onClick={() => {
-                        setRejectingRowId(null);
-                        setRejectReasonText("");
-                      }}
-                      className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                      onClick={exportApprovedList}
+                      className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
                     >
-                      Cancel
+                      <Download className="h-3.5 w-3.5" /> Export
+                    </button>
+                    <button
+                      onClick={printApprovedList}
+                      className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                    >
+                      <Printer className="h-3.5 w-3.5" /> Print
                     </button>
                   </div>
                 </div>
-              )}
-            </article>
-          ))}
 
-          {!showApprovedView && paginatedRows.length === 0 && (
-            <div className="rounded-xl border border-dashed border-border bg-background p-8 text-center">
-              <p className="text-sm font-semibold text-text-primary">No records found for selected filters.</p>
-              <p className="mt-1 text-xs text-text-secondary">Try changing filters or clearing search.</p>
-            </div>
-          )}
-        </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+                    <thead>
+                      <tr>
+                        <SortableHeader label="Full Name" onClick={() => updateApprovedSort("name")} active={approvedSortField === "name"} direction={approvedSortDirection} />
+                        <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Email</th>
+                        <SortableHeader label="Batch" onClick={() => updateApprovedSort("batch")} active={approvedSortField === "batch"} direction={approvedSortDirection} />
+                        <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">House</th>
+                        <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Mobile</th>
+                        <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Father's Name</th>
+                        <SortableHeader label="Updated" onClick={() => updateApprovedSort("updatedAt")} active={approvedSortField === "updatedAt"} direction={approvedSortDirection} />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {approvedRows.map((row) => (
+                        <tr key={`approved-${row.id}`}>
+                          <td className="border-b border-border/70 px-3 py-2 font-semibold text-text-primary">{row.memberDetails?.fullName || row.name}</td>
+                          <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.memberDetails?.email || "N/A"}</td>
+                          <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.memberDetails?.passingYear || row.primaryFilterValue}</td>
+                          <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.memberDetails?.house || "N/A"}</td>
+                          <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.memberDetails?.mobile || "N/A"}</td>
+                          <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.memberDetails?.fatherName || "N/A"}</td>
+                          <td className="border-b border-border/70 px-3 py-2 text-text-secondary">{row.updatedAt}</td>
+                        </tr>
+                      ))}
+                      {approvedRows.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="px-3 py-8 text-center text-sm text-text-secondary">
+                            No approved members found.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : paginatedRows.map((row) => (
+              <article key={row.id} className="rounded-xl border border-border bg-background p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-black text-text-primary">
+                      {key === "members" ? `Full Name: ${row.memberDetails?.fullName || row.name}` : row.name}
+                    </p>
+                    <p className="mt-0.5 text-xs text-text-secondary">
+                      {row.id} • Owner: {row.owner}
+                    </p>
+                  </div>
 
-        {!showApprovedView && (
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-          <p className="text-xs text-text-secondary">
-            Showing {paginatedRows.length === 0 ? 0 : (currentPage - 1) * info.pageSize + 1}-
-            {Math.min(currentPage * info.pageSize, filteredRows.length)} of {filteredRows.length} records
-          </p>
+                  <span className={["inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold", statusChip(row.status)].join(" ")}>
+                    {statusIcon(row.status)}
+                    {row.status}
+                  </span>
+                </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Prev
-            </button>
 
-            {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => goToPage(page)}
-                className={[
-                  "h-8 w-8 rounded-lg border text-xs font-bold",
-                  page === currentPage
-                    ? "border-primary bg-primary text-white"
-                    : "border-border bg-background text-text-primary hover:border-primary/30 hover:text-primary",
-                ].join(" ")}
-              >
-                {page}
-              </button>
+
+                {key === "members" && row.memberDetails && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-text-secondary">
+                    <span className="rounded-full border border-border bg-card px-2.5 py-1">Email: {row.memberDetails.email}</span>
+                    <span className="rounded-full border border-border bg-card px-2.5 py-1">Batch: {row.memberDetails.passingYear}</span>
+                    <span className="rounded-full border border-border bg-card px-2.5 py-1">House: {row.memberDetails.house}</span>
+                    <span className="rounded-full border border-border bg-card px-2.5 py-1">Mobile Number: {row.memberDetails.mobile}</span>
+                    <span className="rounded-full border border-border bg-card px-2.5 py-1">Father's Name: {row.memberDetails.fatherName}</span>
+                    <span className="rounded-full border border-border bg-card px-2.5 py-1">Updated: {row.updatedAt}</span>
+                  </div>
+                )}
+
+                <p className="mt-3 text-sm text-text-secondary">{row.note}</p>
+
+                {key === "finance" && (
+                  <p className="mt-2 text-xs font-semibold text-text-secondary">
+                    Mapped Funding: ₹{(fundingByScholarship.get(row.name) || 0).toLocaleString("en-IN")}
+                  </p>
+                )}
+
+                {key === "requests" && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {(row.status === "Open" || row.status === "Review") && (
+                      <button
+                        onClick={() => updateRequestStatus(row.id, "In Progress")}
+                        className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary/90"
+                      >
+                        Start Processing
+                      </button>
+                    )}
+
+                    {row.status !== "Resolved" && (
+                      <button
+                        onClick={() => updateRequestStatus(row.id, "Resolved")}
+                        className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                      >
+                        Mark Resolved
+                      </button>
+                    )}
+
+                    {row.status !== "Review" && (
+                      <button
+                        onClick={() => updateRequestStatus(row.id, "Review")}
+                        className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+                      >
+                        Escalate Review
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {key === "finance" && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {row.status !== "Settled" && (
+                      <button
+                        onClick={() => updateFinanceRowStatus(row.id, "Settled")}
+                        className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                      >
+                        Approve Payment
+                      </button>
+                    )}
+
+                    {row.status !== "Review" && (
+                      <button
+                        onClick={() => updateFinanceRowStatus(row.id, "Review")}
+                        className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+                      >
+                        Flag Eligibility Review
+                      </button>
+                    )}
+
+                    {row.status !== "Processing" && (
+                      <button
+                        onClick={() => updateFinanceRowStatus(row.id, "Processing")}
+                        className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary/90"
+                      >
+                        Move To Verification
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {key === "members" && row.status === "Rejected" && row.rejectionReason && (
+                  <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                    <span className="font-semibold">Rejection Reason:</span> {row.rejectionReason}
+                  </div>
+                )}
+
+                {key === "members" && row.status === "Pending" && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => handleApprovalAction(row.id, "Approved")}
+                      className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary/90"
+                    >
+                      Approve Registration
+                    </button>
+                    <button
+                      onClick={() => {
+                        setRejectingRowId(row.id);
+                        setRejectReasonText("");
+                      }}
+                      className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                )}
+
+                {key === "members" && rejectingRowId === row.id && (
+                  <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3">
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-rose-700">
+                        Reason For Rejection (Required)
+                      </span>
+                      <textarea
+                        value={rejectReasonText}
+                        onChange={(event) => setRejectReasonText(event.target.value)}
+                        rows={3}
+                        placeholder="Write why this application is being rejected..."
+                        className="w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-rose-400"
+                      />
+                    </label>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => {
+                          const reason = rejectReasonText.trim();
+                          if (!reason) {
+                            setActionMessage("Please enter rejection reason before rejecting application.");
+                            return;
+                          }
+                          handleApprovalAction(row.id, "Rejected", reason);
+                          setRejectingRowId(null);
+                          setRejectReasonText("");
+                          setActionMessage("Application rejected with reason.");
+                        }}
+                        className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-700"
+                      >
+                        Confirm Reject
+                      </button>
+                      <button
+                        onClick={() => {
+                          setRejectingRowId(null);
+                          setRejectReasonText("");
+                        }}
+                        className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </article>
             ))}
 
-            <button
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Next <ArrowRight className="h-3.5 w-3.5" />
-            </button>
+            {!showApprovedView && paginatedRows.length === 0 && (
+              <div className="rounded-xl border border-dashed border-border bg-background p-8 text-center">
+                <p className="text-sm font-semibold text-text-primary">No records found for selected filters.</p>
+                <p className="mt-1 text-xs text-text-secondary">Try changing filters or clearing search.</p>
+              </div>
+            )}
           </div>
-          </div>
-        )}
-      </section>
+
+          {!showApprovedView && (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+              <p className="text-xs text-text-secondary">
+                Showing {paginatedRows.length === 0 ? 0 : (currentPage - 1) * info.pageSize + 1}-
+                {Math.min(currentPage * info.pageSize, filteredRows.length)} of {filteredRows.length} records
+              </p>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" /> Prev
+                </button>
+
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => goToPage(page)}
+                    className={[
+                      "h-8 w-8 rounded-lg border text-xs font-bold",
+                      page === currentPage
+                        ? "border-primary bg-primary text-white"
+                        : "border-border bg-background text-text-primary hover:border-primary/30 hover:text-primary",
+                    ].join(" ")}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
       )}
 
       {key === "analytics" ? (
@@ -2136,405 +2112,102 @@ export default function AdminSectionPage() {
           </article>
         </section>
       ) : (
-      <section className={key === "finance" ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 gap-4 lg:grid-cols-3"}>
-        <article className={key === "finance" ? "rounded-2xl border border-border bg-card p-5" : "rounded-2xl border border-border bg-card p-5 lg:col-span-2"}>
-          <h3 className="text-lg font-bold">Quick Actions</h3>
-          <p className="mt-1 text-sm text-text-secondary">Section-specific shortcuts to speed up daily operations.</p>
-          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {info.actions.map((action) => (
-              <button
-                key={action}
-                onClick={() => handleQuickAction(action)}
-                className="flex items-center justify-between rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
-              >
-                {action}
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            ))}
-          </div>
-
-          {key === "programs" && (
-            <div className="mt-4 rounded-2xl border border-border bg-background p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-bold text-text-primary">Program Action Workspace</p>
+        <section className={key === "finance" ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 gap-4 lg:grid-cols-3"}>
+          <article className={key === "finance" ? "rounded-2xl border border-border bg-card p-5" : "rounded-2xl border border-border bg-card p-5 lg:col-span-2"}>
+            <h3 className="text-lg font-bold">Quick Actions</h3>
+            <p className="mt-1 text-sm text-text-secondary">Section-specific shortcuts to speed up daily operations.</p>
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {info.actions.map((action) => (
                 <button
-                  onClick={() => {
-                    setProgramActionView("none");
-                    setProgramActionMessage("");
-                    setSelectedProgramForMentor("");
-                    setSelectedMentors([]);
-                  }}
-                  className="rounded-lg border border-border bg-card px-3 py-1 text-xs font-semibold text-text-secondary hover:border-primary/30 hover:text-primary"
+                  key={action}
+                  onClick={() => handleQuickAction(action)}
+                  className="flex items-center justify-between rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
                 >
-                  Reset Panel
+                  {action}
+                  <ArrowRight className="h-4 w-4" />
                 </button>
-              </div>
-
-              {programActionMessage && (
-                <p className="mt-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-xs text-text-secondary">{programActionMessage}</p>
-              )}
-
-              {programActionView === "launch" && (
-                <form
-                  className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    const form = new FormData(event.currentTarget);
-                    const name = String(form.get("name") || "").trim();
-                    const track = String(form.get("track") || "").trim();
-                    const mode = String(form.get("mode") || "").trim();
-                    const owner = String(form.get("owner") || "").trim();
-                    const goal = String(form.get("goal") || "").trim();
-
-                    if (!name || !track || !mode || !owner) {
-                      setProgramActionMessage("Please fill all required fields.");
-                      return;
-                    }
-
-                    const generatedId = `P-${Math.floor(Date.now() / 1000).toString().slice(-4)}`;
-                    setRows((prev) => [
-                      {
-                        id: generatedId,
-                        name,
-                        owner,
-                        status: "Draft",
-                        updatedAt: "Just now",
-                        primaryFilterValue: track,
-                        secondaryFilterValue: mode,
-                        note: goal || "New program draft created from Quick Actions.",
-                      },
-                      ...prev,
-                    ]);
-                    setProgramActionMessage(`Program ${name} created as draft.`);
-                    (event.currentTarget as HTMLFormElement).reset();
-                  }}
-                >
-                  <InputField label="Program Name" name="name" placeholder="Example: Data Science Sprint" required />
-                  <InputField label="Owner Team" name="owner" placeholder="Example: Mentorship Cell" required />
-
-                  <SelectField
-                    label="Track"
-                    name="track"
-                    options={info.primaryFilterOptions.filter((item) => item !== "All")}
-                    required
-                  />
-
-                  <SelectField
-                    label="Mode"
-                    name="mode"
-                    options={info.secondaryFilterOptions.filter((item) => item !== "All")}
-                    required
-                  />
-
-                  <label className="sm:col-span-2">
-                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Program Goal</span>
-                    <textarea
-                      name="goal"
-                      rows={3}
-                      placeholder="Write a short goal and scope"
-                      className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
-                    />
-                  </label>
-
-                  <div className="sm:col-span-2 flex justify-end">
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
-                    >
-                      Create Program
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {programActionView === "assign" && (
-                <div className="mt-3 space-y-3">
-                  <label className="block">
-                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Select Program</span>
-                    <select
-                      value={selectedProgramForMentor}
-                      onChange={(event) => setSelectedProgramForMentor(event.target.value)}
-                      className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
-                    >
-                      <option value="">Choose program</option>
-                      {rows.map((row) => (
-                        <option key={`assign-${row.id}`} value={row.id}>
-                          {row.id} - {row.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <div>
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Mentor Pool</p>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      {mentorPool.map((mentor) => (
-                        <label key={mentor} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-text-primary">
-                          <input
-                            type="checkbox"
-                            checked={selectedMentors.includes(mentor)}
-                            onChange={(event) => {
-                              if (event.target.checked) {
-                                setSelectedMentors((prev) => [...prev, mentor]);
-                                return;
-                              }
-                              setSelectedMentors((prev) => prev.filter((item) => item !== mentor));
-                            }}
-                          />
-                          {mentor}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <button
-                      onClick={assignMentorsToProgram}
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
-                    >
-                      Save Mentor Assignment
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {programActionView === "report" && (
-                <div className="mt-3 space-y-3">
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <div className="rounded-xl border border-border bg-card p-3">
-                      <p className="text-xs text-text-secondary">Total Programs</p>
-                      <p className="mt-1 text-xl font-black text-text-primary">{rows.length}</p>
-                    </div>
-                    <div className="rounded-xl border border-border bg-card p-3">
-                      <p className="text-xs text-text-secondary">Live / In Progress</p>
-                      <p className="mt-1 text-xl font-black text-text-primary">
-                        {rows.filter((row) => row.status === "Live" || row.status === "In Progress").length}
-                      </p>
-                    </div>
-                    <div className="rounded-xl border border-border bg-card p-3">
-                      <p className="text-xs text-text-secondary">Draft / Review</p>
-                      <p className="mt-1 text-xl font-black text-text-primary">
-                        {rows.filter((row) => row.status === "Draft" || row.status === "Review").length}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="overflow-x-auto rounded-xl border border-border">
-                    <table className="min-w-full text-left text-sm">
-                      <thead>
-                        <tr className="bg-card">
-                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Program</th>
-                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Track</th>
-                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Mode</th>
-                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Status</th>
-                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Updated</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.map((row) => (
-                          <tr key={`weekly-${row.id}`}>
-                            <td className="border-b border-border/60 px-3 py-2 text-text-primary">{row.name}</td>
-                            <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{row.primaryFilterValue}</td>
-                            <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{row.secondaryFilterValue}</td>
-                            <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{row.status}</td>
-                            <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{row.updatedAt}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    <button
-                      onClick={exportProgramWeeklyReport}
-                      className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
-                    >
-                      <Download className="h-4 w-4" /> Download CSV
-                    </button>
-                    <button
-                      onClick={printProgramWeeklyReport}
-                      className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
-                    >
-                      <Printer className="h-4 w-4" /> Print Summary
-                    </button>
-                  </div>
-                </div>
-              )}
+              ))}
             </div>
-          )}
 
-          {key === "requests" && (
-            <div className="mt-4 rounded-2xl border border-border bg-background p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-bold text-text-primary">Request Action Workspace</p>
-                <button
-                  onClick={() => {
-                    setRequestActionView("none");
-                    setRequestActionMessage("");
-                    setSelectedRequestId("");
-                    setRequestAssignTeam("");
-                    setRequestAssignNote("");
-                  }}
-                  className="rounded-lg border border-border bg-card px-3 py-1 text-xs font-semibold text-text-secondary hover:border-primary/30 hover:text-primary"
-                >
-                  Reset Panel
-                </button>
-              </div>
-
-              {requestActionMessage && (
-                <p className="mt-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-xs text-text-secondary">{requestActionMessage}</p>
-              )}
-
-              {requestActionView === "priority" && (
-                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  <div className="rounded-xl border border-border bg-card p-3">
-                    <p className="text-xs text-text-secondary">Open Requests</p>
-                    <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Open").length}</p>
-                  </div>
-                  <div className="rounded-xl border border-border bg-card p-3">
-                    <p className="text-xs text-text-secondary">High Priority</p>
-                    <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.primaryFilterValue === "High").length}</p>
-                  </div>
-                  <div className="rounded-xl border border-border bg-card p-3">
-                    <p className="text-xs text-text-secondary">In Progress</p>
-                    <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "In Progress").length}</p>
-                  </div>
+            {key === "programs" && (
+              <div className="mt-4 rounded-2xl border border-border bg-background p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-text-primary">Program Action Workspace</p>
+                  <button
+                    onClick={() => {
+                      setProgramActionView("none");
+                      setProgramActionMessage("");
+                      setSelectedProgramForMentor("");
+                      setSelectedMentors([]);
+                    }}
+                    className="rounded-lg border border-border bg-card px-3 py-1 text-xs font-semibold text-text-secondary hover:border-primary/30 hover:text-primary"
+                  >
+                    Reset Panel
+                  </button>
                 </div>
-              )}
 
-              {requestActionView === "assign" && (
-                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <label>
-                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Request</span>
-                    <select
-                      value={selectedRequestId}
-                      onChange={(event) => setSelectedRequestId(event.target.value)}
-                      className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
-                    >
-                      <option value="">Select request</option>
-                      {rows.map((row) => (
-                        <option key={`request-assign-${row.id}`} value={row.id}>
-                          {row.id} - {row.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                {programActionMessage && (
+                  <p className="mt-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-xs text-text-secondary">{programActionMessage}</p>
+                )}
 
-                  <label>
-                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Assign Team</span>
-                    <select
-                      value={requestAssignTeam}
-                      onChange={(event) => setRequestAssignTeam(event.target.value)}
-                      className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
-                    >
-                      <option value="">Select team</option>
-                      {requestTeams.map((team) => (
-                        <option key={team} value={team}>
-                          {team}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                {programActionView === "launch" && (
+                  <form
+                    className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const form = new FormData(event.currentTarget);
+                      const name = String(form.get("name") || "").trim();
+                      const track = String(form.get("track") || "").trim();
+                      const mode = String(form.get("mode") || "").trim();
+                      const owner = String(form.get("owner") || "").trim();
+                      const goal = String(form.get("goal") || "").trim();
 
-                  <label className="sm:col-span-2">
-                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Assignment Note (Optional)</span>
-                    <textarea
-                      value={requestAssignNote}
-                      onChange={(event) => setRequestAssignNote(event.target.value)}
-                      rows={3}
-                      placeholder="Add context for assigned team"
-                      className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                      if (!name || !track || !mode || !owner) {
+                        setProgramActionMessage("Please fill all required fields.");
+                        return;
+                      }
+
+                      const generatedId = `P-${Math.floor(Date.now() / 1000).toString().slice(-4)}`;
+                      setRows((prev) => [
+                        {
+                          id: generatedId,
+                          name,
+                          owner,
+                          status: "Draft",
+                          updatedAt: "Just now",
+                          primaryFilterValue: track,
+                          secondaryFilterValue: mode,
+                          note: goal || "New program draft created from Quick Actions.",
+                        },
+                        ...prev,
+                      ]);
+                      setProgramActionMessage(`Program ${name} created as draft.`);
+                      (event.currentTarget as HTMLFormElement).reset();
+                    }}
+                  >
+                    <InputField label="Program Name" name="name" placeholder="Example: Data Science Sprint" required />
+                    <InputField label="Owner Team" name="owner" placeholder="Example: Mentorship Cell" required />
+
+                    <SelectField
+                      label="Track"
+                      name="track"
+                      options={info.primaryFilterOptions.filter((item) => item !== "All")}
+                      required
                     />
-                  </label>
 
-                  <div className="sm:col-span-2 flex justify-end">
-                    <button
-                      onClick={assignRequestToTeam}
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
-                    >
-                      Assign Request
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {requestActionView === "close" && (
-                <div className="mt-3 rounded-xl border border-border bg-card p-3 text-sm text-text-secondary">
-                  Resolved batch close operation complete. You can now filter by status <span className="font-semibold text-text-primary">Resolved</span> to review archived entries.
-                </div>
-              )}
-            </div>
-          )}
-
-          {key === "finance" && (
-            <div className="mt-4 rounded-2xl border border-border bg-background p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-bold text-text-primary">Scholarship Action Workspace</p>
-                <button
-                  onClick={() => {
-                    setFinanceActionView("none");
-                    setFinanceActionMessage("");
-                    setSelectedFinanceBatchIds([]);
-                  }}
-                  className="rounded-lg border border-border bg-card px-3 py-1 text-xs font-semibold text-text-secondary hover:border-primary/30 hover:text-primary"
-                >
-                  Reset Panel
-                </button>
-              </div>
-
-              {financeActionMessage && (
-                <p className="mt-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-xs text-text-secondary">{financeActionMessage}</p>
-              )}
-
-              {financeActionView === "mapping" && (
-                <div className="mt-3 space-y-3">
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <div className="rounded-xl border border-border bg-card p-3">
-                      <p className="text-xs text-text-secondary">Donor Mappings</p>
-                      <p className="mt-1 text-xl font-black text-text-primary">{scholarshipFundingMap.length}</p>
-                    </div>
-                    <div className="rounded-xl border border-border bg-card p-3">
-                      <p className="text-xs text-text-secondary">Total Committed</p>
-                      <p className="mt-1 text-xl font-black text-text-primary">₹{totalCommittedFunding.toLocaleString("en-IN")}</p>
-                    </div>
-                    <div className="rounded-xl border border-border bg-card p-3">
-                      <p className="text-xs text-text-secondary">Total Transferred</p>
-                      <p className="mt-1 text-xl font-black text-text-primary">₹{totalTransferredFunding.toLocaleString("en-IN")}</p>
-                    </div>
-                  </div>
-
-                  <form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={addDonorScholarshipMapping}>
-                    <InputField label="Donor Name" name="donorName" placeholder="Example: Vikram Joshi" required />
-
-                    <label>
-                      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Scholarship</span>
-                      <select
-                        name="scholarshipName"
-                        required
-                        defaultValue=""
-                        className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
-                      >
-                        <option value="" disabled>
-                          Select scholarship
-                        </option>
-                        {rows.map((row) => (
-                          <option key={`mapping-sch-${row.id}`} value={row.name}>
-                            {row.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <InputField label="Amount (INR)" name="amount" placeholder="Example: 75000" required />
-
-                    <SelectField label="Commitment Cycle" name="cycle" options={["Monthly", "Quarterly", "Annual", "One Time"]} required />
+                    <SelectField
+                      label="Mode"
+                      name="mode"
+                      options={info.secondaryFilterOptions.filter((item) => item !== "All")}
+                      required
+                    />
 
                     <label className="sm:col-span-2">
-                      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Mapping Note</span>
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Program Goal</span>
                       <textarea
-                        name="note"
-                        rows={2}
-                        placeholder="Mention donor intent, tranche plan, or verification notes"
+                        name="goal"
+                        rows={3}
+                        placeholder="Write a short goal and scope"
                         className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
                       />
                     </label>
@@ -2544,214 +2217,517 @@ export default function AdminSectionPage() {
                         type="submit"
                         className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
                       >
-                        Save Donor Mapping
+                        Create Program
                       </button>
                     </div>
                   </form>
+                )}
 
-                  <div className="overflow-x-auto rounded-xl border border-border">
-                    <table className="min-w-full text-left text-sm">
-                      <thead>
-                        <tr className="bg-card">
-                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Donor</th>
-                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Scholarship</th>
-                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Amount</th>
-                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Cycle</th>
-                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Status</th>
-                          <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {scholarshipFundingMap.map((item) => (
-                          <tr key={item.id}>
-                            <td className="border-b border-border/60 px-3 py-2 text-text-primary">{item.donorName}</td>
-                            <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{item.scholarshipName}</td>
-                            <td className="border-b border-border/60 px-3 py-2 text-text-secondary">₹{item.amount.toLocaleString("en-IN")}</td>
-                            <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{item.cycle}</td>
-                            <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{item.status}</td>
-                            <td className="border-b border-border/60 px-3 py-2">
-                              {item.status !== "Transferred" ? (
-                                <button
-                                  onClick={() => updateMappingStatus(item.id, "Transferred")}
-                                  className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                                >
-                                  Mark Transferred
-                                </button>
-                              ) : (
-                                <span className="text-xs font-semibold text-emerald-700">Completed</span>
-                              )}
-                            </td>
-                          </tr>
+                {programActionView === "assign" && (
+                  <div className="mt-3 space-y-3">
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Select Program</span>
+                      <select
+                        value={selectedProgramForMentor}
+                        onChange={(event) => setSelectedProgramForMentor(event.target.value)}
+                        className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                      >
+                        <option value="">Choose program</option>
+                        {rows.map((row) => (
+                          <option key={`assign-${row.id}`} value={row.id}>
+                            {row.id} - {row.name}
+                          </option>
                         ))}
-                      </tbody>
-                    </table>
+                      </select>
+                    </label>
+
+                    <div>
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Mentor Pool</p>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {mentorPool.map((mentor) => (
+                          <label key={mentor} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-text-primary">
+                            <input
+                              type="checkbox"
+                              checked={selectedMentors.includes(mentor)}
+                              onChange={(event) => {
+                                if (event.target.checked) {
+                                  setSelectedMentors((prev) => [...prev, mentor]);
+                                  return;
+                                }
+                                setSelectedMentors((prev) => prev.filter((item) => item !== mentor));
+                              }}
+                            />
+                            {mentor}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        onClick={assignMentorsToProgram}
+                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                      >
+                        Save Mentor Assignment
+                      </button>
+                    </div>
                   </div>
+                )}
+
+                {programActionView === "report" && (
+                  <div className="mt-3 space-y-3">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      <div className="rounded-xl border border-border bg-card p-3">
+                        <p className="text-xs text-text-secondary">Total Programs</p>
+                        <p className="mt-1 text-xl font-black text-text-primary">{rows.length}</p>
+                      </div>
+                      <div className="rounded-xl border border-border bg-card p-3">
+                        <p className="text-xs text-text-secondary">Live / In Progress</p>
+                        <p className="mt-1 text-xl font-black text-text-primary">
+                          {rows.filter((row) => row.status === "Live" || row.status === "In Progress").length}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-border bg-card p-3">
+                        <p className="text-xs text-text-secondary">Draft / Review</p>
+                        <p className="mt-1 text-xl font-black text-text-primary">
+                          {rows.filter((row) => row.status === "Draft" || row.status === "Review").length}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-xl border border-border">
+                      <table className="min-w-full text-left text-sm">
+                        <thead>
+                          <tr className="bg-card">
+                            <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Program</th>
+                            <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Track</th>
+                            <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Mode</th>
+                            <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Status</th>
+                            <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Updated</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map((row) => (
+                            <tr key={`weekly-${row.id}`}>
+                              <td className="border-b border-border/60 px-3 py-2 text-text-primary">{row.name}</td>
+                              <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{row.primaryFilterValue}</td>
+                              <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{row.secondaryFilterValue}</td>
+                              <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{row.status}</td>
+                              <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{row.updatedAt}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <button
+                        onClick={exportProgramWeeklyReport}
+                        className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                      >
+                        <Download className="h-4 w-4" /> Download CSV
+                      </button>
+                      <button
+                        onClick={printProgramWeeklyReport}
+                        className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                      >
+                        <Printer className="h-4 w-4" /> Print Summary
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {key === "requests" && (
+              <div className="mt-4 rounded-2xl border border-border bg-background p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-text-primary">Request Action Workspace</p>
+                  <button
+                    onClick={() => {
+                      setRequestActionView("none");
+                      setRequestActionMessage("");
+                      setSelectedRequestId("");
+                      setRequestAssignTeam("");
+                      setRequestAssignNote("");
+                    }}
+                    className="rounded-lg border border-border bg-card px-3 py-1 text-xs font-semibold text-text-secondary hover:border-primary/30 hover:text-primary"
+                  >
+                    Reset Panel
+                  </button>
                 </div>
-              )}
 
-              {financeActionView === "create" && (
-                <form className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={createScholarshipRecord}>
-                  <InputField label="Scholarship Name" name="name" placeholder="Example: Merit Plus 2026" required />
-                  <InputField label="Owner Team" name="owner" placeholder="Example: Scholarship Desk" required />
+                {requestActionMessage && (
+                  <p className="mt-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-xs text-text-secondary">{requestActionMessage}</p>
+                )}
 
-                  <SelectField
-                    label="Category"
-                    name="category"
-                    options={info.primaryFilterOptions.filter((item) => item !== "All")}
-                    required
-                  />
+                {requestActionView === "priority" && (
+                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <div className="rounded-xl border border-border bg-card p-3">
+                      <p className="text-xs text-text-secondary">Open Requests</p>
+                      <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Open").length}</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-card p-3">
+                      <p className="text-xs text-text-secondary">High Priority</p>
+                      <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.primaryFilterValue === "High").length}</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-card p-3">
+                      <p className="text-xs text-text-secondary">In Progress</p>
+                      <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "In Progress").length}</p>
+                    </div>
+                  </div>
+                )}
 
-                  <SelectField
-                    label="Cycle"
-                    name="cycle"
-                    options={info.secondaryFilterOptions.filter((item) => item !== "All")}
-                    required
-                  />
+                {requestActionView === "assign" && (
+                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <label>
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Request</span>
+                      <select
+                        value={selectedRequestId}
+                        onChange={(event) => setSelectedRequestId(event.target.value)}
+                        className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                      >
+                        <option value="">Select request</option>
+                        {rows.map((row) => (
+                          <option key={`request-assign-${row.id}`} value={row.id}>
+                            {row.id} - {row.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
 
-                  <label className="sm:col-span-2">
-                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Scholarship Note</span>
-                    <textarea
-                      name="note"
-                      rows={3}
-                      placeholder="Add eligibility, fund source, and processing remarks"
-                      className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                    <label>
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Assign Team</span>
+                      <select
+                        value={requestAssignTeam}
+                        onChange={(event) => setRequestAssignTeam(event.target.value)}
+                        className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                      >
+                        <option value="">Select team</option>
+                        {requestTeams.map((team) => (
+                          <option key={team} value={team}>
+                            {team}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="sm:col-span-2">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Assignment Note (Optional)</span>
+                      <textarea
+                        value={requestAssignNote}
+                        onChange={(event) => setRequestAssignNote(event.target.value)}
+                        rows={3}
+                        placeholder="Add context for assigned team"
+                        className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                      />
+                    </label>
+
+                    <div className="sm:col-span-2 flex justify-end">
+                      <button
+                        onClick={assignRequestToTeam}
+                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                      >
+                        Assign Request
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {requestActionView === "close" && (
+                  <div className="mt-3 rounded-xl border border-border bg-card p-3 text-sm text-text-secondary">
+                    Resolved batch close operation complete. You can now filter by status <span className="font-semibold text-text-primary">Resolved</span> to review archived entries.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {key === "finance" && (
+              <div className="mt-4 rounded-2xl border border-border bg-background p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-text-primary">Scholarship Action Workspace</p>
+                  <button
+                    onClick={() => {
+                      setFinanceActionView("none");
+                      setFinanceActionMessage("");
+                      setSelectedFinanceBatchIds([]);
+                    }}
+                    className="rounded-lg border border-border bg-card px-3 py-1 text-xs font-semibold text-text-secondary hover:border-primary/30 hover:text-primary"
+                  >
+                    Reset Panel
+                  </button>
+                </div>
+
+                {financeActionMessage && (
+                  <p className="mt-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-xs text-text-secondary">{financeActionMessage}</p>
+                )}
+
+                {financeActionView === "mapping" && (
+                  <div className="mt-3 space-y-3">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      <div className="rounded-xl border border-border bg-card p-3">
+                        <p className="text-xs text-text-secondary">Donor Mappings</p>
+                        <p className="mt-1 text-xl font-black text-text-primary">{scholarshipFundingMap.length}</p>
+                      </div>
+                      <div className="rounded-xl border border-border bg-card p-3">
+                        <p className="text-xs text-text-secondary">Total Committed</p>
+                        <p className="mt-1 text-xl font-black text-text-primary">₹{totalCommittedFunding.toLocaleString("en-IN")}</p>
+                      </div>
+                      <div className="rounded-xl border border-border bg-card p-3">
+                        <p className="text-xs text-text-secondary">Total Transferred</p>
+                        <p className="mt-1 text-xl font-black text-text-primary">₹{totalTransferredFunding.toLocaleString("en-IN")}</p>
+                      </div>
+                    </div>
+
+                    <form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={addDonorScholarshipMapping}>
+                      <InputField label="Donor Name" name="donorName" placeholder="Example: Vikram Joshi" required />
+
+                      <label>
+                        <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Scholarship</span>
+                        <select
+                          name="scholarshipName"
+                          required
+                          defaultValue=""
+                          className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                        >
+                          <option value="" disabled>
+                            Select scholarship
+                          </option>
+                          {rows.map((row) => (
+                            <option key={`mapping-sch-${row.id}`} value={row.name}>
+                              {row.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <InputField label="Amount (INR)" name="amount" placeholder="Example: 75000" required />
+
+                      <SelectField label="Commitment Cycle" name="cycle" options={["Monthly", "Quarterly", "Annual", "One Time"]} required />
+
+                      <label className="sm:col-span-2">
+                        <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Mapping Note</span>
+                        <textarea
+                          name="note"
+                          rows={2}
+                          placeholder="Mention donor intent, tranche plan, or verification notes"
+                          className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                        />
+                      </label>
+
+                      <div className="sm:col-span-2 flex justify-end">
+                        <button
+                          type="submit"
+                          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                        >
+                          Save Donor Mapping
+                        </button>
+                      </div>
+                    </form>
+
+                    <div className="overflow-x-auto rounded-xl border border-border">
+                      <table className="min-w-full text-left text-sm">
+                        <thead>
+                          <tr className="bg-card">
+                            <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Donor</th>
+                            <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Scholarship</th>
+                            <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Amount</th>
+                            <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Cycle</th>
+                            <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Status</th>
+                            <th className="border-b border-border px-3 py-2 font-semibold text-text-secondary">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {scholarshipFundingMap.map((item) => (
+                            <tr key={item.id}>
+                              <td className="border-b border-border/60 px-3 py-2 text-text-primary">{item.donorName}</td>
+                              <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{item.scholarshipName}</td>
+                              <td className="border-b border-border/60 px-3 py-2 text-text-secondary">₹{item.amount.toLocaleString("en-IN")}</td>
+                              <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{item.cycle}</td>
+                              <td className="border-b border-border/60 px-3 py-2 text-text-secondary">{item.status}</td>
+                              <td className="border-b border-border/60 px-3 py-2">
+                                {item.status !== "Transferred" ? (
+                                  <button
+                                    onClick={() => updateMappingStatus(item.id, "Transferred")}
+                                    className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                                  >
+                                    Mark Transferred
+                                  </button>
+                                ) : (
+                                  <span className="text-xs font-semibold text-emerald-700">Completed</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {financeActionView === "create" && (
+                  <form className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={createScholarshipRecord}>
+                    <InputField label="Scholarship Name" name="name" placeholder="Example: Merit Plus 2026" required />
+                    <InputField label="Owner Team" name="owner" placeholder="Example: Scholarship Desk" required />
+
+                    <SelectField
+                      label="Category"
+                      name="category"
+                      options={info.primaryFilterOptions.filter((item) => item !== "All")}
+                      required
                     />
-                  </label>
 
-                  <div className="sm:col-span-2 flex justify-end">
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
-                    >
-                      Create Scholarship
-                    </button>
+                    <SelectField
+                      label="Cycle"
+                      name="cycle"
+                      options={info.secondaryFilterOptions.filter((item) => item !== "All")}
+                      required
+                    />
+
+                    <label className="sm:col-span-2">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Scholarship Note</span>
+                      <textarea
+                        name="note"
+                        rows={3}
+                        placeholder="Add eligibility, fund source, and processing remarks"
+                        className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+                      />
+                    </label>
+
+                    <div className="sm:col-span-2 flex justify-end">
+                      <button
+                        type="submit"
+                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                      >
+                        Create Scholarship
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {financeActionView === "payout" && (
+                  <div className="mt-3 space-y-3">
+                    <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-text-secondary">
+                      <span className="font-semibold text-text-primary">Simple meaning:</span> Scholarship Payment means scholarship amount transfer to student account.
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      <div className="rounded-xl border border-border bg-card p-3">
+                        <p className="text-xs text-text-secondary">Pending Scholarship Payments</p>
+                        <p className="mt-1 text-xl font-black text-text-primary">{financePayoutCandidates.length}</p>
+                      </div>
+                      <div className="rounded-xl border border-border bg-card p-3">
+                        <p className="text-xs text-text-secondary">Selected In Batch</p>
+                        <p className="mt-1 text-xl font-black text-text-primary">{selectedFinanceBatchIds.length}</p>
+                      </div>
+                      <div className="rounded-xl border border-border bg-card p-3">
+                        <p className="text-xs text-text-secondary">Payments Completed</p>
+                        <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Settled").length}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      {financePayoutCandidates.length === 0 && (
+                        <div className="rounded-xl border border-dashed border-border bg-card p-3 text-sm text-text-secondary">
+                          No scholarship payment entries are waiting for batch approval.
+                        </div>
+                      )}
+
+                      {financePayoutCandidates.map((row) => (
+                        <label key={`finance-batch-${row.id}`} className="flex items-start gap-2 rounded-xl border border-border bg-card px-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedFinanceBatchIds.includes(row.id)}
+                            onChange={() => toggleFinanceBatchSelection(row.id)}
+                          />
+                          <div>
+                            <p className="text-sm font-semibold text-text-primary">
+                              {row.id} - {row.name}
+                            </p>
+                            <p className="text-xs text-text-secondary">{row.note}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        onClick={approveSelectedPayoutBatch}
+                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                      >
+                        Approve Selected Payment Batch
+                      </button>
+                    </div>
                   </div>
-                </form>
-              )}
+                )}
 
-              {financeActionView === "payout" && (
-                <div className="mt-3 space-y-3">
-                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-text-secondary">
-                    <span className="font-semibold text-text-primary">Simple meaning:</span> Scholarship Payment means scholarship amount transfer to student account.
+                {financeActionView === "ledger" && (
+                  <div className="mt-3 space-y-3">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <button
+                        onClick={() => exportFinanceLedger(rows, "full")}
+                        className="inline-flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                      >
+                        Download Full Ledger
+                        <Download className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => exportFinanceLedger(filteredRows, "filtered")}
+                        className="inline-flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+                      >
+                        Download Filtered Ledger
+                        <Download className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <p className="text-xs text-text-secondary">
+                      Ledger export supports current filters so scholarship team can quickly share category-wise and cycle-wise reports.
+                    </p>
                   </div>
+                )}
 
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {financeActionView === "audit" && (
+                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <div className="rounded-xl border border-border bg-card p-3">
-                      <p className="text-xs text-text-secondary">Pending Scholarship Payments</p>
-                      <p className="mt-1 text-xl font-black text-text-primary">{financePayoutCandidates.length}</p>
+                      <p className="text-xs text-text-secondary">Entries In Review</p>
+                      <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Review").length}</p>
                     </div>
                     <div className="rounded-xl border border-border bg-card p-3">
-                      <p className="text-xs text-text-secondary">Selected In Batch</p>
-                      <p className="mt-1 text-xl font-black text-text-primary">{selectedFinanceBatchIds.length}</p>
+                      <p className="text-xs text-text-secondary">Verification In Progress</p>
+                      <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Processing").length}</p>
                     </div>
                     <div className="rounded-xl border border-border bg-card p-3">
-                      <p className="text-xs text-text-secondary">Payments Completed</p>
+                      <p className="text-xs text-text-secondary">Audit Safe (Settled)</p>
                       <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Settled").length}</p>
                     </div>
                   </div>
+                )}
+              </div>
+            )}
 
-                  <div className="space-y-2">
-                    {financePayoutCandidates.length === 0 && (
-                      <div className="rounded-xl border border-dashed border-border bg-card p-3 text-sm text-text-secondary">
-                        No scholarship payment entries are waiting for batch approval.
-                      </div>
-                    )}
+          </article>
 
-                    {financePayoutCandidates.map((row) => (
-                      <label key={`finance-batch-${row.id}`} className="flex items-start gap-2 rounded-xl border border-border bg-card px-3 py-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedFinanceBatchIds.includes(row.id)}
-                          onChange={() => toggleFinanceBatchSelection(row.id)}
-                        />
-                        <div>
-                          <p className="text-sm font-semibold text-text-primary">
-                            {row.id} - {row.name}
-                          </p>
-                          <p className="text-xs text-text-secondary">{row.note}</p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-
-                  <div className="flex justify-end">
-                    <button
-                      onClick={approveSelectedPayoutBatch}
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
-                    >
-                      Approve Selected Payment Batch
-                    </button>
-                  </div>
-                </div>
+          {key !== "finance" && key !== "analytics" && (
+            <article className="rounded-2xl border border-border bg-card p-5">
+              <h3 className="text-lg font-bold">Management Notes</h3>
+              <p className="mt-1 text-sm text-text-secondary">
+                Keep all approvals and operations in this workspace. Filters and pagination are tailored to each admin section.
+              </p>
+              {key === "members" && (
+                <p className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-text-secondary">
+                  New user registrations appear in <span className="font-semibold text-text-primary">Pending</span>. Use
+                  <span className="font-semibold text-text-primary"> Approve / Reject</span> buttons to complete approval workflow.
+                </p>
               )}
 
-              {financeActionView === "ledger" && (
-                <div className="mt-3 space-y-3">
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <button
-                      onClick={() => exportFinanceLedger(rows, "full")}
-                      className="inline-flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
-                    >
-                      Download Full Ledger
-                      <Download className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => exportFinanceLedger(filteredRows, "filtered")}
-                      className="inline-flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
-                    >
-                      Download Filtered Ledger
-                      <Download className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <p className="text-xs text-text-secondary">
-                    Ledger export supports current filters so scholarship team can quickly share category-wise and cycle-wise reports.
-                  </p>
-                </div>
+              {key === "requests" && (
+                <p className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-text-secondary">
+                  Use quick actions to open priority queue, assign request owners, and close resolved batches. Each request card also supports direct lifecycle actions.
+                </p>
               )}
 
-              {financeActionView === "audit" && (
-                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  <div className="rounded-xl border border-border bg-card p-3">
-                    <p className="text-xs text-text-secondary">Entries In Review</p>
-                    <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Review").length}</p>
-                  </div>
-                  <div className="rounded-xl border border-border bg-card p-3">
-                    <p className="text-xs text-text-secondary">Verification In Progress</p>
-                    <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Processing").length}</p>
-                  </div>
-                  <div className="rounded-xl border border-border bg-card p-3">
-                    <p className="text-xs text-text-secondary">Audit Safe (Settled)</p>
-                    <p className="mt-1 text-xl font-black text-text-primary">{rows.filter((row) => row.status === "Settled").length}</p>
-                  </div>
-                </div>
-              )}
-            </div>
+            </article>
           )}
-
-        </article>
-
-        {key !== "finance" && key !== "analytics" && (
-        <article className="rounded-2xl border border-border bg-card p-5">
-          <h3 className="text-lg font-bold">Management Notes</h3>
-          <p className="mt-1 text-sm text-text-secondary">
-            Keep all approvals and operations in this workspace. Filters and pagination are tailored to each admin section.
-          </p>
-          {key === "members" && (
-            <p className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-text-secondary">
-              New user registrations appear in <span className="font-semibold text-text-primary">Pending</span>. Use
-              <span className="font-semibold text-text-primary"> Approve / Reject</span> buttons to complete approval workflow.
-            </p>
-          )}
-
-          {key === "requests" && (
-            <p className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-text-secondary">
-              Use quick actions to open priority queue, assign request owners, and close resolved batches. Each request card also supports direct lifecycle actions.
-            </p>
-          )}
-
-        </article>
-        )}
-      </section>
+        </section>
       )}
     </div>
   );

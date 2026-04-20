@@ -34,7 +34,6 @@ const navItems: NavItem[] = [
   { label: "Requests", href: "/admin/requests", icon: ClipboardList },
   { label: "Scholarships", href: "/admin/finance", icon: CreditCard },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
-  { label: "Security", href: "/admin/security", icon: ShieldCheck },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
