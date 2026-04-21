@@ -9,7 +9,6 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  ClipboardList,
   CreditCard,
   LayoutDashboard,
   LogOut,
@@ -31,8 +30,7 @@ const navItems: NavItem[] = [
   { label: "Members", href: "/admin/members", icon: Users },
   { label: "Programs", href: "/admin/programs", icon: BookOpen },
   { label: "Events", href: "/admin/events", icon: Calendar },
-  { label: "Requests", href: "/admin/requests", icon: ClipboardList },
-  { label: "Scholarships", href: "/admin/finance", icon: CreditCard },
+  { label: "Scholarships", href: "/admin/scholarships", icon: CreditCard },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];

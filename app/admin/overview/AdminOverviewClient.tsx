@@ -48,7 +48,7 @@ const quickActions = [
   { label: "Approve Members", href: "/admin/members" },
   { label: "Assign Mentors", href: "/admin/programs" },
   { label: "Publish Event", href: "/admin/events" },
-  { label: "Review Donations", href: "/admin/finance" },
+  { label: "Review Scholarships", href: "/admin/scholarships" },
 ];
 
 const defaultStats: Stat[] = [
@@ -188,9 +188,7 @@ export default function AdminOverviewClient() {
         <article className="rounded-2xl border border-border bg-card p-5 xl:col-span-2">
           <div className="mb-5 flex items-center justify-between">
             <h3 className="text-lg font-bold">Recent Admin Activity</h3>
-            <Link href="/admin/requests" className="text-sm font-semibold text-primary hover:underline">
-              View All
-            </Link>
+            <span className="text-sm font-semibold text-text-secondary">Live Feed</span>
           </div>
           <div className="space-y-3">
             {!hasFeed && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
   Clock3,
@@ -39,6 +39,9 @@ type ProgramsApiResponse = {
     pendingCount: number;
     approvedCount: number;
     rejectedCount: number;
+  };
+  filterOptions?: {
+    years: string[];
   };
   message?: string;
 };
@@ -96,6 +99,7 @@ export default function AdminProgramsPage() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [summary, setSummary] = useState({ pendingCount: 0, approvedCount: 0, rejectedCount: 0 });
+  const [yearOptions, setYearOptions] = useState<string[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -127,12 +131,13 @@ export default function AdminProgramsPage() {
     return params.toString();
   }, [page, pageSize, search, statusFilter, yearFilter]);
 
-  const loadPrograms = async (signal?: AbortSignal, forceFresh = false) => {
+  const loadPrograms = useCallback(async (signal?: AbortSignal, forceFresh = false) => {
     const cacheKey = queryString;
     const cached = forceFresh ? undefined : programsResponseCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       setRows(cached.data.rows || []);
       setSummary(cached.data.summary || { pendingCount: 0, approvedCount: 0, rejectedCount: 0 });
+      setYearOptions(cached.data.filterOptions?.years || []);
       setTotalPages(cached.data.pagination?.totalPages || 1);
       setTotal(cached.data.pagination?.total || 0);
       setLoading(false);
@@ -140,7 +145,7 @@ export default function AdminProgramsPage() {
     }
 
     try {
-      setLoading((prev) => prev || rows.length === 0);
+      setLoading(true);
       const refreshParam = forceFresh ? `&_=${Date.now()}` : "";
       const response = await fetch(`/api/admin/programs?${queryString}${refreshParam}`, {
         cache: forceFresh ? "no-store" : "default",
@@ -155,6 +160,7 @@ export default function AdminProgramsPage() {
 
       setRows(payload.rows || []);
       setSummary(payload.summary || { pendingCount: 0, approvedCount: 0, rejectedCount: 0 });
+      setYearOptions(payload.filterOptions?.years || []);
       setTotalPages(payload.pagination?.totalPages || 1);
       setTotal(payload.pagination?.total || 0);
       programsResponseCache.set(cacheKey, {
@@ -169,7 +175,7 @@ export default function AdminProgramsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [queryString]);
 
   const loadStatusLists = async (forceFresh = false) => {
     setStatusListLoading(true);
@@ -202,7 +208,7 @@ export default function AdminProgramsPage() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [queryString]);
+  }, [loadPrograms]);
 
   useEffect(() => {
     void loadStatusLists();
@@ -460,13 +466,15 @@ export default function AdminProgramsPage() {
                 View and manage program applications, approvals, and rejections.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowCreateProgram((prev) => !prev)}
-            className="rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
-          >
-            {showCreateProgram ? "Close Create Program" : "Create New Program"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowCreateProgram((prev) => !prev)}
+              className="rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
+            >
+              {showCreateProgram ? "Close Create Program" : "Create New Program"}
+            </button>
+          </div>
         </div>
         {message && <p className="mt-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-text-secondary">{message}</p>}
       </section>
@@ -591,10 +599,11 @@ export default function AdminProgramsPage() {
               className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-text-primary outline-none focus:border-primary"
             >
               <option>All</option>
-              <option>2024</option>
-              <option>2025</option>
-              <option>2026</option>
-              <option>2027</option>
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
             </select>
           </label>
         </div>

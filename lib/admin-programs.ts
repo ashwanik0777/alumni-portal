@@ -38,6 +38,9 @@ type ProgramsListResult = {
     approvedCount: number;
     rejectedCount: number;
   };
+  filterOptions: {
+    years: string[];
+  };
 };
 
 type ProgramsListCacheEntry = {
@@ -274,6 +277,14 @@ export async function listAdminPrograms(filters: ProgramListFilters) {
     FROM admin_programs
   `);
 
+  const yearsResult = await postgresPool.query<{ program_year: string }>(`
+    SELECT DISTINCT program_year
+    FROM admin_programs
+    WHERE program_year IS NOT NULL AND program_year <> ''
+    ORDER BY program_year DESC
+    LIMIT 30
+  `);
+
   const result: ProgramsListResult = {
     rows: rows.rows.map(mapRow),
     pagination: {
@@ -286,6 +297,9 @@ export async function listAdminPrograms(filters: ProgramListFilters) {
       pendingCount: Number(summary.rows[0]?.pending_count || "0"),
       approvedCount: Number(summary.rows[0]?.approved_count || "0"),
       rejectedCount: Number(summary.rows[0]?.rejected_count || "0"),
+    },
+    filterOptions: {
+      years: yearsResult.rows.map((item) => item.program_year),
     },
   };
 
