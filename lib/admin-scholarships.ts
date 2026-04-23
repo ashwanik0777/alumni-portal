@@ -128,17 +128,19 @@ function mapApplicationRow(row: Record<string, unknown>): ScholarshipApplication
   };
 }
 
-export async function ensureScholarshipTables() {
-  // Drop old table if schema mismatch (provider_name -> provider_names JSON)
-  const colCheck = await postgresPool.query(`
-    SELECT column_name FROM information_schema.columns
-    WHERE table_name = 'admin_scholarships' AND column_name = 'provider_name'
-  `);
-  if (colCheck.rows.length > 0) {
-    await postgresPool.query(`DROP TABLE IF EXISTS scholarship_applications`);
-    await postgresPool.query(`DROP TABLE IF EXISTS admin_scholarships`);
-  }
+let _ensurePromise: Promise<void> | null = null;
 
+export function ensureScholarshipTables() {
+  if (!_ensurePromise) {
+    _ensurePromise = _doEnsureScholarshipTables().catch((err) => {
+      _ensurePromise = null;
+      throw err;
+    });
+  }
+  return _ensurePromise;
+}
+
+async function _doEnsureScholarshipTables() {
   await postgresPool.query(`
     CREATE TABLE IF NOT EXISTS admin_scholarships (
       id BIGSERIAL PRIMARY KEY,
@@ -188,45 +190,6 @@ export async function ensureScholarshipTables() {
 
   await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_scholarship_apps_sid ON scholarship_applications(scholarship_id)`);
   await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_scholarship_apps_status ON scholarship_applications(status)`);
-
-  // Seed if empty
-  const count = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM admin_scholarships`);
-  if (Number(count.rows[0]?.count || "0") > 0) return;
-
-  const seeds = [
-    {
-      name: "Merit Excellence Scholarship",
-      providers: ["Alumni Education Fund", "GBU Trust"],
-      year: "2026", amount: 75000, seats: 25, deadline: "2026-07-30",
-      criteria: ["Class 12 pass with at least 85%", "Family income below 6 LPA", "Must be a first-year student", "No active backlog"],
-      description: "Supports top-performing students from economically constrained backgrounds.",
-      email: "scholarships@alumniportal.org", phone: "9876501200", active: true,
-    },
-    {
-      name: "STEM Future Grant",
-      providers: ["Tech Alumni Collective", "Innovation Foundation", "STEM India"],
-      year: "2026", amount: 100000, seats: 12, deadline: "2026-08-20",
-      criteria: ["Admission in STEM degree program", "Recommendation from school principal", "Minimum 80% in qualifying exam"],
-      description: "One-time grant for first-year STEM students in accredited institutions.",
-      email: "stem.grants@alumniportal.org", phone: "9876501300", active: true,
-    },
-    {
-      name: "Girls Higher Education Fund",
-      providers: ["Women Alumni Network"],
-      year: "2025", amount: 60000, seats: 18, deadline: "2025-12-10",
-      criteria: ["Female students only", "Admitted to undergraduate programs", "Family annual income below 4 LPA"],
-      description: "Promotes continuation of higher education for girl students.",
-      email: "womenfund@alumniportal.org", phone: "9876501400", active: false,
-    },
-  ];
-
-  for (const s of seeds) {
-    await postgresPool.query(
-      `INSERT INTO admin_scholarships (scholarship_name, provider_names, scholarship_year, amount_inr, seats, deadline_date, eligibility_criteria, description, contact_email, contact_phone, is_active)
-       VALUES ($1, $2::jsonb, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11)`,
-      [s.name, JSON.stringify(s.providers), s.year, s.amount, s.seats, s.deadline, JSON.stringify(s.criteria), s.description, s.email, s.phone, s.active],
-    );
-  }
 }
 
 export async function listAdminScholarships(filters: ScholarshipListFilters): Promise<ScholarshipListResult> {
