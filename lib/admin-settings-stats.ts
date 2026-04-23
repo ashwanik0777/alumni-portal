@@ -28,7 +28,14 @@ export type SettingsStats = {
   };
 };
 
+let statsCache: { data: SettingsStats; expiresAt: number } | null = null;
+const STATS_CACHE_TTL_MS = 15_000;
+
 export async function getSettingsStats(): Promise<SettingsStats> {
+  if (statsCache && statsCache.expiresAt > Date.now()) {
+    return statsCache.data;
+  }
+
   const [
     totalMembers, pendingMembers, rejectedMembers, approvedMembers,
     totalScholarships, activeScholarships,
@@ -60,7 +67,7 @@ export async function getSettingsStats(): Promise<SettingsStats> {
   const applicationCompletionRate = totalApps > 0 ? Math.round((completedApps / totalApps) * 100) : 0;
   const programActiveRate = totalPrograms > 0 ? Math.round((activePrograms / totalPrograms) * 100) : 0;
 
-  return {
+  const result: SettingsStats = {
     access: {
       totalAdmins: 1, // Currently single admin system
       totalMembers,
@@ -79,4 +86,7 @@ export async function getSettingsStats(): Promise<SettingsStats> {
       lastUpdated: new Date().toISOString(),
     },
   };
+
+  statsCache = { data: result, expiresAt: Date.now() + STATS_CACHE_TTL_MS };
+  return result;
 }

@@ -366,7 +366,7 @@ export async function verifyMemberCreateOtp(payload: {
     [payload.verificationId],
   );
 
-  if (result.rowCount === 0) {
+  if ((result.rowCount ?? 0) === 0) {
     return { ok: false, reason: "invalid" as const };
   }
 
@@ -459,7 +459,7 @@ export async function updateAdminMemberStatus(payload: {
     [numericId, payload.status, payload.status === "Rejected" ? payload.rejectionReason || "Rejected by admin." : null],
   );
 
-  if (result.rowCount === 0) {
+  if ((result.rowCount ?? 0) === 0) {
     return null;
   }
 

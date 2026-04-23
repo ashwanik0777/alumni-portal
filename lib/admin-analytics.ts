@@ -35,7 +35,15 @@ async function safeQuery<T extends QueryResultRow>(sql: string, params: unknown[
   }
 }
 
+let analyticsCache: { data: AnalyticsData; expiresAt: number } | null = null;
+const ANALYTICS_CACHE_TTL_MS = 15_000;
+
 export async function getAnalyticsData(): Promise<AnalyticsData> {
+  // Return cached result if fresh
+  if (analyticsCache && analyticsCache.expiresAt > Date.now()) {
+    return analyticsCache.data;
+  }
+
   // Run all queries in parallel for performance
   const [
     membersCount,
@@ -130,7 +138,7 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   const so = scholarshipsOverview[0] || { total: "0", active: "0", funding: "0" };
   const ao = applicationsOverview[0] || { total: "0", pending: "0", verified: "0", completed: "0", disbursed: "0" };
 
-  return {
+  const result: AnalyticsData = {
     overview: {
       totalMembers: Number(membersCount[0]?.count || "0"),
       totalEvents: Number(eventsCount[0]?.count || "0"),
@@ -153,4 +161,9 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
     topScholarships: topScholarships.map((r) => ({ name: r.name, applications: Number(r.applications), amount: Number(r.amount) })),
     monthlyTrend: monthlyTrend.map((r) => ({ month: r.month, applications: Number(r.applications), completions: Number(r.completions) })),
   };
+
+  // Cache the result
+  analyticsCache = { data: result, expiresAt: Date.now() + ANALYTICS_CACHE_TTL_MS };
+
+  return result;
 }

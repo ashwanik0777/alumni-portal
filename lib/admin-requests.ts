@@ -135,7 +135,11 @@ function mapRow(row: {
   };
 }
 
+let tableReady = false;
+
 export async function ensureAdminRequestsTable() {
+  if (tableReady) return;
+
   await postgresPool.query(`
     CREATE TABLE IF NOT EXISTS admin_requests (
       id BIGSERIAL PRIMARY KEY,
@@ -160,17 +164,19 @@ export async function ensureAdminRequestsTable() {
   await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_requests_updated_at ON admin_requests(updated_at DESC)`);
 
   const existingCount = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM admin_requests`);
-  if (Number(existingCount.rows[0]?.count || "0") > 0) return;
-
-  for (const item of seedRequests) {
-    await postgresPool.query(
-      `
-      INSERT INTO admin_requests (requester_name, requester_email, subject, description, category, priority, status, admin_note)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      `,
-      [item.requesterName, item.requesterEmail, item.subject, item.description, item.category, item.priority, item.status, item.adminNote],
-    );
+  if (Number(existingCount.rows[0]?.count || "0") === 0) {
+    for (const item of seedRequests) {
+      await postgresPool.query(
+        `
+        INSERT INTO admin_requests (requester_name, requester_email, subject, description, category, priority, status, admin_note)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `,
+        [item.requesterName, item.requesterEmail, item.subject, item.description, item.category, item.priority, item.status, item.adminNote],
+      );
+    }
   }
+
+  tableReady = true;
 }
 
 export async function listAdminRequests(filters: RequestListFilters): Promise<RequestsListResult> {
@@ -205,14 +211,12 @@ export async function listAdminRequests(filters: RequestListFilters): Promise<Re
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
+  // Build data query with separate values array (count query doesn't need LIMIT/OFFSET)
+  const dataValues = [...values, pageSize, (page - 1) * pageSize];
+  const limitIndex = dataValues.length - 1;
+  const offsetIndex = dataValues.length;
+
   const countQuery = `SELECT COUNT(*)::text AS count FROM admin_requests ${whereClause}`;
-  const countResult = await postgresPool.query<{ count: string }>(countQuery, values);
-  const total = Number(countResult.rows[0]?.count || "0");
-
-  values.push(pageSize, (page - 1) * pageSize);
-  const limitIndex = values.length - 1;
-  const offsetIndex = values.length;
-
   const dataQuery = `
     SELECT id::text, requester_name, requester_email, subject, description, category, priority, status, admin_note, submitted_at::text, updated_at::text
     FROM admin_requests
@@ -222,28 +226,7 @@ export async function listAdminRequests(filters: RequestListFilters): Promise<Re
       updated_at DESC
     LIMIT $${limitIndex} OFFSET $${offsetIndex}
   `;
-
-  const rows = await postgresPool.query<{
-    id: string;
-    requester_name: string;
-    requester_email: string;
-    subject: string;
-    description: string;
-    category: RequestCategory;
-    priority: RequestPriority;
-    status: RequestStatus;
-    admin_note: string | null;
-    submitted_at: string;
-    updated_at: string;
-  }>(dataQuery, values);
-
-  const summary = await postgresPool.query<{
-    open_count: string;
-    in_progress_count: string;
-    resolved_count: string;
-    closed_count: string;
-    critical_count: string;
-  }>(`
+  const summaryQuery = `
     SELECT
       COUNT(*) FILTER (WHERE status = 'Open')::text AS open_count,
       COUNT(*) FILTER (WHERE status = 'In Progress')::text AS in_progress_count,
@@ -251,7 +234,34 @@ export async function listAdminRequests(filters: RequestListFilters): Promise<Re
       COUNT(*) FILTER (WHERE status = 'Closed')::text AS closed_count,
       COUNT(*) FILTER (WHERE priority = 'Critical')::text AS critical_count
     FROM admin_requests
-  `);
+  `;
+
+  // Run all three queries in parallel for maximum performance
+  const [countResult, rows, summary] = await Promise.all([
+    postgresPool.query<{ count: string }>(countQuery, values),
+    postgresPool.query<{
+      id: string;
+      requester_name: string;
+      requester_email: string;
+      subject: string;
+      description: string;
+      category: RequestCategory;
+      priority: RequestPriority;
+      status: RequestStatus;
+      admin_note: string | null;
+      submitted_at: string;
+      updated_at: string;
+    }>(dataQuery, dataValues),
+    postgresPool.query<{
+      open_count: string;
+      in_progress_count: string;
+      resolved_count: string;
+      closed_count: string;
+      critical_count: string;
+    }>(summaryQuery),
+  ]);
+
+  const total = Number(countResult.rows[0]?.count || "0");
 
   return {
     rows: rows.rows.map(mapRow),
@@ -303,7 +313,7 @@ export async function updateAdminRequestStatus(payload: {
     [numericId, payload.status, payload.adminNote || null],
   );
 
-  if (result.rowCount === 0) {
+  if ((result.rowCount ?? 0) === 0) {
     return null;
   }
 

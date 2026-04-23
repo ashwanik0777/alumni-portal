@@ -27,7 +27,7 @@ export async function getAdminState(stateKey: string) {
     [stateKey],
   );
 
-  if (result.rowCount === 0) {
+  if ((result.rowCount ?? 0) === 0) {
     return null;
   }
 

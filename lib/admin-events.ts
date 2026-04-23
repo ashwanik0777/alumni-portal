@@ -437,7 +437,7 @@ export async function registerUserForEvent(payload: {
 
   const eventNumericId = toEventNumericId(payload.eventId);
   const eventExists = await postgresPool.query<{ id: string }>(`SELECT id::text FROM admin_events WHERE id = $1 LIMIT 1`, [eventNumericId]);
-  if (eventExists.rowCount === 0) {
+  if ((eventExists.rowCount ?? 0) === 0) {
     return { ok: false as const, reason: "event-not-found" as const };
   }
 
@@ -492,7 +492,7 @@ export async function cancelUserEventRegistration(payload: { eventId: string; at
     [eventNumericId, payload.attendeeEmail.trim().toLowerCase()],
   );
 
-  if (result.rowCount === 0) {
+  if ((result.rowCount ?? 0) === 0) {
     return { ok: false as const, reason: "registration-not-found" as const };
   }
 
@@ -713,7 +713,7 @@ export async function updateAdminEventStatus(payload: {
     [numericId, payload.status, payload.status === "Rejected" ? payload.rejectionReason || "Rejected by admin." : null],
   );
 
-  if (result.rowCount === 0) {
+  if ((result.rowCount ?? 0) === 0) {
     return null;
   }
 

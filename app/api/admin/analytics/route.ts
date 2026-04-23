@@ -8,7 +8,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const data = await getAnalyticsData();
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: { "Cache-Control": "private, max-age=15, stale-while-revalidate=10" },
+    });
   } catch (error) {
     console.error("Admin analytics GET error", error);
     return NextResponse.json({ message: "Unable to load analytics." }, { status: 500 });

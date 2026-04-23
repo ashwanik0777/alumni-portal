@@ -278,7 +278,7 @@ export async function toggleScholarshipActive(scholarshipId: string, isActive: b
     `UPDATE admin_scholarships SET is_active = $2, updated_at = NOW() WHERE id = $1 RETURNING *`,
     [numId, isActive],
   );
-  if (result.rowCount === 0) return null;
+  if ((result.rowCount ?? 0) === 0) return null;
   return mapScholarshipRow(result.rows[0]);
 }
 
@@ -374,7 +374,7 @@ export async function updateApplicationStatus(applicationId: string, status: "Ve
     [numId, status, adminNotes || null],
   );
 
-  if (result.rowCount === 0) return null;
+  if ((result.rowCount ?? 0) === 0) return null;
   return mapApplicationRow(result.rows[0]);
 }
 

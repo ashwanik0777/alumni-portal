@@ -73,18 +73,34 @@ function applyQuickAction(current: OverviewState, actionId: string) {
   };
 }
 
+let overviewCache: { data: OverviewState; expiresAt: number } | null = null;
+const OVERVIEW_CACHE_TTL_MS = 10_000;
+
 export async function GET(request: NextRequest) {
   const denial = requireAdminApiAccess(request);
   if (denial) return denial;
 
   try {
+    // Return from memory cache if fresh
+    if (overviewCache && overviewCache.expiresAt > Date.now()) {
+      return NextResponse.json(
+        { overview: overviewCache.data },
+        { headers: { "Cache-Control": "private, max-age=10, stale-while-revalidate=5" } },
+      );
+    }
+
     const existing = (await getAdminState(OVERVIEW_KEY)) as OverviewState | null;
     if (existing?.stats && existing?.feed) {
-      return NextResponse.json({ overview: existing });
+      overviewCache = { data: existing, expiresAt: Date.now() + OVERVIEW_CACHE_TTL_MS };
+      return NextResponse.json(
+        { overview: existing },
+        { headers: { "Cache-Control": "private, max-age=10, stale-while-revalidate=5" } },
+      );
     }
 
     const seed = getDefaultOverviewState();
     await saveAdminState(OVERVIEW_KEY, seed);
+    overviewCache = { data: seed, expiresAt: Date.now() + OVERVIEW_CACHE_TTL_MS };
     return NextResponse.json({ overview: seed });
   } catch (error) {
     console.error("Admin overview GET error", error);
@@ -110,6 +126,7 @@ export async function POST(request: NextRequest) {
     }
 
     await saveAdminState(OVERVIEW_KEY, updated);
+    overviewCache = null; // Invalidate cache after mutation
     return NextResponse.json({ overview: updated, message: "Overview updated." });
   } catch (error) {
     console.error("Admin overview POST error", error);
