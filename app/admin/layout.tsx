@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CreditCard,
+  Inbox,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -28,6 +29,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { label: "Overview", href: "/admin/overview", icon: LayoutDashboard },
   { label: "Members", href: "/admin/members", icon: Users },
+  { label: "Requests", href: "/admin/requests", icon: Inbox },
   { label: "Programs", href: "/admin/programs", icon: BookOpen },
   { label: "Events", href: "/admin/events", icon: Calendar },
   { label: "Scholarships", href: "/admin/scholarships", icon: CreditCard },

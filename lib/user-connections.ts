@@ -174,7 +174,7 @@ async function ensureProfileExists(email: string, fullName?: string) {
     [normalizedEmail],
   );
 
-  if (existing.rowCount > 0) {
+  if ((existing.rowCount ?? 0) > 0) {
     if (fullName?.trim()) {
       await postgresPool.query(
         `UPDATE user_connection_profiles SET full_name = $2, updated_at = NOW() WHERE email = $1`,
@@ -463,7 +463,7 @@ export async function sendConnectionRequest(payload: {
     [senderEmail, receiverEmail],
   );
 
-  if (existing.rowCount > 0) {
+  if ((existing.rowCount ?? 0) > 0) {
     const previous = existing.rows[0];
     if (previous.status === "Pending") {
       return { ok: false as const, reason: "already-pending" as const };
@@ -523,7 +523,7 @@ export async function respondToConnectionRequest(payload: {
     [requestId, nextStatus, userEmail],
   );
 
-  if (result.rowCount === 0) {
+  if ((result.rowCount ?? 0) === 0) {
     return { ok: false as const, reason: "not-found" as const };
   }
 
@@ -551,7 +551,7 @@ export async function manageConnection(payload: {
       [requestId, userEmail],
     );
 
-    if (result.rowCount === 0) {
+    if ((result.rowCount ?? 0) === 0) {
       return { ok: false as const, reason: "not-found" as const };
     }
 
@@ -568,7 +568,7 @@ export async function manageConnection(payload: {
     [requestId, userEmail],
   );
 
-  if (result.rowCount === 0) {
+  if ((result.rowCount ?? 0) === 0) {
     return { ok: false as const, reason: "not-found" as const };
   }
 
