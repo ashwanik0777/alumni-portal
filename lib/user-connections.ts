@@ -103,66 +103,87 @@ const seedProfiles = [
   },
 ];
 
+let connectionTablesReady = false;
+let connectionTableInitPromise: Promise<void> | null = null;
+
 async function ensureConnectionTables() {
-  await postgresPool.query(`
-    CREATE TABLE IF NOT EXISTS user_connection_profiles (
-      id BIGSERIAL PRIMARY KEY,
-      full_name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE,
-      batch TEXT NOT NULL,
-      city TEXT NOT NULL,
-      role TEXT NOT NULL,
-      company TEXT NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
+  if (connectionTablesReady) return;
 
-  await postgresPool.query(`
-    CREATE TABLE IF NOT EXISTS user_connection_requests (
-      id BIGSERIAL PRIMARY KEY,
-      sender_email TEXT NOT NULL,
-      receiver_email TEXT NOT NULL,
-      message TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'Pending',
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      CONSTRAINT user_connection_requests_status_check CHECK (status IN ('Pending', 'Accepted', 'Declined', 'Cancelled')),
-      CONSTRAINT user_connection_requests_no_self CHECK (sender_email <> receiver_email)
-    )
-  `);
+  // Deduplicate concurrent initialization calls
+  if (connectionTableInitPromise) {
+    await connectionTableInitPromise;
+    return;
+  }
 
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_user_connection_requests_sender ON user_connection_requests(sender_email)`);
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_user_connection_requests_receiver ON user_connection_requests(receiver_email)`);
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_user_connection_requests_status ON user_connection_requests(status)`);
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_user_connection_requests_updated_at ON user_connection_requests(updated_at DESC)`);
+  connectionTableInitPromise = (async () => {
+    try {
+      await postgresPool.query(`
+        CREATE TABLE IF NOT EXISTS user_connection_profiles (
+          id BIGSERIAL PRIMARY KEY,
+          full_name TEXT NOT NULL,
+          email TEXT NOT NULL UNIQUE,
+          batch TEXT NOT NULL,
+          city TEXT NOT NULL,
+          role TEXT NOT NULL,
+          company TEXT NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `);
 
-  const countResult = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM user_connection_profiles`);
-  if (Number(countResult.rows[0]?.count || "0") === 0) {
-    for (const profile of seedProfiles) {
-      await postgresPool.query(
-        `
-          INSERT INTO user_connection_profiles (full_name, email, batch, city, role, company)
-          VALUES ($1, $2, $3, $4, $5, $6)
-        `,
-        [profile.fullName, profile.email.toLowerCase(), profile.batch, profile.city, profile.role, profile.company],
-      );
+      await postgresPool.query(`
+        CREATE TABLE IF NOT EXISTS user_connection_requests (
+          id BIGSERIAL PRIMARY KEY,
+          sender_email TEXT NOT NULL,
+          receiver_email TEXT NOT NULL,
+          message TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'Pending',
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          CONSTRAINT user_connection_requests_status_check CHECK (status IN ('Pending', 'Accepted', 'Declined', 'Cancelled')),
+          CONSTRAINT user_connection_requests_no_self CHECK (sender_email <> receiver_email)
+        )
+      `);
+
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_user_connection_requests_sender ON user_connection_requests(sender_email)`);
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_user_connection_requests_receiver ON user_connection_requests(receiver_email)`);
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_user_connection_requests_status ON user_connection_requests(status)`);
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_user_connection_requests_updated_at ON user_connection_requests(updated_at DESC)`);
+
+      const countResult = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM user_connection_profiles`);
+      if (Number(countResult.rows[0]?.count || "0") === 0) {
+        for (const profile of seedProfiles) {
+          await postgresPool.query(
+            `
+              INSERT INTO user_connection_profiles (full_name, email, batch, city, role, company)
+              VALUES ($1, $2, $3, $4, $5, $6)
+            `,
+            [profile.fullName, profile.email.toLowerCase(), profile.batch, profile.city, profile.role, profile.company],
+          );
+        }
+      }
+
+      const reqCount = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM user_connection_requests`);
+      if (Number(reqCount.rows[0]?.count || "0") === 0) {
+        await postgresPool.query(
+          `
+            INSERT INTO user_connection_requests (sender_email, receiver_email, message, status)
+            VALUES
+              ('karan.verma@example.com', 'aman.alumni@jnvportal.in', 'Hi Aman, same batch cluster se hoon, connect karna hai.', 'Pending'),
+              ('riya.dubey@example.com', 'aman.alumni@jnvportal.in', 'Data role ke liye guidance chahiye, please connect.', 'Pending'),
+              ('aman.alumni@jnvportal.in', 'arjun.singh@example.com', 'Sir, backend referrals ke liye connect request bhej raha hoon.', 'Pending'),
+              ('aman.alumni@jnvportal.in', 'ritika.verma@example.com', 'Product mentorship ke liye connect request.', 'Accepted')
+          `,
+        );
+      }
+
+      connectionTablesReady = true;
+    } finally {
+      connectionTableInitPromise = null;
     }
-  }
+  })();
 
-  const reqCount = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM user_connection_requests`);
-  if (Number(reqCount.rows[0]?.count || "0") === 0) {
-    await postgresPool.query(
-      `
-        INSERT INTO user_connection_requests (sender_email, receiver_email, message, status)
-        VALUES
-          ('karan.verma@example.com', 'aman.alumni@jnvportal.in', 'Hi Aman, same batch cluster se hoon, connect karna hai.', 'Pending'),
-          ('riya.dubey@example.com', 'aman.alumni@jnvportal.in', 'Data role ke liye guidance chahiye, please connect.', 'Pending'),
-          ('aman.alumni@jnvportal.in', 'arjun.singh@example.com', 'Sir, backend referrals ke liye connect request bhej raha hoon.', 'Pending'),
-          ('aman.alumni@jnvportal.in', 'ritika.verma@example.com', 'Product mentorship ke liye connect request.', 'Accepted')
-      `,
-    );
-  }
+  await connectionTableInitPromise;
 }
 
 async function ensureProfileExists(email: string, fullName?: string) {

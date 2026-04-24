@@ -109,52 +109,68 @@ const seedPrograms: Array<Omit<AdminProgram, "id" | "submittedAt" | "updatedAt">
   },
 ];
 
+let programsTableReady = false;
+let programsTableInitPromise: Promise<void> | null = null;
+
 export async function ensureAdminProgramsTable() {
-  await postgresPool.query(`
-    CREATE TABLE IF NOT EXISTS admin_programs (
-      id BIGSERIAL PRIMARY KEY,
-      title TEXT NOT NULL,
-      category TEXT NOT NULL,
-      program_year TEXT NOT NULL,
-      mode TEXT NOT NULL,
-      coordinator_name TEXT NOT NULL,
-      coordinator_email TEXT NOT NULL,
-      contact_number TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'Pending',
-      rejection_reason TEXT,
-      submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      CONSTRAINT admin_programs_status_check CHECK (status IN ('Pending', 'Approved', 'Rejected', 'Needs Info'))
-    )
-  `);
+  if (programsTableReady) return;
+  if (programsTableInitPromise) { await programsTableInitPromise; return; }
 
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_programs_status ON admin_programs(status)`);
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_programs_year ON admin_programs(program_year)`);
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_programs_updated_at ON admin_programs(updated_at DESC)`);
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_programs_coordinator_email ON admin_programs(coordinator_email)`);
+  programsTableInitPromise = (async () => {
+    try {
+      await postgresPool.query(`
+        CREATE TABLE IF NOT EXISTS admin_programs (
+          id BIGSERIAL PRIMARY KEY,
+          title TEXT NOT NULL,
+          category TEXT NOT NULL,
+          program_year TEXT NOT NULL,
+          mode TEXT NOT NULL,
+          coordinator_name TEXT NOT NULL,
+          coordinator_email TEXT NOT NULL,
+          contact_number TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'Pending',
+          rejection_reason TEXT,
+          submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          CONSTRAINT admin_programs_status_check CHECK (status IN ('Pending', 'Approved', 'Rejected', 'Needs Info'))
+        )
+      `);
 
-  const existingCount = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM admin_programs`);
-  if (Number(existingCount.rows[0]?.count || "0") > 0) return;
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_programs_status ON admin_programs(status)`);
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_programs_year ON admin_programs(program_year)`);
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_programs_updated_at ON admin_programs(updated_at DESC)`);
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_programs_coordinator_email ON admin_programs(coordinator_email)`);
 
-  for (const item of seedPrograms) {
-    await postgresPool.query(
-      `
-      INSERT INTO admin_programs (title, category, program_year, mode, coordinator_name, coordinator_email, contact_number, status, rejection_reason)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      `,
-      [
-        item.title,
-        item.category,
-        item.programYear,
-        item.mode,
-        item.coordinatorName,
-        item.coordinatorEmail,
-        item.contactNumber,
-        item.status,
-        item.rejectionReason,
-      ],
-    );
-  }
+      const existingCount = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM admin_programs`);
+      if (Number(existingCount.rows[0]?.count || "0") === 0) {
+        for (const item of seedPrograms) {
+          await postgresPool.query(
+            `
+            INSERT INTO admin_programs (title, category, program_year, mode, coordinator_name, coordinator_email, contact_number, status, rejection_reason)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            `,
+            [
+              item.title,
+              item.category,
+              item.programYear,
+              item.mode,
+              item.coordinatorName,
+              item.coordinatorEmail,
+              item.contactNumber,
+              item.status,
+              item.rejectionReason,
+            ],
+          );
+        }
+      }
+
+      programsTableReady = true;
+    } finally {
+      programsTableInitPromise = null;
+    }
+  })();
+
+  await programsTableInitPromise;
 }
 
 function getProgramsListCacheKey(filters: ProgramListFilters) {

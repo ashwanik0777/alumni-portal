@@ -136,47 +136,57 @@ function mapRow(row: {
 }
 
 let tableReady = false;
+let requestsTableInitPromise: Promise<void> | null = null;
 
 export async function ensureAdminRequestsTable() {
   if (tableReady) return;
+  if (requestsTableInitPromise) { await requestsTableInitPromise; return; }
 
-  await postgresPool.query(`
-    CREATE TABLE IF NOT EXISTS admin_requests (
-      id BIGSERIAL PRIMARY KEY,
-      requester_name TEXT NOT NULL,
-      requester_email TEXT NOT NULL,
-      subject TEXT NOT NULL,
-      description TEXT NOT NULL DEFAULT '',
-      category TEXT NOT NULL DEFAULT 'Other',
-      priority TEXT NOT NULL DEFAULT 'Medium',
-      status TEXT NOT NULL DEFAULT 'Open',
-      admin_note TEXT,
-      submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      CONSTRAINT admin_requests_status_check CHECK (status IN ('Open', 'In Progress', 'Resolved', 'Closed')),
-      CONSTRAINT admin_requests_priority_check CHECK (priority IN ('Low', 'Medium', 'High', 'Critical')),
-      CONSTRAINT admin_requests_category_check CHECK (category IN ('Support', 'Feedback', 'Bug Report', 'Feature Request', 'Account', 'Other'))
-    )
-  `);
+  requestsTableInitPromise = (async () => {
+    try {
+      await postgresPool.query(`
+        CREATE TABLE IF NOT EXISTS admin_requests (
+          id BIGSERIAL PRIMARY KEY,
+          requester_name TEXT NOT NULL,
+          requester_email TEXT NOT NULL,
+          subject TEXT NOT NULL,
+          description TEXT NOT NULL DEFAULT '',
+          category TEXT NOT NULL DEFAULT 'Other',
+          priority TEXT NOT NULL DEFAULT 'Medium',
+          status TEXT NOT NULL DEFAULT 'Open',
+          admin_note TEXT,
+          submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          CONSTRAINT admin_requests_status_check CHECK (status IN ('Open', 'In Progress', 'Resolved', 'Closed')),
+          CONSTRAINT admin_requests_priority_check CHECK (priority IN ('Low', 'Medium', 'High', 'Critical')),
+          CONSTRAINT admin_requests_category_check CHECK (category IN ('Support', 'Feedback', 'Bug Report', 'Feature Request', 'Account', 'Other'))
+        )
+      `);
 
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_requests_status ON admin_requests(status)`);
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_requests_priority ON admin_requests(priority)`);
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_requests_updated_at ON admin_requests(updated_at DESC)`);
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_requests_status ON admin_requests(status)`);
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_requests_priority ON admin_requests(priority)`);
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_requests_updated_at ON admin_requests(updated_at DESC)`);
 
-  const existingCount = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM admin_requests`);
-  if (Number(existingCount.rows[0]?.count || "0") === 0) {
-    for (const item of seedRequests) {
-      await postgresPool.query(
-        `
-        INSERT INTO admin_requests (requester_name, requester_email, subject, description, category, priority, status, admin_note)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        `,
-        [item.requesterName, item.requesterEmail, item.subject, item.description, item.category, item.priority, item.status, item.adminNote],
-      );
+      const existingCount = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM admin_requests`);
+      if (Number(existingCount.rows[0]?.count || "0") === 0) {
+        for (const item of seedRequests) {
+          await postgresPool.query(
+            `
+            INSERT INTO admin_requests (requester_name, requester_email, subject, description, category, priority, status, admin_note)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            `,
+            [item.requesterName, item.requesterEmail, item.subject, item.description, item.category, item.priority, item.status, item.adminNote],
+          );
+        }
+      }
+
+      tableReady = true;
+    } finally {
+      requestsTableInitPromise = null;
     }
-  }
+  })();
 
-  tableReady = true;
+  await requestsTableInitPromise;
 }
 
 export async function listAdminRequests(filters: RequestListFilters): Promise<RequestsListResult> {

@@ -122,6 +122,9 @@ const seedEvents: Array<Omit<AdminEvent, "id" | "submittedAt" | "updatedAt" | "a
   },
 ];
 
+let eventsTableReady = false;
+let eventsTableInitPromise: Promise<void> | null = null;
+
 async function ensureEventRegistrationsTable() {
   await postgresPool.query(`
     CREATE TABLE IF NOT EXISTS admin_event_registrations (
@@ -144,53 +147,65 @@ async function ensureEventRegistrationsTable() {
 }
 
 export async function ensureAdminEventsTable() {
-  await postgresPool.query(`
-    CREATE TABLE IF NOT EXISTS admin_events (
-      id BIGSERIAL PRIMARY KEY,
-      title TEXT NOT NULL,
-      event_type TEXT NOT NULL,
-      event_date DATE NOT NULL,
-      location TEXT NOT NULL,
-      mode TEXT NOT NULL,
-      organizer_name TEXT NOT NULL,
-      organizer_email TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'Approved',
-      rejection_reason TEXT,
-      submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      CONSTRAINT admin_events_status_check CHECK (status IN ('Pending', 'Approved', 'Rejected', 'Needs Info'))
-    )
-  `);
+  if (eventsTableReady) return;
+  if (eventsTableInitPromise) { await eventsTableInitPromise; return; }
 
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_events_status ON admin_events(status)`);
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_events_event_date ON admin_events(event_date DESC)`);
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_events_updated_at ON admin_events(updated_at DESC)`);
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_events_organizer_email ON admin_events(organizer_email)`);
+  eventsTableInitPromise = (async () => {
+    try {
+      await postgresPool.query(`
+        CREATE TABLE IF NOT EXISTS admin_events (
+          id BIGSERIAL PRIMARY KEY,
+          title TEXT NOT NULL,
+          event_type TEXT NOT NULL,
+          event_date DATE NOT NULL,
+          location TEXT NOT NULL,
+          mode TEXT NOT NULL,
+          organizer_name TEXT NOT NULL,
+          organizer_email TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'Approved',
+          rejection_reason TEXT,
+          submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          CONSTRAINT admin_events_status_check CHECK (status IN ('Pending', 'Approved', 'Rejected', 'Needs Info'))
+        )
+      `);
 
-  const existingCount = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM admin_events`);
-  if (Number(existingCount.rows[0]?.count || "0") === 0) {
-    for (const item of seedEvents) {
-      await postgresPool.query(
-        `
-        INSERT INTO admin_events (title, event_type, event_date, location, mode, organizer_name, organizer_email, status, rejection_reason)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        `,
-        [
-          item.title,
-          item.eventType,
-          item.eventDate,
-          item.location,
-          item.mode,
-          item.organizerName,
-          item.organizerEmail,
-          item.status,
-          item.rejectionReason,
-        ],
-      );
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_events_status ON admin_events(status)`);
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_events_event_date ON admin_events(event_date DESC)`);
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_events_updated_at ON admin_events(updated_at DESC)`);
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_events_organizer_email ON admin_events(organizer_email)`);
+
+      const existingCount = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM admin_events`);
+      if (Number(existingCount.rows[0]?.count || "0") === 0) {
+        for (const item of seedEvents) {
+          await postgresPool.query(
+            `
+            INSERT INTO admin_events (title, event_type, event_date, location, mode, organizer_name, organizer_email, status, rejection_reason)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            `,
+            [
+              item.title,
+              item.eventType,
+              item.eventDate,
+              item.location,
+              item.mode,
+              item.organizerName,
+              item.organizerEmail,
+              item.status,
+              item.rejectionReason,
+            ],
+          );
+        }
+      }
+
+      await ensureEventRegistrationsTable();
+      eventsTableReady = true;
+    } finally {
+      eventsTableInitPromise = null;
     }
-  }
+  })();
 
-  await ensureEventRegistrationsTable();
+  await eventsTableInitPromise;
 }
 
 function toEventNumericId(eventId: string) {

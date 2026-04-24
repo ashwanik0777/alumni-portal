@@ -128,14 +128,18 @@ function mapApplicationRow(row: Record<string, unknown>): ScholarshipApplication
   };
 }
 
+let scholarshipsTableReady = false;
 let _ensurePromise: Promise<void> | null = null;
 
 export function ensureScholarshipTables() {
+  if (scholarshipsTableReady) return Promise.resolve();
   if (!_ensurePromise) {
-    _ensurePromise = _doEnsureScholarshipTables().catch((err) => {
-      _ensurePromise = null;
-      throw err;
-    });
+    _ensurePromise = _doEnsureScholarshipTables()
+      .then(() => { scholarshipsTableReady = true; })
+      .catch((err) => {
+        _ensurePromise = null;
+        throw err;
+      });
   }
   return _ensurePromise;
 }

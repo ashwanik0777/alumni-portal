@@ -9,14 +9,29 @@ export type PersistedAdminState = {
   [key: string]: unknown;
 };
 
+let stateTableReady = false;
+let stateTableInitPromise: Promise<void> | null = null;
+
 async function ensureAdminStateTable() {
-  await postgresPool.query(`
-    CREATE TABLE IF NOT EXISTS admin_dynamic_state (
-      state_key TEXT PRIMARY KEY,
-      payload JSONB NOT NULL,
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
+  if (stateTableReady) return;
+  if (stateTableInitPromise) { await stateTableInitPromise; return; }
+
+  stateTableInitPromise = (async () => {
+    try {
+      await postgresPool.query(`
+        CREATE TABLE IF NOT EXISTS admin_dynamic_state (
+          state_key TEXT PRIMARY KEY,
+          payload JSONB NOT NULL,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `);
+      stateTableReady = true;
+    } finally {
+      stateTableInitPromise = null;
+    }
+  })();
+
+  await stateTableInitPromise;
 }
 
 export async function getAdminState(stateKey: string) {

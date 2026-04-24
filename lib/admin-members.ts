@@ -100,40 +100,57 @@ const seedMembers: Array<Omit<AdminMember, "id" | "submittedAt" | "updatedAt">> 
   },
 ];
 
+let membersTableReady = false;
+let membersTableInitPromise: Promise<void> | null = null;
+
 export async function ensureAdminMembersTable() {
-  await postgresPool.query(`
-    CREATE TABLE IF NOT EXISTS admin_members (
-      id BIGSERIAL PRIMARY KEY,
-      full_name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE,
-      passing_year TEXT NOT NULL,
-      house TEXT NOT NULL,
-      mobile TEXT NOT NULL,
-      father_name TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'Pending',
-      rejection_reason TEXT,
-      submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      CONSTRAINT admin_members_status_check CHECK (status IN ('Pending', 'Approved', 'Rejected', 'Needs Info'))
-    )
-  `);
+  if (membersTableReady) return;
+  if (membersTableInitPromise) { await membersTableInitPromise; return; }
 
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_members_status ON admin_members(status)`);
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_members_passing_year ON admin_members(passing_year)`);
-  await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_members_updated_at ON admin_members(updated_at DESC)`);
+  membersTableInitPromise = (async () => {
+    try {
+      await postgresPool.query(`
+        CREATE TABLE IF NOT EXISTS admin_members (
+          id BIGSERIAL PRIMARY KEY,
+          full_name TEXT NOT NULL,
+          email TEXT NOT NULL UNIQUE,
+          passing_year TEXT NOT NULL,
+          house TEXT NOT NULL,
+          mobile TEXT NOT NULL,
+          father_name TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'Pending',
+          rejection_reason TEXT,
+          submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          CONSTRAINT admin_members_status_check CHECK (status IN ('Pending', 'Approved', 'Rejected', 'Needs Info'))
+        )
+      `);
 
-  const existingCount = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM admin_members`);
-  if (Number(existingCount.rows[0]?.count || "0") > 0) return;
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_members_status ON admin_members(status)`);
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_members_passing_year ON admin_members(passing_year)`);
+      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_admin_members_updated_at ON admin_members(updated_at DESC)`);
 
-  for (const item of seedMembers) {
-    await postgresPool.query(
-      `
-      INSERT INTO admin_members (full_name, email, passing_year, house, mobile, father_name, status, rejection_reason)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      `,
-      [item.fullName, item.email, item.passingYear, item.house, item.mobile, item.fatherName, item.status, item.rejectionReason],
-    );
-  }
+      const existingCount = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM admin_members`);
+      if (Number(existingCount.rows[0]?.count || "0") === 0) {
+        for (const item of seedMembers) {
+          await postgresPool.query(
+            `
+            INSERT INTO admin_members (full_name, email, passing_year, house, mobile, father_name, status, rejection_reason)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            `,
+            [item.fullName, item.email, item.passingYear, item.house, item.mobile, item.fatherName, item.status, item.rejectionReason],
+          );
+        }
+      }
+
+      await ensureMemberCreateOtpTable();
+      membersTableReady = true;
+    } finally {
+      membersTableInitPromise = null;
+    }
+  })();
+
+  await membersTableInitPromise;
 }
 
 async function ensureMemberCreateOtpTable() {
