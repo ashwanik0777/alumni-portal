@@ -1,14 +1,8 @@
-import { Award, Compass, Globe2, HeartHandshake, School, Sparkles, Target, Users } from "lucide-react";
+"use client";
 
-const committeeMembers = [
-    { role: "President", name: "Sh. Avneendra Rathaur", batch: "1994" },
-    { role: "Vice President", name: "Sh. Susheel Mathur", batch: "2000" },
-    { role: "Secretary", name: "Sh. Pawan Yadav", batch: "2010" },
-    { role: "Joint Secretary (Alumni Relation)", name: "Sh. Ashwani Dixit", batch: "2011" },
-    { role: "Joint Secretary (Student Relations)", name: "Sh. Subhash Chandra", batch: "1999" },
-    { role: "Joint Secretary (Industry)", name: "Sh. Sirmit Katiyar", batch: "1998" },
-    { role: "Treasurer", name: "Sh. Pramod Pal", batch: "2009" },
-];
+import { useEffect, useState } from "react";
+import { Award, Compass, Globe2, HeartHandshake, School, Sparkles, Target, Users } from "lucide-react";
+import { HomeDataPayload } from "@/lib/home-data";
 
 const values = [
     {
@@ -33,13 +27,34 @@ const values = [
     },
 ];
 
-const milestones = [
-    { label: "Global Alumni Reach", value: "30+ Cities" },
-    { label: "Mentorship & Career Sessions", value: "1,300+" },
-    { label: "Community Participation", value: "4,000+ Alumni" },
-];
-
 export default function AboutPage() {
+    const [data, setData] = useState<HomeDataPayload | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchHomeData = async () => {
+            try {
+                const res = await fetch("/api/home");
+                if (res.ok) {
+                    const payload = await res.json();
+                    setData(payload);
+                }
+            } catch (error) {
+                console.error("Failed to load about data", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchHomeData();
+    }, []);
+
+    const milestones = loading ? [] : [
+        { label: "Global Alumni Reach", value: `${data?.stats.citiesConnected || 0}+ Cities` },
+        { label: "Mentorship & Career Sessions", value: `${data?.stats.mentorSessions || 0}` },
+        { label: "Community Participation", value: `${data?.stats.activeAlumni || 0} Alumni` },
+    ];
+
     return (
         <div className="bg-background min-h-screen text-text-primary">
             <section className="relative overflow-hidden border-b border-border">
@@ -62,12 +77,21 @@ export default function AboutPage() {
                     </p>
 
                     <div className="mt-8 grid sm:grid-cols-3 gap-3 max-w-3xl">
-                        {milestones.map((item) => (
-                            <div key={item.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
-                                <p className="text-2xl font-black text-primary">{item.value}</p>
-                                <p className="text-xs text-text-secondary mt-1">{item.label}</p>
-                            </div>
-                        ))}
+                        {loading ? (
+                            Array.from({ length: 3 }).map((_, i) => (
+                                <div key={i} className="rounded-xl border border-border bg-card p-4 shadow-sm animate-pulse">
+                                    <div className="h-8 w-24 bg-border/50 rounded mb-2"></div>
+                                    <div className="h-4 w-32 bg-border/50 rounded"></div>
+                                </div>
+                            ))
+                        ) : (
+                            milestones.map((item) => (
+                                <div key={item.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                                    <p className="text-2xl font-black text-primary">{item.value}</p>
+                                    <p className="text-xs text-text-secondary mt-1">{item.label}</p>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
             </section>
@@ -121,20 +145,30 @@ export default function AboutPage() {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {committeeMembers.map((member, index) => (
-                                <article
-                                    key={member.name}
-                                    className={`rounded-xl border border-border bg-card p-5 hover:border-primary/30 hover:shadow-md transition-all ${
-                                        index === committeeMembers.length - 1 && committeeMembers.length % 2 !== 0
-                                            ? "md:col-span-2 md:w-2/3 md:mx-auto"
-                                            : ""
-                                    }`}
-                                >
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">{member.role}</p>
-                                    <p className="text-lg font-bold">{member.name}</p>
-                                    <p className="text-sm text-text-secondary mt-1">Batch of {member.batch}</p>
-                                </article>
-                            ))}
+                            {loading ? (
+                                Array.from({ length: 4 }).map((_, index) => (
+                                    <div key={index} className="rounded-xl border border-border bg-card p-5 animate-pulse">
+                                        <div className="h-4 w-24 bg-border/50 rounded mb-2"></div>
+                                        <div className="h-5 w-40 bg-border/50 rounded mb-1"></div>
+                                        <div className="h-4 w-32 bg-border/50 rounded"></div>
+                                    </div>
+                                ))
+                            ) : (
+                                (data?.committee || []).map((member, index) => (
+                                    <article
+                                        key={member.id}
+                                        className={`rounded-xl border border-border bg-card p-5 hover:border-primary/30 hover:shadow-md transition-all ${
+                                            index === (data?.committee?.length || 0) - 1 && (data?.committee?.length || 0) % 2 !== 0
+                                                ? "md:col-span-2 md:w-2/3 md:mx-auto"
+                                                : ""
+                                        }`}
+                                    >
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">{member.role}</p>
+                                        <p className="text-lg font-bold">{member.name}</p>
+                                        <p className="text-sm text-text-secondary mt-1">Batch of {member.batch}</p>
+                                    </article>
+                                ))
+                            )}
                         </div>
                     </div>
                 </div>

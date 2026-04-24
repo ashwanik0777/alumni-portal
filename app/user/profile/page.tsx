@@ -84,22 +84,63 @@ const defaultState: ProfileFormState = {
 
 const STORAGE_KEY = "user_profile_draft_v1";
 
+function ProfileSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <section className="rounded-xl border border-border bg-card p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-3">
+            <div className="h-5 w-40 rounded bg-border/60" />
+            <div className="h-7 w-64 rounded bg-border/60" />
+            <div className="h-4 w-80 max-w-full rounded bg-border/40" />
+          </div>
+          <div className="h-28 w-48 rounded-xl bg-border/40" />
+        </div>
+      </section>
+      <section className="rounded-xl border border-border bg-card p-4.5 sm:p-5">
+        <div className="h-6 w-48 rounded bg-border/60 mb-4" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-16 rounded-lg bg-border/40" />
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export default function UserProfilePage() {
   const [form, setForm] = useState<ProfileFormState>(defaultState);
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [includeOptionalDetails, setIncludeOptionalDetails] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return;
+    let initialEmail = "";
 
     try {
-      const parsed = JSON.parse(saved) as Partial<ProfileFormState>;
-      setForm((prev) => ({ ...prev, ...parsed }));
-    } catch {
-      // Keep default values if parsing fails.
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as Partial<ProfileFormState>;
+        setForm((prev) => ({ ...prev, ...parsed }));
+        if (parsed.email) initialEmail = parsed.email;
+      }
+    } catch { /* ignore */ }
+
+    // Always attempt to fetch latest profile from backend if we have an email
+    if (initialEmail) {
+      fetch(`/api/user/profile?email=${encodeURIComponent(initialEmail)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.profile) setForm((prev) => ({ ...prev, ...data.profile }));
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
   }, []);
 
@@ -154,23 +195,42 @@ export default function UserProfilePage() {
 
   const handleSaveDraft = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
-    setStatusMessage("Draft saved successfully.");
+    setStatusMessage("Draft saved locally.");
   };
 
-  const handleSubmitProfile = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitProfile = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
     if (completionPercent < 100) {
       setStatusMessage("Please complete all required profile fields before submitting.");
       return;
     }
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
-    setStatusMessage("Profile submitted successfully. Backend integration will be connected next.");
+    setSaving(true);
+    setStatusMessage("Saving profile to database...");
+    
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+        setStatusMessage("Profile successfully saved and synced to database.");
+      } else {
+        setStatusMessage(data.message || "Failed to save profile to database.");
+      }
+    } catch (e) {
+      setStatusMessage("Network error while saving profile.");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  if (!mounted) {
-    return null;
+  if (!mounted || loading) {
+    return <ProfileSkeleton />;
   }
 
   return (

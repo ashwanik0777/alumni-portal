@@ -1,43 +1,24 @@
-import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { NextRequest, NextResponse } from "next/server";
+import { getPageViews, incrementAndGetPageViews } from "@/lib/home-data";
 
-const COUNTER_FILE = path.join(process.cwd(), "public", "counter.json");
+export const dynamic = 'force-dynamic';
 
-function getCount() {
+export async function GET(request: NextRequest) {
   try {
-    if (!fs.existsSync(COUNTER_FILE)) {
-        fs.writeFileSync(COUNTER_FILE, JSON.stringify({ count: 1240 })); // Initialize with a realistic number
+    const shouldIncrement = request.nextUrl.searchParams.get("increment") === "true";
+    
+    let count = 0;
+    if (shouldIncrement) {
+      count = await incrementAndGetPageViews();
+    } else {
+      count = await getPageViews();
     }
-    const data = fs.readFileSync(COUNTER_FILE, "utf-8");
-    return JSON.parse(data).count || 0;
+    
+    return NextResponse.json({ count }, {
+      headers: { "Cache-Control": "no-store" } // Real-time counter should not be cached
+    });
   } catch (error) {
-    return 0;
+    console.error("Counter API Error:", error);
+    return NextResponse.json({ count: 120 }); // Fallback
   }
-}
-
-function incrementCount() {
-    try {
-        const count = getCount();
-        const newCount = count + 1;
-        fs.writeFileSync(COUNTER_FILE, JSON.stringify({ count: newCount }));
-        return newCount;
-    } catch {
-        return getCount();
-    }
-}
-
-export async function GET(request: Request) {
-  // Check for a specific 'increment' query param or just simple logic
-  // Real world: check cookies/IP/fingerprint. 
-  // Here: We trust the client to tell us if they are "new" via a flag, or we just return the count.
-  const { searchParams } = new URL(request.url);
-  const shouldIncrement = searchParams.get('increment') === 'true';
-
-  let count = getCount();
-  if (shouldIncrement) {
-      count = incrementCount();
-  }
-  
-  return NextResponse.json({ count });
 }

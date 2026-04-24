@@ -4,57 +4,56 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Users, Calendar, Briefcase, HandHeart, Quote, MapPin, GraduationCap } from "lucide-react";
 
-const impactStats = [
-  { label: "Active Alumni", value: "4,200+" },
-  { label: "Mentor Sessions", value: "1,300+" },
-  { label: "Cities Connected", value: "28" },
-  { label: "Opportunities Shared", value: "950+" },
-];
+type HomeStats = {
+  activeAlumni: string;
+  mentorSessions: string;
+  citiesConnected: string;
+  opportunitiesShared: string;
+};
 
-const eventHighlights = [
-  { title: "Annual Alumni Meet", time: "Sat, 5:30 PM", venue: "Main Auditorium" },
-  { title: "Startup Founder Panel", time: "Sun, 11:00 AM", venue: "Innovation Hub" },
-  { title: "Tech Career Meetup", time: "Fri, 6:30 PM", venue: "City Chapter Hall" },
-  { title: "Women In Leadership Talk", time: "Thu, 4:00 PM", venue: "Seminar Block" },
-  { title: "Batch 2012 Reunion", time: "Sat, 7:00 PM", venue: "Lawn Arena" },
-];
+type HomeFeedEvent = { title: string; time: string; venue: string; };
+export type HomeFeedJob = { title: string; sub: string; meta: string; };
+export type HomeFeedMentor = { title: string; sub: string; meta: string; };
 
-const jobHighlights = [
-  { title: "Frontend Engineer", sub: "PixelNest Labs", meta: "Bengaluru | Full-time" },
-  { title: "Data Analyst", sub: "InsightGrid", meta: "Remote | Full-time" },
-  { title: "Product Designer", sub: "BlueOrbit", meta: "Pune | Hybrid" },
-  { title: "Growth Associate", sub: "ScaleBridge", meta: "Delhi | Full-time" },
-  { title: "Backend Developer", sub: "CloudSprint", meta: "Hyderabad | Hybrid" },
-];
+type HomeTestimonial = {
+  quote: string;
+  author: string;
+  meta: string;
+  company: string;
+  outcome: string;
+};
 
-const mentorshipHighlights = [
-  { title: "Resume Review Clinic", sub: "Mentor: Nitin Raj", meta: "Slots: Tue 7 PM" },
-  { title: "Mock Interview Track", sub: "Mentor: Ritika Singh", meta: "Slots: Wed 8 PM" },
-  { title: "Career Switch Strategy", sub: "Mentor: Karan Mehta", meta: "Slots: Thu 6 PM" },
-  { title: "Higher Studies Guidance", sub: "Mentor: Meera Sinha", meta: "Slots: Fri 5 PM" },
-  { title: "Portfolio Feedback", sub: "Mentor: Aman Tiwari", meta: "Slots: Sat 11 AM" },
-];
-
-const testimonials = [
-  {
-    quote: "I reconnected with my batchmates after 9 years and found my current role through the alumni network.",
-    author: "Ritika Singh",
-    meta: "Batch 2014, Product Manager",
-    company: "Product Manager, Bengaluru",
-    outcome: "Career Transition Success",
-  },
-  {
-    quote: "The mentorship program gave me clarity, confidence, and direct guidance from seniors in my target domain.",
-    author: "Nitin Raj",
-    meta: "Batch 2020, Software Engineer",
-    company: "Software Engineer, Hyderabad",
-    outcome: "Mentorship Breakthrough",
-  },
-];
+type HomeDataPayload = {
+  stats: HomeStats;
+  events: HomeFeedEvent[];
+  jobs: HomeFeedJob[];
+  mentors: HomeFeedMentor[];
+  testimonials: HomeTestimonial[];
+};
 
 export default function Home() {
   const impactRef = useRef<HTMLElement | null>(null);
   const [impactVisible, setImpactVisible] = useState(false);
+  const [data, setData] = useState<HomeDataPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHomeData = async () => {
+      try {
+        const res = await fetch("/api/home");
+        if (res.ok) {
+          const payload = await res.json();
+          setData(payload);
+        }
+      } catch (error) {
+        console.error("Failed to load home data", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHomeData();
+  }, []);
 
   useEffect(() => {
     const target = impactRef.current;
@@ -72,7 +71,7 @@ export default function Home() {
 
     observer.observe(target);
     return () => observer.disconnect();
-  }, []);
+  }, [loading]); // Re-bind observer after loading finishes
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -155,14 +154,28 @@ export default function Home() {
             </div>
 
             <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {impactStats.map((item) => (
-                <div key={item.label} className="rounded-2xl border border-border bg-background p-5 hover:border-primary/35 hover:-translate-y-1 hover:shadow-md transition-all">
-                  <p className="text-2xl sm:text-3xl font-black text-primary">
-                    <AnimatedImpactValue value={item.value} start={impactVisible} />
-                  </p>
-                  <p className="text-sm text-text-secondary mt-1">{item.label}</p>
-                </div>
-              ))}
+              {loading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="rounded-2xl border border-border bg-background p-5 animate-pulse">
+                    <div className="h-8 w-24 bg-border/50 rounded mb-2"></div>
+                    <div className="h-4 w-32 bg-border/50 rounded"></div>
+                  </div>
+                ))
+              ) : (
+                [
+                  { label: "Active Alumni", value: data?.stats.activeAlumni || "0" },
+                  { label: "Mentor Sessions", value: data?.stats.mentorSessions || "0" },
+                  { label: "Cities Connected", value: data?.stats.citiesConnected || "0" },
+                  { label: "Opportunities Shared", value: data?.stats.opportunitiesShared || "0" },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-2xl border border-border bg-background p-5 hover:border-primary/35 hover:-translate-y-1 hover:shadow-md transition-all">
+                    <p className="text-2xl sm:text-3xl font-black text-primary">
+                      <AnimatedImpactValue value={item.value} start={impactVisible} />
+                    </p>
+                    <p className="text-sm text-text-secondary mt-1">{item.label}</p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -176,7 +189,6 @@ export default function Home() {
               Live Opportunity Streams
             </p>
             <h2 className="text-3xl sm:text-4xl font-black my-8">Explore Events, Find Jobs, Get Mentorship</h2>
-            
           </div>
 
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -185,7 +197,8 @@ export default function Home() {
               icon={<Calendar className="w-4 h-4" />}
               link="/events"
               cta="View All Events"
-              items={eventHighlights.map((item) => ({
+              loading={loading}
+              items={(data?.events || []).map((item) => ({
                 primary: item.title,
                 secondary: item.time,
                 tertiary: item.venue,
@@ -197,7 +210,8 @@ export default function Home() {
               icon={<Briefcase className="w-4 h-4" />}
               link="/jobs"
               cta="Browse Jobs"
-              items={jobHighlights.map((item) => ({
+              loading={loading}
+              items={(data?.jobs || []).map((item) => ({
                 primary: item.title,
                 secondary: item.sub,
                 tertiary: item.meta,
@@ -209,7 +223,8 @@ export default function Home() {
               icon={<Users className="w-4 h-4" />}
               link="/mentorship"
               cta="Join Mentorship"
-              items={mentorshipHighlights.map((item) => ({
+              loading={loading}
+              items={(data?.mentors || []).map((item) => ({
                 primary: item.title,
                 secondary: item.sub,
                 tertiary: item.meta,
@@ -240,39 +255,48 @@ export default function Home() {
                     <p className="text-xs text-text-secondary mt-1">Positive outcomes</p>
                   </div>
                   <div className="rounded-xl border border-border bg-background p-4">
-                    <p className="text-2xl font-black text-primary">1,300+</p>
+                    <p className="text-2xl font-black text-primary">{loading ? "..." : (data?.testimonials.length ? "1,300+" : "0")}</p>
                     <p className="text-xs text-text-secondary mt-1">Stories shared</p>
                   </div>
                 </div>
               </div>
 
               <div className="lg:col-span-8 grid md:grid-cols-2 gap-5">
-                {testimonials.map((item) => (
-                  <article key={item.author} className="group rounded-2xl border border-border bg-background p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="inline-flex rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                        {item.outcome}
-                      </p>
-                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-sm">
-                        {item.author
-                          .split(" ")
-                          .map((part) => part[0])
-                          .join("")
-                          .slice(0, 2)
-                          .toUpperCase()}
-                      </span>
-                    </div>
-
-                    <Quote className="w-6 h-6 text-secondary mt-4" />
-                    <p className="mt-4 text-text-primary leading-relaxed">{item.quote}</p>
-
-                    <div className="mt-6 pt-4 border-t border-border/80">
-                      <p className="font-bold text-primary">{item.author}</p>
-                      <p className="text-sm text-text-secondary">{item.meta}</p>
-                      <p className="text-xs text-text-secondary mt-1">{item.company}</p>
-                    </div>
-                  </article>
-                ))}
+                {loading ? (
+                  Array.from({ length: 2 }).map((_, i) => (
+                    <article key={i} className="rounded-2xl border border-border bg-background p-6 animate-pulse">
+                      <div className="h-6 w-24 bg-border/50 rounded-full mb-4"></div>
+                      <div className="h-4 w-full bg-border/50 rounded mb-2"></div>
+                      <div className="h-4 w-3/4 bg-border/50 rounded mb-6"></div>
+                      <div className="border-t border-border/80 pt-4 mt-6">
+                        <div className="h-4 w-32 bg-border/50 rounded mb-2"></div>
+                        <div className="h-3 w-40 bg-border/50 rounded"></div>
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  (data?.testimonials || []).map((item) => (
+                    <article key={item.author} className="group rounded-2xl border border-border bg-background p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="inline-flex rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                            {item.outcome}
+                          </p>
+                          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-sm">
+                            {item.author.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
+                          </span>
+                        </div>
+                        <Quote className="w-6 h-6 text-secondary mt-4" />
+                        <p className="mt-4 text-text-primary leading-relaxed">{item.quote}</p>
+                      </div>
+                      <div className="mt-6 pt-4 border-t border-border/80">
+                        <p className="font-bold text-primary">{item.author}</p>
+                        <p className="text-sm text-text-secondary">{item.meta}</p>
+                        <p className="text-xs text-text-secondary mt-1">{item.company}</p>
+                      </div>
+                    </article>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -360,12 +384,14 @@ function ScrollingFeedBox({
   icon,
   link,
   cta,
+  loading,
   items,
 }: {
   title: string;
   icon: React.ReactNode;
   link: string;
   cta: string;
+  loading: boolean;
   items: { primary: string; secondary: string; tertiary: string }[];
 }) {
   const mergedItems = [...items, ...items];
@@ -387,18 +413,27 @@ function ScrollingFeedBox({
         <div className="absolute inset-x-0 bottom-0 h-8 bg-linear-to-t from-background to-transparent z-10 pointer-events-none" />
 
         <div className="feed-track px-3 py-2">
-          {mergedItems.map((item, index) => (
-            <div key={`${title}-${item.primary}-${index}`} className="h-14.5 rounded-lg border border-border bg-background/95 px-3 py-2 mb-2">
-              <p className="text-sm font-semibold text-text-primary truncate">{item.primary}</p>
-              <div className="mt-0.5 flex items-center justify-between gap-2">
-                <p className="text-xs text-text-secondary truncate">{item.secondary}</p>
-                <p className="text-[11px] text-text-secondary/90 inline-flex shrink-0 items-center gap-1 text-right">
-                  <MapPin className="w-3 h-3" />
-                  <span className="max-w-30 truncate">{item.tertiary}</span>
-                </p>
+          {loading ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="h-14.5 rounded-lg border border-border bg-background/95 px-3 py-2 mb-2 animate-pulse">
+                <div className="h-4 w-3/4 bg-border/50 rounded mb-2"></div>
+                <div className="h-3 w-1/2 bg-border/50 rounded"></div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            mergedItems.map((item, index) => (
+              <div key={`${title}-${item.primary}-${index}`} className="h-14.5 rounded-lg border border-border bg-background/95 px-3 py-2 mb-2">
+                <p className="text-sm font-semibold text-text-primary truncate">{item.primary}</p>
+                <div className="mt-0.5 flex items-center justify-between gap-2">
+                  <p className="text-xs text-text-secondary truncate">{item.secondary}</p>
+                  <p className="text-[11px] text-text-secondary/90 inline-flex shrink-0 items-center gap-1 text-right">
+                    <MapPin className="w-3 h-3" />
+                    <span className="max-w-30 truncate">{item.tertiary}</span>
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

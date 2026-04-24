@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CreditCard,
+  Globe2,
   Inbox,
   LayoutDashboard,
   LogOut,
@@ -33,6 +34,7 @@ const navItems: NavItem[] = [
   { label: "Programs", href: "/admin/programs", icon: BookOpen },
   { label: "Events", href: "/admin/events", icon: Calendar },
   { label: "Scholarships", href: "/admin/scholarships", icon: CreditCard },
+  { label: "Website", href: "/admin/web", icon: Globe2 },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
