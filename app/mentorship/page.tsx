@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -33,22 +37,10 @@ const mentorshipTracks = [
 ];
 
 const process = [
-  {
-    title: "Share Your Goals",
-    text: "Tell us your career stage, interests, and what outcomes you want from mentorship.",
-  },
-  {
-    title: "Smart Mentor Match",
-    text: "We pair you with relevant alumni mentors based on domain, role, and growth goals.",
-  },
-  {
-    title: "Structured Sessions",
-    text: "Follow a guided session plan with milestones, action items, and progress feedback.",
-  },
-  {
-    title: "Continuous Growth",
-    text: "Track outcomes and expand your network with peer circles and advanced mentor groups.",
-  },
+  { title: "Share Your Goals", text: "Tell us your career stage, interests, and what outcomes you want from mentorship." },
+  { title: "Smart Mentor Match", text: "We pair you with relevant alumni mentors based on domain, role, and growth goals." },
+  { title: "Structured Sessions", text: "Follow a guided session plan with milestones, action items, and progress feedback." },
+  { title: "Continuous Growth", text: "Track outcomes and expand your network with peer circles and advanced mentor groups." },
 ];
 
 const impact = [
@@ -58,6 +50,94 @@ const impact = [
 ];
 
 export default function MentorshipPage() {
+  const router = useRouter();
+  const [activeForm, setActiveForm] = useState<"mentee" | "mentor">("mentee");
+  
+  // Mentee Form State
+  const [menteeName, setMenteeName] = useState("");
+  const [menteeStage, setMenteeStage] = useState("Student");
+  const [menteeTrack, setMenteeTrack] = useState("Career Mentorship");
+  const [menteeUrgency, setMenteeUrgency] = useState("Flexible");
+  const [menteeGoal, setMenteeGoal] = useState("");
+  
+  // Mentor Form State
+  const [mentorName, setMentorName] = useState("");
+  const [mentorExpertise, setMentorExpertise] = useState("");
+  const [mentorMax, setMentorMax] = useState("1");
+
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const submitMentee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage("");
+    try {
+      const res = await fetch("/api/mentorship/apply-mentee", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: menteeName,
+          currentStage: menteeStage,
+          track: menteeTrack,
+          goal: menteeGoal,
+          urgency: menteeUrgency
+        })
+      });
+
+      if (res.status === 401) {
+        router.push("/login?redirect=/mentorship");
+        return;
+      }
+
+      const data = await res.json();
+      if (res.ok) {
+        setMessage("Request submitted! We will assign a mentor soon.");
+        setMenteeName(""); setMenteeGoal("");
+      } else {
+        setMessage(data.message || "Failed to submit.");
+      }
+    } catch {
+      setMessage("Network error.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitMentor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage("");
+    try {
+      const res = await fetch("/api/mentorship/apply-mentor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: mentorName,
+          expertise: mentorExpertise,
+          maxMentees: mentorMax
+        })
+      });
+
+      if (res.status === 401) {
+        router.push("/login?redirect=/mentorship");
+        return;
+      }
+
+      const data = await res.json();
+      if (res.ok) {
+        setMessage("Mentor application submitted! Wait for admin approval.");
+        setMentorName(""); setMentorExpertise("");
+      } else {
+        setMessage(data.message || "Failed to submit.");
+      }
+    } catch {
+      setMessage("Network error.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="bg-background text-text-primary">
       <section className="relative overflow-hidden border-b border-border">
@@ -82,16 +162,18 @@ export default function MentorshipPage() {
           <div className="mt-8 flex flex-col sm:flex-row gap-4">
             <a
               href="#mentor-form"
+              onClick={() => setActiveForm("mentee")}
               className="inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
             >
               Apply For Mentorship
             </a>
-            <Link
-              href="/directory"
+            <a
+              href="#mentor-form"
+              onClick={() => setActiveForm("mentor")}
               className="inline-flex items-center justify-center rounded-xl border border-border bg-card px-6 py-3.5 font-semibold text-text-primary hover:border-primary/30 transition-colors"
             >
-              Explore Alumni Directory
-            </Link>
+              Become a Mentor
+            </a>
           </div>
 
           <div className="mt-9 grid sm:grid-cols-3 gap-3 max-w-3xl">
@@ -164,7 +246,6 @@ export default function MentorshipPage() {
                       <span className="hidden sm:inline-flex absolute left-0 top-5 h-8 w-8 items-center justify-center rounded-full bg-primary text-white text-xs font-bold ring-4 ring-background">
                         {index + 1}
                       </span>
-
                       <article className="group rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
                         <div className="flex items-start justify-between gap-3">
                           <h3 className="text-lg sm:text-xl font-bold">{step.title}</h3>
@@ -172,15 +253,7 @@ export default function MentorshipPage() {
                             Step 0{index + 1}
                           </span>
                         </div>
-
                         <p className="mt-2 text-sm text-text-secondary leading-relaxed">{step.text}</p>
-
-                        <div className="mt-4 h-1.5 w-full rounded-full bg-primary/10 overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-linear-to-r from-primary to-secondary"
-                            style={{ width: `${(index + 1) * 25}%` }}
-                          />
-                        </div>
                       </article>
                     </li>
                   ))}
@@ -193,101 +266,125 @@ export default function MentorshipPage() {
 
       <section id="mentor-form" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-16">
         <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 lg:p-10 shadow-sm">
-          <div className="flex items-center gap-2 text-primary mb-3">
-            <MessageSquareText className="h-5 w-5" />
-            <span className="text-sm font-semibold">Mentorship Request</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-bold">Apply in under 2 minutes</h2>
-          <p className="mt-2 text-text-secondary">
-            Share your current stage and goals. We will match you with relevant mentors from the alumni network.
-          </p>
-
-          <form className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <label>
-              <span className="mb-1.5 block text-sm font-medium">Full Name</span>
-              <input
-                type="text"
-                placeholder="Enter your name"
-                className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary"
-              />
-            </label>
-
-            <label>
-              <span className="mb-1.5 block text-sm font-medium">Email Address</span>
-              <input
-                type="email"
-                placeholder="you@example.com"
-                className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary"
-              />
-            </label>
-
-            <label>
-              <span className="mb-1.5 block text-sm font-medium">Current Stage</span>
-              <select className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary outline-none focus:border-primary">
-                <option>Student</option>
-                <option>Early Career</option>
-                <option>Mid Career</option>
-                <option>Founder</option>
-              </select>
-            </label>
-
-            <label>
-              <span className="mb-1.5 block text-sm font-medium">Preferred Track</span>
-              <select className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary outline-none focus:border-primary">
-                <option>Career Mentorship</option>
-                <option>Leadership Mentorship</option>
-                <option>Startup Mentorship</option>
-              </select>
-            </label>
-
-            <label className="sm:col-span-2">
-              <span className="mb-1.5 block text-sm font-medium">Your Goal</span>
-              <textarea
-                rows={4}
-                placeholder="Describe what you want to achieve through mentorship"
-                className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary resize-y"
-              />
-            </label>
-
-            <div className="sm:col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
-              <p className="inline-flex items-center gap-2 text-xs text-text-secondary">
-                <BadgeCheck className="h-4 w-4 text-primary" />
-                Mentor matching is managed by a verified alumni moderation team.
-              </p>
-              <button
-                type="button"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 font-semibold text-white hover:bg-primary/90 transition-colors"
+          <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
+            <div className="flex items-center gap-2 text-primary">
+              <MessageSquareText className="h-5 w-5" />
+              <span className="text-sm font-semibold">{activeForm === "mentee" ? "Mentorship Request" : "Become a Mentor"}</span>
+            </div>
+            <div className="flex rounded-lg bg-background p-1 border border-border">
+              <button 
+                onClick={() => { setActiveForm("mentee"); setMessage(""); }}
+                className={`px-4 py-1.5 text-sm font-semibold rounded-md ${activeForm === "mentee" ? "bg-primary text-white" : "text-text-secondary hover:text-text-primary"}`}
               >
-                Submit Request
-                <ArrowRight className="h-4 w-4" />
+                Apply for Mentor
+              </button>
+              <button 
+                onClick={() => { setActiveForm("mentor"); setMessage(""); }}
+                className={`px-4 py-1.5 text-sm font-semibold rounded-md ${activeForm === "mentor" ? "bg-primary text-white" : "text-text-secondary hover:text-text-primary"}`}
+              >
+                Become a Mentor
               </button>
             </div>
-          </form>
-        </div>
-      </section>
-
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14 lg:pb-16">
-        <div className="rounded-3xl border border-primary/20 dark:border-primary/40 bg-linear-to-r from-primary/95 to-primary dark:from-slate-900 dark:to-blue-950 p-8 sm:p-10 text-white relative overflow-hidden">
-          <div className="absolute -right-14 -top-14 h-44 w-44 rounded-full bg-white/10" />
-          <div className="absolute -left-12 -bottom-16 h-52 w-52 rounded-full bg-secondary/20" />
-          <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div>
-              <p className="inline-flex items-center gap-2 text-sm font-medium bg-white/10 px-3 py-1 rounded-full mb-3">
-                <Users className="h-4 w-4" />
-                Alumni Mentors Ready
-              </p>
-              <h3 className="text-2xl sm:text-3xl font-bold">Ready to accelerate your next chapter?</h3>
-              <p className="mt-2 text-white/90 max-w-2xl">
-                Join mentorship circles and get practical guidance from alumni who understand your journey.
-              </p>
-            </div>
-            <Link
-              href="/contact"
-              className="inline-flex items-center justify-center rounded-xl bg-white px-6 py-3.5 font-semibold text-primary hover:bg-white/90 transition-colors"
-            >
-              Talk To Program Team
-            </Link>
           </div>
+          
+          <h2 className="text-2xl sm:text-3xl font-bold">
+            {activeForm === "mentee" ? "Apply in under 2 minutes" : "Join as a Mentor"}
+          </h2>
+          <p className="mt-2 text-text-secondary">
+            {activeForm === "mentee" 
+              ? "Share your current stage and goals. We will match you with relevant mentors."
+              : "Help guide the next generation. Share your expertise and experience."}
+          </p>
+
+          {message && (
+            <div className="mt-4 p-4 rounded-xl border border-primary/20 bg-primary/5 text-sm font-semibold text-primary">
+              {message}
+            </div>
+          )}
+
+          {activeForm === "mentee" ? (
+            <form onSubmit={submitMentee} className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label>
+                <span className="mb-1.5 block text-sm font-medium">Full Name</span>
+                <input required type="text" value={menteeName} onChange={e => setMenteeName(e.target.value)} placeholder="Enter your name" className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary" />
+              </label>
+
+              <label>
+                <span className="mb-1.5 block text-sm font-medium">Current Stage</span>
+                <select value={menteeStage} onChange={e => setMenteeStage(e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary outline-none focus:border-primary">
+                  <option>Student</option>
+                  <option>Early Career</option>
+                  <option>Mid Career</option>
+                  <option>Founder</option>
+                </select>
+              </label>
+
+              <label>
+                <span className="mb-1.5 block text-sm font-medium">Preferred Track</span>
+                <select value={menteeTrack} onChange={e => setMenteeTrack(e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary outline-none focus:border-primary">
+                  <option>Career Mentorship</option>
+                  <option>Leadership Mentorship</option>
+                  <option>Startup Mentorship</option>
+                  <option>Technical/Coding</option>
+                </select>
+              </label>
+
+              <label>
+                <span className="mb-1.5 block text-sm font-medium">Urgency</span>
+                <select value={menteeUrgency} onChange={e => setMenteeUrgency(e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary outline-none focus:border-primary">
+                  <option>Flexible</option>
+                  <option>Urgent (Need help soon)</option>
+                </select>
+              </label>
+
+              <label className="sm:col-span-2">
+                <span className="mb-1.5 block text-sm font-medium">Your Goal</span>
+                <textarea required rows={4} value={menteeGoal} onChange={e => setMenteeGoal(e.target.value)} placeholder="Describe what you want to achieve through mentorship" className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary resize-y" />
+              </label>
+
+              <div className="sm:col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+                <p className="inline-flex items-center gap-2 text-xs text-text-secondary">
+                  <BadgeCheck className="h-4 w-4 text-primary" />
+                  Mentor matching is managed by a verified alumni moderation team.
+                </p>
+                <button disabled={loading} type="submit" className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 font-semibold text-white hover:bg-primary/90 transition-colors disabled:opacity-70">
+                  Submit Request <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={submitMentor} className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label>
+                <span className="mb-1.5 block text-sm font-medium">Full Name</span>
+                <input required type="text" value={mentorName} onChange={e => setMentorName(e.target.value)} placeholder="Enter your name" className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary" />
+              </label>
+
+              <label>
+                <span className="mb-1.5 block text-sm font-medium">Max Mentees</span>
+                <select value={mentorMax} onChange={e => setMentorMax(e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary outline-none focus:border-primary">
+                  <option>1</option>
+                  <option>2</option>
+                  <option>3</option>
+                  <option>5</option>
+                </select>
+              </label>
+
+              <label className="sm:col-span-2">
+                <span className="mb-1.5 block text-sm font-medium">Your Expertise & Domain</span>
+                <textarea required rows={4} value={mentorExpertise} onChange={e => setMentorExpertise(e.target.value)} placeholder="Describe your industry, skills, and how you can help mentees..." className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary resize-y" />
+              </label>
+
+              <div className="sm:col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+                <p className="inline-flex items-center gap-2 text-xs text-text-secondary">
+                  <BadgeCheck className="h-4 w-4 text-primary" />
+                  Admins will review your profile before you are listed as an approved mentor.
+                </p>
+                <button disabled={loading} type="submit" className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 font-semibold text-white hover:bg-primary/90 transition-colors disabled:opacity-70">
+                  Apply to be Mentor <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </section>
     </div>

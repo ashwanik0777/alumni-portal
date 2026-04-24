@@ -46,7 +46,7 @@ const statIconMap: Record<string, ComponentType<{ className?: string }>> = {
 
 const quickActions = [
   { label: "Approve Members", href: "/admin/members" },
-  { label: "Assign Mentors", href: "/admin/programs" },
+  { label: "Assign Mentors", href: "/admin/mentorship" },
   { label: "Publish Event", href: "/admin/events" },
   { label: "Review Scholarships", href: "/admin/scholarships" },
 ];

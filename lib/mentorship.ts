@@ -1,4 +1,4 @@
-import { postgresPool } from "./db";
+import { postgresPool } from "@/lib/postgres";
 
 export async function ensureMentorshipTables() {
   const client = await postgresPool.connect();

@@ -15,15 +15,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: "User not identified" }, { status: 401 });
     }
 
-    const result = await postgresPool.query(
-      `SELECT * FROM mentorship_applications WHERE mentee_email = $1 ORDER BY created_at DESC`,
+    // Check if user is an approved mentor
+    const checkMentor = await postgresPool.query(
+      `SELECT * FROM admin_mentors WHERE email = $1 AND status = 'Approved'`,
       [email]
     );
 
-    return NextResponse.json({ applications: result.rows });
+    if (!checkMentor.rowCount || checkMentor.rowCount === 0) {
+      return NextResponse.json({ message: "Not an approved mentor", applications: [] }, { status: 403 });
+    }
+
+    const result = await postgresPool.query(
+      `SELECT * FROM mentorship_applications WHERE mentor_email = $1 ORDER BY created_at DESC`,
+      [email]
+    );
+
+    return NextResponse.json({
+      applications: result.rows,
+      isMentor: true,
+      mentorProfile: checkMentor.rows[0],
+    });
   } catch (error) {
-    console.error("User mentorship GET error:", error);
-    return NextResponse.json({ message: "Failed to fetch mentorships" }, { status: 500 });
+    console.error("User mentor GET error:", error);
+    return NextResponse.json({ message: "Failed to fetch mentees" }, { status: 500 });
   }
 }
 
@@ -45,12 +59,12 @@ export async function PATCH(request: NextRequest) {
     }
 
     let fieldToUpdate = "";
-    if (action === "start") fieldToUpdate = "mentee_started = true";
-    else if (action === "complete") fieldToUpdate = "mentee_completed = true";
+    if (action === "start") fieldToUpdate = "mentor_started = true";
+    else if (action === "complete") fieldToUpdate = "mentor_completed = true";
     else return NextResponse.json({ message: "Invalid action" }, { status: 400 });
 
     const result = await postgresPool.query(
-      `UPDATE mentorship_applications SET ${fieldToUpdate}, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND mentee_email = $2 RETURNING *`,
+      `UPDATE mentorship_applications SET ${fieldToUpdate}, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND mentor_email = $2 RETURNING *`,
       [id, email]
     );
 
@@ -60,7 +74,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ message: "Mentorship updated successfully", application: result.rows[0] });
   } catch (error) {
-    console.error("User mentorship PATCH error:", error);
+    console.error("User mentor PATCH error:", error);
     return NextResponse.json({ message: "Failed to update mentorship" }, { status: 500 });
   }
 }
