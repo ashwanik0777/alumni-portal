@@ -32,13 +32,20 @@ type ApiResponse = {
 
 type ViewMode = "scholarships" | "applications" | "create";
 
+const scholarshipsResponseCache = new Map<string, { expiresAt: number; data: ApiResponse }>();
+const SCHOLARSHIPS_CLIENT_CACHE_TTL_MS = 300_000; // 5 min
+
 function formatCurrency(v: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(v || 0);
 }
 
 export default function AdminScholarshipsPage() {
-  const [data, setData] = useState<ApiResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const defaultQueryStr = "search=&year=All&page=1&pageSize=10";
+  const initialCache = scholarshipsResponseCache.get(defaultQueryStr);
+  const isInitialCached = initialCache && initialCache.expiresAt > Date.now();
+
+  const [data, setData] = useState<ApiResponse | null>(() => isInitialCached ? initialCache!.data : null);
+  const [loading, setLoading] = useState(!isInitialCached);
   const [search, setSearch] = useState("");
   const [yearFilter, setYearFilter] = useState("All");
   const [page, setPage] = useState(1);
@@ -47,17 +54,30 @@ export default function AdminScholarshipsPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [selectedScholarshipId, setSelectedScholarshipId] = useState<string | undefined>();
 
-  const loadScholarships = useCallback(async () => {
-    setLoading(true);
+  const loadScholarships = useCallback(async (forceFresh = false) => {
+    const params = new URLSearchParams({ search, year: yearFilter, page: String(page), pageSize: "10" });
+    const cacheKey = params.toString();
+    const cached = forceFresh ? undefined : scholarshipsResponseCache.get(cacheKey);
+
+    if (cached && cached.expiresAt > Date.now()) {
+      setData(cached.data);
+      setLoading(false);
+      return;
+    }
+
+    setLoading((prev) => prev || !data);
     try {
-      const params = new URLSearchParams({ search, year: yearFilter, page: String(page), pageSize: "10" });
       const res = await fetch(`/api/admin/scholarships?${params}`);
       const json = await res.json();
-      if (res.ok) { setData(json); setMessage(""); }
+      if (res.ok) { 
+        setData(json); 
+        setMessage(""); 
+        scholarshipsResponseCache.set(cacheKey, { expiresAt: Date.now() + SCHOLARSHIPS_CLIENT_CACHE_TTL_MS, data: json });
+      }
       else setMessage(json.message || "Error loading scholarships.");
     } catch { setMessage("Network error."); }
     finally { setLoading(false); }
-  }, [search, yearFilter, page]);
+  }, [search, yearFilter, page, data]);
 
   useEffect(() => { loadScholarships(); }, [loadScholarships]);
 

@@ -93,30 +93,45 @@ function OverviewSkeleton() {
   );
 }
 
+let cachedOverviewPayload: OverviewResponse | null = null;
+let lastOverviewFetchTime = 0;
+const OVERVIEW_CACHE_TTL_MS = 300_000; // 5 minutes
+
 export default function AdminOverviewClient() {
-  const [fiscalYear, setFiscalYear] = useState("FY 2026");
-  const [syncMode, setSyncMode] = useState("Live Sync");
-  const [stats, setStats] = useState<Stat[]>(defaultStats);
-  const [feed, setFeed] = useState<FeedItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const isCached = cachedOverviewPayload !== null && Date.now() - lastOverviewFetchTime < OVERVIEW_CACHE_TTL_MS;
+
+  const [fiscalYear, setFiscalYear] = useState(() => isCached ? cachedOverviewPayload!.overview?.fiscalYear || "FY 2026" : "FY 2026");
+  const [syncMode, setSyncMode] = useState(() => isCached ? cachedOverviewPayload!.overview?.syncMode || "Live Sync" : "Live Sync");
+  const [stats, setStats] = useState<Stat[]>(() => {
+    if (isCached && cachedOverviewPayload!.overview?.stats) {
+      const nextStats = cachedOverviewPayload!.overview!.stats.map((item) => ({
+        ...item,
+        icon: statIconMap[item.label] || Activity,
+      }));
+      return nextStats.length > 0 ? nextStats : defaultStats;
+    }
+    return defaultStats;
+  });
+  const [feed, setFeed] = useState<FeedItem[]>(() => isCached ? cachedOverviewPayload!.overview?.feed || [] : []);
+  const [isLoading, setIsLoading] = useState(!isCached);
 
   const hasFeed = useMemo(() => feed.length > 0, [feed]);
 
   useEffect(() => {
-    let isCancelled = false;
+    if (isCached) return;
 
+    let isCancelled = false;
     const loadOverview = async () => {
       setIsLoading(true);
       try {
         const response = await fetch("/api/admin/overview", { cache: "no-store" });
         const payload = (await response.json()) as OverviewResponse;
 
-        if (!response.ok || !payload.overview) {
-          // Keep skeleton-to-content transition smooth even when overview API has no payload.
-          return;
-        }
-
+        if (!response.ok || !payload.overview) return;
         if (isCancelled) return;
+
+        cachedOverviewPayload = payload;
+        lastOverviewFetchTime = Date.now();
 
         setFiscalYear(payload.overview.fiscalYear || "FY 2026");
         setSyncMode(payload.overview.syncMode || "Live Sync");
@@ -128,20 +143,15 @@ export default function AdminOverviewClient() {
         setStats(nextStats.length > 0 ? nextStats : defaultStats);
         setFeed(payload.overview.feed || []);
       } catch {
-        // Ignore fetch errors and keep default cards.
+        // Ignore fetch errors
       } finally {
-        if (!isCancelled) {
-          setIsLoading(false);
-        }
+        if (!isCancelled) setIsLoading(false);
       }
     };
 
     void loadOverview();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, []);
+    return () => { isCancelled = true; };
+  }, [isCached]);
 
   if (isLoading) {
     return <OverviewSkeleton />;

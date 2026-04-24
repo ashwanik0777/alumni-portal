@@ -295,7 +295,7 @@ export default function UserRequestsPage() {
         </p>
         <h2 className="mt-2 text-2xl font-black">Connections and Request Management</h2>
         <p className="mt-1 text-sm text-text-secondary">
-          Incoming requests handle karein, sent requests track karein, aur apne active connections manage karein.
+          Handle incoming requests, track sent requests, and manage your active connections.
         </p>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

@@ -36,29 +36,7 @@ type Testimonial = {
   note: string;
 };
 
-const runningScholarships = [
-  {
-    name: "Merit Excellence Scholarship",
-    provider: "Aman Tiwari (Batch 2008)",
-    support: "Up to INR 60,000 per student per year",
-    eligibility: "Class 11-12 students with strong academic consistency",
-    window: "Applications open: 15 April to 30 May",
-  },
-  {
-    name: "STEM Future Grant",
-    provider: "Nidhi Sharma (Batch 2011)",
-    support: "One-time grant for coaching, books, and exam fees",
-    eligibility: "Students preparing for engineering and science entrance exams",
-    window: "Applications open: 1 May to 20 June",
-  },
-  {
-    name: "Girls Higher Education Fund",
-    provider: "Ruchi Verma (Batch 2006)",
-    support: "Annual support for college admission and first-year expenses",
-    eligibility: "Girls from low-income families with confirmed admission",
-    window: "Applications open: 5 June to 10 July",
-  },
-];
+// Static running scholarships removed (fetched dynamically)
 
 const recipients: Recipient[] = [
   {
@@ -140,12 +118,31 @@ export default function ScholarshipsPage() {
   const [slideDirection, setSlideDirection] = useState<"next" | "prev">("next");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [gateMessage, setGateMessage] = useState("");
+  
+  const [runningScholarships, setRunningScholarships] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   const [profilePrefill, setProfilePrefill] = useState({
     fullName: "",
     email: "",
     mobile: "",
     currentCourse: "",
   });
+  
+  const [applicationPayload, setApplicationPayload] = useState({
+    scholarshipId: "",
+    fullName: "",
+    email: "",
+    mobile: "",
+    passingYear: "2025",
+    currentCourse: "",
+    currentYear: "1st Year",
+    percentage: "",
+    annualIncome: "",
+    statement: "",
+  });
+  const [submitStatus, setSubmitStatus] = useState("");
+  
   const testimonialsTrackRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -153,19 +150,42 @@ export default function ScholarshipsPage() {
     setIsAuthenticated(authUser);
 
     const saved = localStorage.getItem("user_profile_draft_v1");
-    if (!saved) return;
-
-    try {
-      const parsed = JSON.parse(saved) as Record<string, string>;
-      setProfilePrefill({
-        fullName: parsed.fullName || "",
-        email: parsed.email || "",
-        mobile: parsed.mobile || "",
-        currentCourse: parsed.studentCourse || parsed.currentCourse || parsed.jobTitle || "",
-      });
-    } catch {
-      // Keep manual form entry if profile draft is not available.
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as Record<string, string>;
+        const email = parsed.email || localStorage.getItem("auth_user_email") || "";
+        setProfilePrefill({
+          fullName: parsed.fullName || "",
+          email: email,
+          mobile: parsed.mobile || "",
+          currentCourse: parsed.studentCourse || parsed.currentCourse || parsed.jobTitle || "",
+        });
+        setApplicationPayload(prev => ({
+          ...prev,
+          fullName: parsed.fullName || prev.fullName,
+          email: email,
+          mobile: parsed.mobile || prev.mobile,
+          currentCourse: parsed.studentCourse || parsed.currentCourse || parsed.jobTitle || prev.currentCourse,
+        }));
+      } catch {}
+    } else if (authUser) {
+        setApplicationPayload(prev => ({ ...prev, email: localStorage.getItem("auth_user_email") || "" }));
     }
+
+    const fetchScholarships = async () => {
+      try {
+        const res = await fetch("/api/scholarships");
+        if (res.ok) {
+          const data = await res.json();
+          setRunningScholarships(data.scholarships || []);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void fetchScholarships();
   }, []);
 
   const openModalWithAuth = (type: Exclude<ModalType, "none">) => {
@@ -174,18 +194,39 @@ export default function ScholarshipsPage() {
       return;
     }
     setGateMessage("");
+    setSubmitStatus("");
     setActiveModal(type);
+  };
+
+  const handleStudentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitStatus("Submitting...");
+    try {
+      const res = await fetch("/api/scholarships/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...applicationPayload,
+          documentLinks: [] // Could be expanded later
+        }),
+      });
+      if (res.ok) {
+        setSubmitStatus("Application submitted successfully! Our team will review it.");
+        setTimeout(() => setActiveModal("none"), 3000);
+      } else {
+        const err = await res.json();
+        setSubmitStatus(err.message || "Failed to submit application.");
+      }
+    } catch {
+      setSubmitStatus("Network error occurred.");
+    }
   };
 
   useEffect(() => {
     const updateItemsPerView = () => {
-      if (window.innerWidth >= 1024) {
-        setItemsPerView(3);
-      } else if (window.innerWidth >= 768) {
-        setItemsPerView(2);
-      } else {
-        setItemsPerView(1);
-      }
+      if (window.innerWidth >= 1024) setItemsPerView(3);
+      else if (window.innerWidth >= 768) setItemsPerView(2);
+      else setItemsPerView(1);
     };
 
     updateItemsPerView();
@@ -209,54 +250,23 @@ export default function ScholarshipsPage() {
   };
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      handleNext();
-    }, 4000);
-
+    const timer = window.setInterval(() => handleNext(), 4000);
     return () => window.clearInterval(timer);
   }, []);
 
   const visibleTestimonials = useMemo(() => {
-    if (itemsPerView === 1) {
-      return [testimonials[activeIndex]];
-    }
-
-    if (itemsPerView === 2) {
-      return [
-        testimonials[getWrappedIndex(activeIndex)],
-        testimonials[getWrappedIndex(activeIndex + 1)],
-      ];
-    }
-
-    return [
-      testimonials[getWrappedIndex(activeIndex - 1)],
-      testimonials[getWrappedIndex(activeIndex)],
-      testimonials[getWrappedIndex(activeIndex + 1)],
-    ];
+    if (itemsPerView === 1) return [testimonials[activeIndex]];
+    if (itemsPerView === 2) return [testimonials[getWrappedIndex(activeIndex)], testimonials[getWrappedIndex(activeIndex + 1)]];
+    return [testimonials[getWrappedIndex(activeIndex - 1)], testimonials[getWrappedIndex(activeIndex)], testimonials[getWrappedIndex(activeIndex + 1)]];
   }, [activeIndex, itemsPerView]);
 
   useEffect(() => {
     const node = testimonialsTrackRef.current;
-    if (!node) {
-      return;
-    }
-
+    if (!node) return;
     const startX = slideDirection === "next" ? 36 : -36;
     node.animate(
-      [
-        {
-          opacity: 0,
-          transform: `translateX(${startX}px) scale(0.98)`,
-        },
-        {
-          opacity: 1,
-          transform: "translateX(0) scale(1)",
-        },
-      ],
-      {
-        duration: 520,
-        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-      },
+      [{ opacity: 0, transform: `translateX(${startX}px) scale(0.98)` }, { opacity: 1, transform: "translateX(0) scale(1)" }],
+      { duration: 520, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
     );
   }, [activeIndex, slideDirection, itemsPerView]);
 
@@ -285,6 +295,12 @@ export default function ScholarshipsPage() {
               </button>
             </div>
 
+            {submitStatus && (
+              <div className="mb-4 rounded-xl border border-primary/20 bg-primary/10 p-4 text-sm font-semibold text-primary">
+                {submitStatus}
+              </div>
+            )}
+
             {activeModal === "alumni" ? (
               <form className="space-y-3">
                 <input className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" placeholder="Full name" />
@@ -299,51 +315,87 @@ export default function ScholarshipsPage() {
                 </label>
                 <button type="button" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90">
                   <ClipboardList className="h-4 w-4" />
-                  Submit Contribution
+                  Submit Contribution (Coming Soon)
                 </button>
               </form>
             ) : (
-              <form className="space-y-3">
+              <form onSubmit={handleStudentSubmit} className="space-y-3">
                 <input
+                  required
                   className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
                   placeholder="Student full name"
-                  defaultValue={profilePrefill.fullName}
+                  value={applicationPayload.fullName}
+                  onChange={(e) => setApplicationPayload({...applicationPayload, fullName: e.target.value})}
                   readOnly={Boolean(profilePrefill.fullName)}
                 />
                 <input
+                  required
                   className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
                   placeholder="Current class or course"
-                  defaultValue={profilePrefill.currentCourse}
+                  value={applicationPayload.currentCourse}
+                  onChange={(e) => setApplicationPayload({...applicationPayload, currentCourse: e.target.value})}
                   readOnly={Boolean(profilePrefill.currentCourse)}
                 />
                 <input
+                  required
                   className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
                   placeholder="Email address"
                   type="email"
-                  defaultValue={profilePrefill.email}
+                  value={applicationPayload.email}
+                  onChange={(e) => setApplicationPayload({...applicationPayload, email: e.target.value})}
                   readOnly={Boolean(profilePrefill.email)}
                 />
                 <input
+                  required
                   className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
                   placeholder="Phone number"
-                  defaultValue={profilePrefill.mobile}
+                  value={applicationPayload.mobile}
+                  onChange={(e) => setApplicationPayload({...applicationPayload, mobile: e.target.value})}
                   readOnly={Boolean(profilePrefill.mobile)}
                 />
-                <select className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary">
-                  <option>Select scholarship</option>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    required
+                    className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
+                    placeholder="Latest Percentage/CGPA"
+                    value={applicationPayload.percentage}
+                    onChange={(e) => setApplicationPayload({...applicationPayload, percentage: e.target.value})}
+                  />
+                  <input
+                    required
+                    className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
+                    placeholder="Family Annual Income"
+                    value={applicationPayload.annualIncome}
+                    onChange={(e) => setApplicationPayload({...applicationPayload, annualIncome: e.target.value})}
+                  />
+                </div>
+                <select 
+                  required
+                  value={applicationPayload.scholarshipId}
+                  onChange={(e) => setApplicationPayload({...applicationPayload, scholarshipId: e.target.value})}
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
+                >
+                  <option value="">Select scholarship</option>
                   {runningScholarships.map((item) => (
-                    <option key={item.name}>{item.name}</option>
+                    <option key={item.id} value={item.id}>{item.scholarshipName}</option>
                   ))}
                 </select>
-                <textarea className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" rows={4} placeholder="Why are you applying? (short statement)" />
+                <textarea 
+                  required
+                  value={applicationPayload.statement}
+                  onChange={(e) => setApplicationPayload({...applicationPayload, statement: e.target.value})}
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" 
+                  rows={4} 
+                  placeholder="Why are you applying? (short statement)" 
+                />
                 <p className="text-xs text-text-secondary">
                   Basic information is auto-filled from your profile when available.
                 </p>
                 <label className="flex items-start gap-2 text-xs text-text-secondary">
-                  <input type="checkbox" className="mt-0.5" />
+                  <input required type="checkbox" className="mt-0.5" />
                   I agree to share my details with the scholarship review committee for evaluation.
                 </label>
-                <button type="button" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90">
+                <button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90">
                   <Users className="h-4 w-4" />
                   Submit Application
                 </button>
@@ -374,7 +426,7 @@ export default function ScholarshipsPage() {
 
           <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="rounded-xl border border-border bg-card p-4">
-              <p className="text-2xl font-black text-primary">3</p>
+              <p className="text-2xl font-black text-primary">{loading ? "..." : runningScholarships.length}</p>
               <p className="text-xs text-text-secondary mt-1">Running scholarships</p>
             </div>
             <div className="rounded-xl border border-border bg-card p-4">
@@ -400,35 +452,52 @@ export default function ScholarshipsPage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {runningScholarships.map((item) => (
-            <article key={item.name} className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                  <BadgeCheck className="h-3.5 w-3.5" />
-                  Running
-                </span>
-                <IndianRupee className="h-4 w-4 text-primary" />
-              </div>
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+               <article key={i} className="rounded-2xl border border-border bg-card p-6 animate-pulse">
+                <div className="h-8 bg-border/50 rounded mb-4"></div>
+                <div className="h-4 bg-border/50 rounded w-3/4 mb-4"></div>
+                <div className="space-y-2 mt-4">
+                   <div className="h-4 bg-border/50 rounded w-full"></div>
+                   <div className="h-4 bg-border/50 rounded w-5/6"></div>
+                </div>
+               </article>
+            ))
+          ) : runningScholarships.length === 0 ? (
+             <div className="col-span-full py-12 text-center text-text-secondary">
+              <p>No active scholarships available at the moment.</p>
+            </div>
+          ) : (
+            runningScholarships.map((item) => (
+              <article key={item.id} className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                    <BadgeCheck className="h-3.5 w-3.5" />
+                    Running
+                  </span>
+                  <IndianRupee className="h-4 w-4 text-primary" />
+                </div>
 
-              <h3 className="text-xl font-bold leading-snug">{item.name}</h3>
-              <p className="mt-2 text-sm text-text-secondary">Provided by {item.provider}</p>
+                <h3 className="text-xl font-bold leading-snug">{item.scholarshipName}</h3>
+                <p className="mt-2 text-sm text-text-secondary">Provided by {item.providerNames.join(", ")}</p>
 
-              <div className="mt-5 space-y-3 text-sm">
-                <p className="inline-flex items-start gap-2 text-text-secondary">
-                  <HandHeart className="h-4 w-4 text-primary mt-0.5" />
-                  <span>{item.support}</span>
-                </p>
-                <p className="inline-flex items-start gap-2 text-text-secondary">
-                  <GraduationCap className="h-4 w-4 text-primary mt-0.5" />
-                  <span>{item.eligibility}</span>
-                </p>
-                <p className="inline-flex items-start gap-2 text-text-secondary">
-                  <CalendarClock className="h-4 w-4 text-primary mt-0.5" />
-                  <span>{item.window}</span>
-                </p>
-              </div>
-            </article>
-          ))}
+                <div className="mt-5 space-y-3 text-sm">
+                  <p className="inline-flex items-start gap-2 text-text-secondary">
+                    <HandHeart className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+                    <span>Up to INR {item.amountInr.toLocaleString()} support</span>
+                  </p>
+                  <p className="inline-flex items-start gap-2 text-text-secondary">
+                    <GraduationCap className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+                    <span>{item.eligibilityCriteria.join(", ")}</span>
+                  </p>
+                  <p className="inline-flex items-start gap-2 text-text-secondary">
+                    <CalendarClock className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+                    <span>Deadline: {item.deadlineDate}</span>
+                  </p>
+                </div>
+              </article>
+            ))
+          )}
         </div>
       </section>
 

@@ -235,7 +235,7 @@ export default function Home() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-16 lg:py-20 bg-background">
+      <section className="py-12 lg:py-16 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="rounded-4xl border border-border bg-card p-6 sm:p-8 lg:p-10 shadow-sm">
             <div className="grid lg:grid-cols-12 gap-8 lg:gap-10 items-start">
@@ -304,7 +304,7 @@ export default function Home() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-16 lg:py-20">
+      <section className="py-10 lg:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative rounded-3xl border border-primary/20 dark:border-primary/40 bg-linear-to-r from-primary/95 to-primary dark:from-slate-900 dark:to-blue-950 p-8 sm:p-10 lg:p-12 text-white overflow-hidden">
             <div className="absolute -top-16 -right-14 h-48 w-48 rounded-full bg-white/10" />

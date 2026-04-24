@@ -54,7 +54,11 @@ type StatusListResponse = {
 type ProgramView = "queue" | "approved" | "rejected";
 
 const programsResponseCache = new Map<string, { expiresAt: number; data: ProgramsApiResponse }>();
-const PROGRAMS_CLIENT_CACHE_TTL_MS = 12_000;
+const PROGRAMS_CLIENT_CACHE_TTL_MS = 300_000; // 5 min
+
+let cachedApprovedRows: ProgramRow[] | null = null;
+let cachedRejectedRows: ProgramRow[] | null = null;
+let statusListCacheTime = 0;
 
 function statusChip(status: ProgramStatus) {
   if (status === "Approved") return "border-emerald-200 bg-emerald-50 text-emerald-700";
@@ -92,23 +96,29 @@ function ProgramsSkeleton() {
 }
 
 export default function AdminProgramsPage() {
-  const [rows, setRows] = useState<ProgramRow[]>([]);
+  const defaultQueryStr = "search=&status=All&year=All&page=1&pageSize=10";
+  const initialCache = programsResponseCache.get(defaultQueryStr);
+  const isInitialCached = initialCache && initialCache.expiresAt > Date.now();
+
+  const [rows, setRows] = useState<ProgramRow[]>(() => isInitialCached ? initialCache!.data.rows || [] : []);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [yearFilter, setYearFilter] = useState("All");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
-  const [summary, setSummary] = useState({ pendingCount: 0, approvedCount: 0, rejectedCount: 0 });
-  const [yearOptions, setYearOptions] = useState<string[]>([]);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState(() => isInitialCached ? initialCache!.data.summary || { pendingCount: 0, approvedCount: 0, rejectedCount: 0 } : { pendingCount: 0, approvedCount: 0, rejectedCount: 0 });
+  const [yearOptions, setYearOptions] = useState<string[]>(() => isInitialCached ? initialCache!.data.filterOptions?.years || [] : []);
+  const [totalPages, setTotalPages] = useState(() => isInitialCached ? initialCache!.data.pagination?.totalPages || 1 : 1);
+  const [total, setTotal] = useState(() => isInitialCached ? initialCache!.data.pagination?.total || 0 : 0);
+  const [loading, setLoading] = useState(!isInitialCached);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [activeView, setActiveView] = useState<ProgramView>("queue");
-  const [approvedRows, setApprovedRows] = useState<ProgramRow[]>([]);
-  const [rejectedRows, setRejectedRows] = useState<ProgramRow[]>([]);
-  const [statusListLoading, setStatusListLoading] = useState(false);
+  
+  const isStatusCached = Date.now() - statusListCacheTime < PROGRAMS_CLIENT_CACHE_TTL_MS;
+  const [approvedRows, setApprovedRows] = useState<ProgramRow[]>(() => isStatusCached ? cachedApprovedRows || [] : []);
+  const [rejectedRows, setRejectedRows] = useState<ProgramRow[]>(() => isStatusCached ? cachedRejectedRows || [] : []);
+  const [statusListLoading, setStatusListLoading] = useState(!isStatusCached);
   const [showCreateProgram, setShowCreateProgram] = useState(false);
 
   const [newProgram, setNewProgram] = useState({
@@ -177,7 +187,11 @@ export default function AdminProgramsPage() {
     }
   }, [queryString]);
 
-  const loadStatusLists = async (forceFresh = false) => {
+  const loadStatusLists = useCallback(async (forceFresh = false) => {
+    if (!forceFresh && isStatusCached) {
+      setStatusListLoading(false);
+      return;
+    }
     setStatusListLoading(true);
     try {
       const refreshParam = forceFresh ? `&_=${Date.now()}` : "";
@@ -189,14 +203,21 @@ export default function AdminProgramsPage() {
       const approvedPayload = (await approvedRes.json()) as StatusListResponse;
       const rejectedPayload = (await rejectedRes.json()) as StatusListResponse;
 
-      if (approvedRes.ok) setApprovedRows(approvedPayload.rows || []);
-      if (rejectedRes.ok) setRejectedRows(rejectedPayload.rows || []);
+      if (approvedRes.ok) {
+        setApprovedRows(approvedPayload.rows || []);
+        cachedApprovedRows = approvedPayload.rows || [];
+      }
+      if (rejectedRes.ok) {
+        setRejectedRows(rejectedPayload.rows || []);
+        cachedRejectedRows = rejectedPayload.rows || [];
+      }
+      statusListCacheTime = Date.now();
     } catch {
       setMessage("Unable to load approval/rejection lists.");
     } finally {
       setStatusListLoading(false);
     }
-  };
+  }, [isStatusCached]);
 
   useEffect(() => {
     const controller = new AbortController();

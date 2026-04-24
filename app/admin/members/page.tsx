@@ -58,7 +58,11 @@ type StatusListResponse = {
 type MemberView = "queue" | "approved" | "rejected";
 
 const membersResponseCache = new Map<string, { expiresAt: number; data: MembersApiResponse }>();
-const MEMBERS_CLIENT_CACHE_TTL_MS = 12_000;
+const MEMBERS_CLIENT_CACHE_TTL_MS = 300_000; // 5 minutes
+
+let cachedApprovedRows: MemberRow[] | null = null;
+let cachedRejectedRows: MemberRow[] | null = null;
+let statusListCacheTime = 0;
 
 function statusChip(status: MemberStatus) {
   if (status === "Approved") return "border-emerald-200 bg-emerald-50 text-emerald-700";
@@ -96,22 +100,28 @@ function MembersSkeleton() {
 }
 
 export default function AdminMembersPage() {
-  const [rows, setRows] = useState<MemberRow[]>([]);
+  const defaultQueryStr = "search=&status=All&batch=All&page=1&pageSize=10";
+  const initialCache = membersResponseCache.get(defaultQueryStr);
+  const isInitialCached = initialCache && initialCache.expiresAt > Date.now();
+
+  const [rows, setRows] = useState<MemberRow[]>(() => isInitialCached ? initialCache!.data.rows || [] : []);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [batchFilter, setBatchFilter] = useState("All");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
-  const [summary, setSummary] = useState({ pendingCount: 0, approvedCount: 0, rejectedCount: 0 });
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState(() => isInitialCached ? initialCache!.data.summary || { pendingCount: 0, approvedCount: 0, rejectedCount: 0 } : { pendingCount: 0, approvedCount: 0, rejectedCount: 0 });
+  const [totalPages, setTotalPages] = useState(() => isInitialCached ? initialCache!.data.pagination?.totalPages || 1 : 1);
+  const [total, setTotal] = useState(() => isInitialCached ? initialCache!.data.pagination?.total || 0 : 0);
+  const [loading, setLoading] = useState(!isInitialCached);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [activeView, setActiveView] = useState<MemberView>("queue");
-  const [approvedRows, setApprovedRows] = useState<MemberRow[]>([]);
-  const [rejectedRows, setRejectedRows] = useState<MemberRow[]>([]);
-  const [statusListLoading, setStatusListLoading] = useState(false);
+  
+  const isStatusCached = Date.now() - statusListCacheTime < MEMBERS_CLIENT_CACHE_TTL_MS;
+  const [approvedRows, setApprovedRows] = useState<MemberRow[]>(() => isStatusCached ? cachedApprovedRows || [] : []);
+  const [rejectedRows, setRejectedRows] = useState<MemberRow[]>(() => isStatusCached ? cachedRejectedRows || [] : []);
+  const [statusListLoading, setStatusListLoading] = useState(!isStatusCached);
   const [otpVerificationId, setOtpVerificationId] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpExpiresAt, setOtpExpiresAt] = useState("");
@@ -182,6 +192,10 @@ export default function AdminMembersPage() {
   };
 
   const loadStatusLists = async (forceFresh = false) => {
+    if (!forceFresh && isStatusCached) {
+      setStatusListLoading(false);
+      return;
+    }
     setStatusListLoading(true);
     try {
       const refreshParam = forceFresh ? `&_=${Date.now()}` : "";
@@ -193,8 +207,15 @@ export default function AdminMembersPage() {
       const approvedPayload = (await approvedRes.json()) as StatusListResponse;
       const rejectedPayload = (await rejectedRes.json()) as StatusListResponse;
 
-      if (approvedRes.ok) setApprovedRows(approvedPayload.rows || []);
-      if (rejectedRes.ok) setRejectedRows(rejectedPayload.rows || []);
+      if (approvedRes.ok) {
+        setApprovedRows(approvedPayload.rows || []);
+        cachedApprovedRows = approvedPayload.rows || [];
+      }
+      if (rejectedRes.ok) {
+        setRejectedRows(rejectedPayload.rows || []);
+        cachedRejectedRows = rejectedPayload.rows || [];
+      }
+      statusListCacheTime = Date.now();
     } catch {
       setMessage("Unable to load approval/rejection lists.");
     } finally {

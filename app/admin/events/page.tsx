@@ -43,8 +43,8 @@ type EventAttendeesResponse = {
 
 const eventsResponseCache = new Map<string, { expiresAt: number; data: EventsApiResponse }>();
 const attendeesCache = new Map<string, { expiresAt: number; data: EventAttendee[] }>();
-const EVENTS_CLIENT_CACHE_TTL_MS = 12_000;
-const ATTENDEES_CLIENT_CACHE_TTL_MS = 10_000;
+const EVENTS_CLIENT_CACHE_TTL_MS = 300_000; // 5 min
+const ATTENDEES_CLIENT_CACHE_TTL_MS = 300_000; // 5 min
 
 function EventsSkeleton() {
   return (
@@ -68,16 +68,20 @@ function EventsSkeleton() {
 }
 
 export default function AdminEventsPage() {
-  const [rows, setRows] = useState<EventRow[]>([]);
+  const defaultQueryStr = "search=&year=All&page=1&pageSize=10&status=All";
+  const initialCache = eventsResponseCache.get(defaultQueryStr);
+  const isInitialCached = initialCache && initialCache.expiresAt > Date.now();
+
+  const [rows, setRows] = useState<EventRow[]>(() => isInitialCached ? initialCache!.data.rows || [] : []);
   const [search, setSearch] = useState("");
   const [yearFilter, setYearFilter] = useState("All");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [registrationsCount, setRegistrationsCount] = useState(0);
-  const [upcomingCount, setUpcomingCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [totalPages, setTotalPages] = useState(() => isInitialCached ? initialCache!.data.pagination?.totalPages || 1 : 1);
+  const [total, setTotal] = useState(() => isInitialCached ? initialCache!.data.pagination?.total || 0 : 0);
+  const [registrationsCount, setRegistrationsCount] = useState(() => isInitialCached ? initialCache!.data.summary?.totalRegistrations || 0 : 0);
+  const [upcomingCount, setUpcomingCount] = useState(() => isInitialCached ? initialCache!.data.summary?.upcomingCount || 0 : 0);
+  const [loading, setLoading] = useState(!isInitialCached);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [showCreateEvent, setShowCreateEvent] = useState(false);

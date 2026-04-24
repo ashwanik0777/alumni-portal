@@ -37,13 +37,20 @@ const tabMeta: { id: SettingsTab; label: string; icon: React.ComponentType<{ cla
   { id: "integrations", label: "Integrations", icon: Server },
 ];
 
+let cachedSettingsPayload: Partial<AdminSettingsState> | null = null;
+let cachedSettingsStats: SettingsStats | null = null;
+let settingsCacheTime = 0;
+const SETTINGS_CACHE_TTL_MS = 300_000; // 5 min
+
 export default function AdminSettingsPanel() {
-  const [settings, setSettings] = useState<AdminSettingsState>(defaultSettings);
+  const isCached = Date.now() - settingsCacheTime < SETTINGS_CACHE_TTL_MS;
+
+  const [settings, setSettings] = useState<AdminSettingsState>(() => isCached && cachedSettingsPayload ? { ...defaultSettings, ...cachedSettingsPayload } : defaultSettings);
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const [statusMessage, setStatusMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [stats, setStats] = useState<SettingsStats | null>(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(!isCached);
+  const [stats, setStats] = useState<SettingsStats | null>(() => isCached ? cachedSettingsStats : null);
 
   const update = <K extends keyof AdminSettingsState>(field: K, value: AdminSettingsState[K]) => {
     setSettings((prev) => ({ ...prev, [field]: value }));
@@ -64,9 +71,12 @@ export default function AdminSettingsPanel() {
   }, [settings]);
 
   useEffect(() => {
+    if (isCached) return;
+
     let isCancelled = false;
 
     const loadSettings = async () => {
+      setIsInitialLoading(true);
       try {
         const [settingsRes, statsRes] = await Promise.all([
           fetch("/api/admin/settings", { cache: "no-store" }),
@@ -76,14 +86,17 @@ export default function AdminSettingsPanel() {
         if (settingsRes.ok) {
           const payload = (await settingsRes.json()) as { settings?: Partial<AdminSettingsState> | null };
           if (payload.settings && !isCancelled) {
+            cachedSettingsPayload = payload.settings;
             setSettings((prev) => ({ ...prev, ...payload.settings }));
           }
         }
 
         if (statsRes.ok && !isCancelled) {
           const statsPayload = await statsRes.json();
+          cachedSettingsStats = statsPayload;
           setStats(statsPayload);
         }
+        settingsCacheTime = Date.now();
       } catch {
         if (!isCancelled) {
           setStatusMessage("Could not load saved settings from server. Default values are shown.");
@@ -100,7 +113,7 @@ export default function AdminSettingsPanel() {
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [isCached]);
 
   const saveSettings = async () => {
     setIsSaving(true);

@@ -22,30 +22,52 @@ type WebCommittee = {
   isActive: boolean;
 };
 
+let cachedWebData: any = null;
+let cachedDirectoryData: any = null;
+let webCacheTime = 0;
+const WEB_CACHE_TTL_MS = 300_000; // 5 min
+
 export default function AdminWebPage() {
-  const [tab, setTab] = useState<"committee" | "testimonials">("committee");
-  const [testimonials, setTestimonials] = useState<WebTestimonial[]>([]);
-  const [committee, setCommittee] = useState<WebCommittee[]>([]);
-  const [loading, setLoading] = useState(true);
+  const isCached = Date.now() - webCacheTime < WEB_CACHE_TTL_MS;
+
+  const [tab, setTab] = useState<"committee" | "testimonials" | "directory">("committee");
+  const [testimonials, setTestimonials] = useState<WebTestimonial[]>(() => isCached ? cachedWebData?.testimonials || [] : []);
+  const [committee, setCommittee] = useState<WebCommittee[]>(() => isCached ? cachedWebData?.committee || [] : []);
+  const [directory, setDirectory] = useState<any[]>(() => isCached ? cachedDirectoryData?.profiles || [] : []);
+  const [loading, setLoading] = useState(!isCached);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (forceFresh = false) => {
+    if (!forceFresh && isCached) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     try {
       const res = await fetch("/api/admin/web");
+      const dirRes = await fetch("/api/directory");
       if (res.ok) {
         const data = await res.json();
         setTestimonials(data.testimonials || []);
         setCommittee(data.committee || []);
+        cachedWebData = data;
       } else {
         setMessage("Failed to load website data.");
       }
+      
+      if (dirRes.ok) {
+        const dirData = await dirRes.json();
+        setDirectory(dirData.profiles || []);
+        cachedDirectoryData = dirData;
+      }
+      webCacheTime = Date.now();
     } catch {
       setMessage("Network error loading data.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isCached]);
 
   useEffect(() => { void loadData(); }, [loadData]);
 
@@ -117,6 +139,14 @@ export default function AdminWebPage() {
             }`}
           >
             <MessageSquareQuote className="h-4 w-4" /> Testimonials
+          </button>
+          <button
+            onClick={() => setTab("directory")}
+            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+              tab === "directory" ? "border-primary bg-primary text-white" : "border-border bg-background hover:border-primary/50"
+            }`}
+          >
+            <Globe2 className="h-4 w-4" /> Directory
           </button>
         </div>
       </header>
@@ -234,6 +264,58 @@ export default function AdminWebPage() {
           </div>
         </section>
       )}
+      {tab === "directory" && (
+        <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-text-primary">Alumni Directory (Public Profile Overview)</h3>
+            <span className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-text-secondary">
+              Total Profiles: {directory.length}
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-border text-text-secondary">
+                <tr>
+                  <th className="pb-3 pr-4 font-semibold">Name</th>
+                  <th className="pb-3 pr-4 font-semibold">Email</th>
+                  <th className="pb-3 pr-4 font-semibold">Batch</th>
+                  <th className="pb-3 pr-4 font-semibold">Role & Company</th>
+                  <th className="pb-3 pr-4 font-semibold">Location</th>
+                  <th className="pb-3 font-semibold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {directory.map((item) => (
+                  <tr key={item.id} className="hover:bg-background/50 transition-colors">
+                    <td className="py-3 pr-4 font-bold text-text-primary">{item.name}</td>
+                    <td className="py-3 pr-4 text-text-secondary">{item.email}</td>
+                    <td className="py-3 pr-4 text-text-secondary">{item.batch}</td>
+                    <td className="py-3 pr-4 text-text-secondary">{item.role} at {item.company}</td>
+                    <td className="py-3 pr-4 text-text-secondary">{item.location}</td>
+                    <td className="py-3 text-right">
+                      <a
+                        href={`/directory/${item.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex rounded-lg border border-border px-3 py-1 text-xs font-semibold hover:border-primary/50 hover:text-primary"
+                      >
+                        View Profile
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+                {directory.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-text-secondary">No directory profiles found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
 
       {/* Modals */}
       {showCommitteeModal && (

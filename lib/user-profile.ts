@@ -41,7 +41,7 @@ export type UserProfile = {
 let profileTableReady = false;
 let profileTableInitPromise: Promise<void> | null = null;
 
-async function ensureUserProfileTable() {
+export async function ensureUserProfileTable() {
   if (profileTableReady) return;
   if (profileTableInitPromise) { await profileTableInitPromise; return; }
 

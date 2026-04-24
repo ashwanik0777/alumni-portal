@@ -218,7 +218,7 @@ export default function UserEventsPage() {
           My Events Dashboard
         </p>
         <h2 className="mt-2 text-2xl font-black">Plan, register, and track alumni events</h2>
-        <p className="mt-1 text-sm text-text-secondary">Login ke baad yahin se registration karein, admin ko attendees live दिखाई देंगे.</p>
+        <p className="mt-1 text-sm text-text-secondary">Register instantly after login and let admins monitor attendees in real time.</p>
         {message && <p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-text-secondary">{message}</p>}
 
         <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">

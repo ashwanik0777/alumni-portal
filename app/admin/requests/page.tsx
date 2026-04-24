@@ -44,6 +44,9 @@ type RequestsApiResponse = {
   message?: string;
 };
 
+const requestsResponseCache = new Map<string, { expiresAt: number; data: RequestsApiResponse }>();
+const REQUESTS_CLIENT_CACHE_TTL_MS = 300_000; // 5 min
+
 function statusChip(status: RequestStatus) {
   if (status === "Open") return "border-amber-200 bg-amber-50 text-amber-700";
   if (status === "In Progress") return "border-blue-200 bg-blue-50 text-blue-700";
@@ -87,17 +90,21 @@ function RequestsSkeleton() {
 }
 
 export default function AdminRequestsPage() {
-  const [rows, setRows] = useState<RequestRow[]>([]);
+  const defaultQueryStr = "search=&status=All&priority=All&category=All&page=1&pageSize=10";
+  const initialCache = requestsResponseCache.get(defaultQueryStr);
+  const isInitialCached = initialCache && initialCache.expiresAt > Date.now();
+
+  const [rows, setRows] = useState<RequestRow[]>(() => isInitialCached ? initialCache!.data.rows || [] : []);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [priorityFilter, setPriorityFilter] = useState("All");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
-  const [summary, setSummary] = useState({ openCount: 0, inProgressCount: 0, resolvedCount: 0, closedCount: 0, criticalCount: 0 });
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState(() => isInitialCached ? initialCache!.data.summary || { openCount: 0, inProgressCount: 0, resolvedCount: 0, closedCount: 0, criticalCount: 0 } : { openCount: 0, inProgressCount: 0, resolvedCount: 0, closedCount: 0, criticalCount: 0 });
+  const [totalPages, setTotalPages] = useState(() => isInitialCached ? initialCache!.data.pagination?.totalPages || 1 : 1);
+  const [total, setTotal] = useState(() => isInitialCached ? initialCache!.data.pagination?.total || 0 : 0);
+  const [loading, setLoading] = useState(!isInitialCached);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [expandedId, setExpandedId] = useState("");
@@ -124,6 +131,17 @@ export default function AdminRequestsPage() {
   }, [search, statusFilter, priorityFilter, categoryFilter, page, pageSize]);
 
   const loadRequests = async (signal?: AbortSignal, forceFresh = false) => {
+    const cacheKey = queryString;
+    const cached = forceFresh ? undefined : requestsResponseCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      setRows(cached.data.rows || []);
+      setSummary(cached.data.summary || { openCount: 0, inProgressCount: 0, resolvedCount: 0, closedCount: 0, criticalCount: 0 });
+      setTotalPages(cached.data.pagination?.totalPages || 1);
+      setTotal(cached.data.pagination?.total || 0);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading((prev) => prev || rows.length === 0);
       const refreshParam = forceFresh ? `&_=${Date.now()}` : "";
@@ -142,6 +160,7 @@ export default function AdminRequestsPage() {
       setSummary(payload.summary || { openCount: 0, inProgressCount: 0, resolvedCount: 0, closedCount: 0, criticalCount: 0 });
       setTotalPages(payload.pagination?.totalPages || 1);
       setTotal(payload.pagination?.total || 0);
+      requestsResponseCache.set(cacheKey, { expiresAt: Date.now() + REQUESTS_CLIENT_CACHE_TTL_MS, data: payload });
       setMessage("");
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
