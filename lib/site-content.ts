@@ -200,6 +200,13 @@ export async function addTeamMember(p: Record<string, string>) {
 }
 export async function deleteTeamMember(id: string) { await postgresPool.query(`DELETE FROM site_team WHERE id = $1`, [id]); }
 export async function toggleTeamMember(id: string, active: boolean) { await postgresPool.query(`UPDATE site_team SET is_active = $1 WHERE id = $2`, [active, id]); }
+export async function updateTeamMember(id: string, p: Record<string, string>) {
+  await ensureSiteContentTables();
+  await postgresPool.query(
+    `UPDATE site_team SET name=$1, role=$2, batch=$3, bio=$4, image=$5, github=$6, linkedin=$7 WHERE id=$8`,
+    [p.name, p.role, p.batch || "", p.bio || "", p.image || "", p.github || "", p.linkedin || "", id]
+  );
+}
 
 // ============ CONTACTS ============
 export async function getActiveContacts() {
@@ -216,6 +223,13 @@ export async function addContact(p: Record<string, string>) {
 }
 export async function deleteContact(id: string) { await postgresPool.query(`DELETE FROM site_contacts WHERE id = $1`, [id]); }
 export async function toggleContact(id: string, active: boolean) { await postgresPool.query(`UPDATE site_contacts SET is_active = $1 WHERE id = $2`, [active, id]); }
+export async function updateContact(id: string, p: Record<string, string>) {
+  await ensureSiteContentTables();
+  await postgresPool.query(
+    `UPDATE site_contacts SET channel_type=$1, title=$2, detail=$3, note=$4 WHERE id=$5`,
+    [p.channel_type || "email", p.title, p.detail, p.note || "", id]
+  );
+}
 
 // ============ SCHOLARSHIP RECIPIENTS ============
 export async function getActiveScholarshipRecipients() {

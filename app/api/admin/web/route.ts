@@ -5,10 +5,12 @@ import {
   addWebTestimonial,
   deleteWebTestimonial,
   toggleTestimonialStatus,
+  updateWebTestimonial,
   getWebCommittee,
   addWebCommittee,
   deleteWebCommittee,
   toggleCommitteeStatus,
+  updateWebCommittee,
 } from "@/lib/admin-web";
 
 export async function GET(request: NextRequest) {
@@ -49,6 +51,10 @@ export async function POST(request: NextRequest) {
         await deleteWebTestimonial(id);
         return NextResponse.json({ message: "Testimonial deleted." });
       }
+      if (action === "update") {
+        await updateWebTestimonial(id, payload);
+        return NextResponse.json({ message: "Testimonial updated." });
+      }
     }
 
     if (type === "committee") {
@@ -63,6 +69,10 @@ export async function POST(request: NextRequest) {
       if (action === "delete") {
         await deleteWebCommittee(id);
         return NextResponse.json({ message: "Member deleted." });
+      }
+      if (action === "update") {
+        await updateWebCommittee(id, payload);
+        return NextResponse.json({ message: "Member updated." });
       }
     }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api-guard";
-import { getAllNews, addNewsStory, deleteNewsStory, toggleNewsStory } from "@/lib/news-mentorship-data";
+import { getAllNews, addNewsStory, deleteNewsStory, toggleNewsStory, updateNewsStory } from "@/lib/news-mentorship-data";
 
 export async function GET(request: NextRequest) {
   const denial = requireAdminApiAccess(request);
@@ -61,6 +61,23 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ message: "News story updated" });
   } catch (error) {
     console.error("Admin news PATCH error:", error);
+    return NextResponse.json({ message: "Failed to update news" }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  const denial = requireAdminApiAccess(request);
+  if (denial) return denial;
+
+  try {
+    const { id, title, author, excerpt } = await request.json();
+    if (!id || !title || !author || !excerpt) {
+      return NextResponse.json({ message: "All fields required" }, { status: 400 });
+    }
+    await updateNewsStory(id, { title, author, excerpt });
+    return NextResponse.json({ message: "News story updated" });
+  } catch (error) {
+    console.error("Admin news PUT error:", error);
     return NextResponse.json({ message: "Failed to update news" }, { status: 500 });
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Globe2, MessageSquareQuote, Newspaper, Phone, Plus, Trash2, Users, UserPlus } from "lucide-react";
+import { Globe2, MessageSquareQuote, Newspaper, Pencil, Phone, Plus, Trash2, Users, UserPlus } from "lucide-react";
 
 type WebTestimonial = {
   id: string;
@@ -50,6 +50,13 @@ export default function AdminWebPage() {
   const [loading, setLoading] = useState(!isCached);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  // Edit modal states
+  const [editingCommittee, setEditingCommittee] = useState<WebCommittee | null>(null);
+  const [editingTestimonial, setEditingTestimonial] = useState<WebTestimonial | null>(null);
+  const [editingNews, setEditingNews] = useState<NewsStory | null>(null);
+  const [editingTeam, setEditingTeam] = useState<any | null>(null);
+  const [editingContact, setEditingContact] = useState<any | null>(null);
 
   const loadData = useCallback(async (forceFresh = false) => {
     if (!forceFresh && isCached) {
@@ -130,10 +137,12 @@ export default function AdminWebPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        await loadData();
+        await loadData(true);
         setMessage(data.message);
         setShowCommitteeModal(false);
         setShowTestimonialModal(false);
+        setEditingCommittee(null);
+        setEditingTestimonial(null);
         setNewCommittee({ role: "", name: "", batch: "" });
         setNewTestimonial({ quote: "", author: "", meta: "", company: "", outcome: "" });
       } else {
@@ -155,66 +164,43 @@ export default function AdminWebPage() {
     );
   }
 
+  const tabs = [
+    { key: "committee" as const, label: "Committee", icon: Users },
+    { key: "testimonials" as const, label: "Testimonials", icon: MessageSquareQuote },
+    { key: "directory" as const, label: "Directory", icon: Globe2 },
+    { key: "news" as const, label: "News", icon: Newspaper },
+    { key: "team" as const, label: "Team", icon: UserPlus },
+    { key: "contacts" as const, label: "Contacts", icon: Phone },
+  ];
+
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <div>
-          <h2 className="text-2xl font-black text-text-primary">Website Management</h2>
-          <p className="mt-1 text-sm text-text-secondary">
-            Manage the dynamic content shown on the public Homepage and About page.
-          </p>
-        </div>
-        <div className="flex gap-2">
-           <button
-            onClick={() => setTab("committee")}
-            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
-              tab === "committee" ? "border-primary bg-primary text-white" : "border-border bg-background hover:border-primary/50"
-            }`}
-          >
-            <Users className="h-4 w-4" /> Committee
-          </button>
-          <button
-            onClick={() => setTab("testimonials")}
-            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
-              tab === "testimonials" ? "border-primary bg-primary text-white" : "border-border bg-background hover:border-primary/50"
-            }`}
-          >
-            <MessageSquareQuote className="h-4 w-4" /> Testimonials
-          </button>
-          <button
-            onClick={() => setTab("directory")}
-            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
-              tab === "directory" ? "border-primary bg-primary text-white" : "border-border bg-background hover:border-primary/50"
-            }`}
-          >
-            <Globe2 className="h-4 w-4" /> Directory
-          </button>
-          <button
-            onClick={() => setTab("news")}
-            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
-              tab === "news" ? "border-primary bg-primary text-white" : "border-border bg-background hover:border-primary/50"
-            }`}
-          >
-            <Newspaper className="h-4 w-4" /> News
-          </button>
-          <button
-            onClick={() => setTab("team")}
-            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
-              tab === "team" ? "border-primary bg-primary text-white" : "border-border bg-background hover:border-primary/50"
-            }`}
-          >
-            <UserPlus className="h-4 w-4" /> Team
-          </button>
-          <button
-            onClick={() => setTab("contacts")}
-            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
-              tab === "contacts" ? "border-primary bg-primary text-white" : "border-border bg-background hover:border-primary/50"
-            }`}
-          >
-            <Phone className="h-4 w-4" /> Contacts
-          </button>
-        </div>
+      <header className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <h2 className="text-2xl font-black text-text-primary">Website Management</h2>
+        <p className="mt-1 text-sm text-text-secondary">
+          Manage the dynamic content shown on the public Homepage and About page.
+        </p>
       </header>
+
+      {/* Tab Navigation */}
+      <nav className="rounded-2xl border border-border bg-card p-2 shadow-sm">
+        <div className="flex flex-wrap gap-1.5">
+          {tabs.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                tab === t.key
+                  ? "bg-primary text-white shadow-md shadow-primary/25"
+                  : "text-text-secondary hover:bg-background hover:text-text-primary"
+              }`}
+            >
+              <t.icon className="h-4 w-4" />
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </nav>
 
       {message && (
         <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-primary">
@@ -262,13 +248,22 @@ export default function AdminWebPage() {
                       </button>
                     </td>
                     <td className="py-3 text-right">
-                      <button
-                        onClick={() => void handleAction("committee", "delete", null, item.id)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-secondary hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
-                        title="Delete Member"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="inline-flex gap-1">
+                        <button
+                          onClick={() => setEditingCommittee({ ...item })}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-secondary hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+                          title="Edit Member"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => void handleAction("committee", "delete", null, item.id)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-secondary hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                          title="Delete Member"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -299,6 +294,13 @@ export default function AdminWebPage() {
             {testimonials.map((t) => (
               <article key={t.id} className="rounded-xl border border-border bg-background p-5 relative">
                 <div className="absolute top-4 right-4 flex gap-2">
+                  <button
+                    onClick={() => setEditingTestimonial({ ...t })}
+                    className="text-text-secondary hover:text-primary"
+                    title="Edit Testimonial"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
                   <button
                     onClick={() => void handleAction("testimonial", "toggle", null, t.id, !t.isActive)}
                     className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -545,6 +547,14 @@ export default function AdminWebPage() {
                   <div className="flex items-center gap-2">
                     <button
                       disabled={actionLoading}
+                      onClick={() => setEditingNews({ ...story })}
+                      className="rounded-lg border border-border bg-background p-1.5 text-text-secondary hover:border-primary/50 hover:text-primary"
+                      title="Edit Story"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      disabled={actionLoading}
                       onClick={async () => {
                         setActionLoading(true);
                         try {
@@ -653,6 +663,9 @@ export default function AdminWebPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button disabled={actionLoading} onClick={() => setEditingTeam({ ...m })} className="rounded-lg border border-border bg-background p-1.5 text-text-secondary hover:border-primary/50 hover:text-primary" title="Edit Member">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
                     <button disabled={actionLoading} onClick={async () => { setActionLoading(true); try { await fetch("/api/admin/web/team", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ id: m.id, isActive: !m.is_active }) }); webCacheTime = 0; await loadData(true); } finally { setActionLoading(false); } }} className={`rounded-lg px-3 py-1 text-xs font-semibold border ${m.is_active ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-border bg-card text-text-secondary"}`}>
                       {m.is_active ? "Active" : "Hidden"}
                     </button>
@@ -691,6 +704,9 @@ export default function AdminWebPage() {
                     <p className="text-xs text-text-secondary mt-1">{c.note}</p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button disabled={actionLoading} onClick={() => setEditingContact({ ...c })} className="rounded-lg border border-border bg-background p-1.5 text-text-secondary hover:border-primary/50 hover:text-primary" title="Edit Contact">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
                     <button disabled={actionLoading} onClick={async () => { setActionLoading(true); try { await fetch("/api/admin/web/contacts", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ id: c.id, isActive: !c.is_active }) }); webCacheTime = 0; await loadData(true); } finally { setActionLoading(false); } }} className={`rounded-lg px-3 py-1 text-xs font-semibold border ${c.is_active ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-border bg-card text-text-secondary"}`}>
                       {c.is_active ? "Active" : "Hidden"}
                     </button>
@@ -751,6 +767,116 @@ export default function AdminWebPage() {
             <div className="mt-6 flex justify-end gap-3">
               <button onClick={() => setShowContactModal(false)} className="rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary hover:bg-background">Cancel</button>
               <button disabled={actionLoading || !newContact.title || !newContact.detail} onClick={async () => { setActionLoading(true); try { const r = await fetch("/api/admin/web/contacts", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(newContact) }); if (r.ok) { setShowContactModal(false); setNewContact({ channel_type:"email", title:"", detail:"", note:"" }); webCacheTime = 0; await loadData(true); setMessage("Contact channel added."); } } finally { setActionLoading(false); } }} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ===== EDIT COMMITTEE MODAL ===== */}
+      {editingCommittee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
+            <h3 className="text-xl font-bold mb-4">Edit Committee Member</h3>
+            <div className="space-y-4">
+              <div><label className="mb-1.5 block text-xs font-semibold text-text-secondary">Name</label><input type="text" value={editingCommittee.name} onChange={(e) => setEditingCommittee({ ...editingCommittee, name: e.target.value })} className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary" /></div>
+              <div><label className="mb-1.5 block text-xs font-semibold text-text-secondary">Role</label><input type="text" value={editingCommittee.role} onChange={(e) => setEditingCommittee({ ...editingCommittee, role: e.target.value })} className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary" /></div>
+              <div><label className="mb-1.5 block text-xs font-semibold text-text-secondary">Batch</label><input type="text" value={editingCommittee.batch} onChange={(e) => setEditingCommittee({ ...editingCommittee, batch: e.target.value })} className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary" /></div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => setEditingCommittee(null)} className="rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary hover:bg-background">Cancel</button>
+              <button disabled={actionLoading || !editingCommittee.name || !editingCommittee.role} onClick={() => void handleAction("committee", "update", { name: editingCommittee.name, role: editingCommittee.role, batch: editingCommittee.batch }, editingCommittee.id)} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50">Update</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== EDIT TESTIMONIAL MODAL ===== */}
+      {editingTestimonial && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-xl">
+            <h3 className="text-xl font-bold mb-4">Edit Testimonial</h3>
+            <div className="space-y-4">
+              <div><label className="mb-1.5 block text-xs font-semibold text-text-secondary">Quote</label><textarea rows={3} value={editingTestimonial.quote} onChange={(e) => setEditingTestimonial({ ...editingTestimonial, quote: e.target.value })} className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary" /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="mb-1.5 block text-xs font-semibold text-text-secondary">Author</label><input type="text" value={editingTestimonial.author} onChange={(e) => setEditingTestimonial({ ...editingTestimonial, author: e.target.value })} className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary" /></div>
+                <div><label className="mb-1.5 block text-xs font-semibold text-text-secondary">Outcome</label><input type="text" value={editingTestimonial.outcome} onChange={(e) => setEditingTestimonial({ ...editingTestimonial, outcome: e.target.value })} className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="mb-1.5 block text-xs font-semibold text-text-secondary">Meta</label><input type="text" value={editingTestimonial.meta} onChange={(e) => setEditingTestimonial({ ...editingTestimonial, meta: e.target.value })} className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary" /></div>
+                <div><label className="mb-1.5 block text-xs font-semibold text-text-secondary">Company</label><input type="text" value={editingTestimonial.company} onChange={(e) => setEditingTestimonial({ ...editingTestimonial, company: e.target.value })} className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary" /></div>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => setEditingTestimonial(null)} className="rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary hover:bg-background">Cancel</button>
+              <button disabled={actionLoading || !editingTestimonial.quote || !editingTestimonial.author} onClick={() => void handleAction("testimonial", "update", { quote: editingTestimonial.quote, author: editingTestimonial.author, meta: editingTestimonial.meta, company: editingTestimonial.company, outcome: editingTestimonial.outcome }, editingTestimonial.id)} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50">Update</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== EDIT NEWS MODAL ===== */}
+      {editingNews && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-xl">
+            <h3 className="text-xl font-bold mb-4">Edit News Story</h3>
+            <div className="space-y-3">
+              <div><label className="text-sm font-medium">Title</label><input value={editingNews.title} onChange={e => setEditingNews({ ...editingNews, title: e.target.value })} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+              <div><label className="text-sm font-medium">Author</label><input value={editingNews.author} onChange={e => setEditingNews({ ...editingNews, author: e.target.value })} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+              <div><label className="text-sm font-medium">Excerpt</label><textarea rows={3} value={editingNews.excerpt} onChange={e => setEditingNews({ ...editingNews, excerpt: e.target.value })} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary resize-y" /></div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => setEditingNews(null)} className="rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary hover:bg-background">Cancel</button>
+              <button disabled={actionLoading || !editingNews.title || !editingNews.author || !editingNews.excerpt} onClick={async () => { setActionLoading(true); try { const r = await fetch("/api/admin/web/news", { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ id: editingNews.id, title: editingNews.title, author: editingNews.author, excerpt: editingNews.excerpt }) }); if (r.ok) { setEditingNews(null); cachedNewsData = null; webCacheTime = 0; await loadData(true); setMessage("News story updated."); } } finally { setActionLoading(false); } }} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50">Update</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== EDIT TEAM MODAL ===== */}
+      {editingTeam && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold mb-4">Edit Team Member</h3>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-sm font-medium">Name</label><input value={editingTeam.name} onChange={e => setEditingTeam({...editingTeam, name: e.target.value})} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+                <div><label className="text-sm font-medium">Role</label><input value={editingTeam.role} onChange={e => setEditingTeam({...editingTeam, role: e.target.value})} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-sm font-medium">Batch</label><input value={editingTeam.batch || ""} onChange={e => setEditingTeam({...editingTeam, batch: e.target.value})} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+                <div><label className="text-sm font-medium">Image URL</label><input value={editingTeam.image || ""} onChange={e => setEditingTeam({...editingTeam, image: e.target.value})} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+              </div>
+              <div><label className="text-sm font-medium">Bio</label><textarea rows={2} value={editingTeam.bio || ""} onChange={e => setEditingTeam({...editingTeam, bio: e.target.value})} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary resize-y" /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-sm font-medium">GitHub</label><input value={editingTeam.github || ""} onChange={e => setEditingTeam({...editingTeam, github: e.target.value})} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+                <div><label className="text-sm font-medium">LinkedIn</label><input value={editingTeam.linkedin || ""} onChange={e => setEditingTeam({...editingTeam, linkedin: e.target.value})} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => setEditingTeam(null)} className="rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary hover:bg-background">Cancel</button>
+              <button disabled={actionLoading || !editingTeam.name || !editingTeam.role} onClick={async () => { setActionLoading(true); try { const r = await fetch("/api/admin/web/team", { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify(editingTeam) }); if (r.ok) { setEditingTeam(null); webCacheTime = 0; await loadData(true); setMessage("Team member updated."); } } finally { setActionLoading(false); } }} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50">Update</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== EDIT CONTACT MODAL ===== */}
+      {editingContact && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-xl">
+            <h3 className="text-xl font-bold mb-4">Edit Contact Channel</h3>
+            <div className="space-y-3">
+              <div><label className="text-sm font-medium">Type</label>
+                <select value={editingContact.channel_type} onChange={e => setEditingContact({...editingContact, channel_type: e.target.value})} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary">
+                  <option value="email">Email</option><option value="phone">Phone</option><option value="address">Address</option>
+                </select>
+              </div>
+              <div><label className="text-sm font-medium">Title</label><input value={editingContact.title} onChange={e => setEditingContact({...editingContact, title: e.target.value})} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+              <div><label className="text-sm font-medium">Detail</label><input value={editingContact.detail} onChange={e => setEditingContact({...editingContact, detail: e.target.value})} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+              <div><label className="text-sm font-medium">Note</label><input value={editingContact.note || ""} onChange={e => setEditingContact({...editingContact, note: e.target.value})} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => setEditingContact(null)} className="rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary hover:bg-background">Cancel</button>
+              <button disabled={actionLoading || !editingContact.title || !editingContact.detail} onClick={async () => { setActionLoading(true); try { const r = await fetch("/api/admin/web/contacts", { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify(editingContact) }); if (r.ok) { setEditingContact(null); webCacheTime = 0; await loadData(true); setMessage("Contact updated."); } } finally { setActionLoading(false); } }} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50">Update</button>
             </div>
           </div>
         </div>

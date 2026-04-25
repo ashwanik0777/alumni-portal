@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api-guard";
-import { getAllContacts, addContact, deleteContact, toggleContact } from "@/lib/site-content";
+import { getAllContacts, addContact, deleteContact, toggleContact, updateContact } from "@/lib/site-content";
 
 export async function GET(request: NextRequest) {
   const d = requireAdminApiAccess(request); if (d) return d;
@@ -33,5 +33,15 @@ export async function PATCH(request: NextRequest) {
     const { id, isActive } = await request.json();
     await toggleContact(id, isActive);
     return NextResponse.json({ message: "Updated" });
+  } catch (e) { console.error(e); return NextResponse.json({ message: "Failed" }, { status: 500 }); }
+}
+
+export async function PUT(request: NextRequest) {
+  const d = requireAdminApiAccess(request); if (d) return d;
+  try {
+    const body = await request.json();
+    if (!body.id || !body.title || !body.detail) return NextResponse.json({ message: "ID, title, and detail required" }, { status: 400 });
+    await updateContact(body.id, body);
+    return NextResponse.json({ message: "Contact updated" });
   } catch (e) { console.error(e); return NextResponse.json({ message: "Failed" }, { status: 500 }); }
 }

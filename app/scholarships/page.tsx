@@ -47,19 +47,19 @@ export default function ScholarshipsPage() {
   const [slideDirection, setSlideDirection] = useState<"next" | "prev">("next");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [gateMessage, setGateMessage] = useState("");
-  
+
   const [runningScholarships, setRunningScholarships] = useState<any[]>([]);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [profilePrefill, setProfilePrefill] = useState({
     fullName: "",
     email: "",
     mobile: "",
     currentCourse: "",
   });
-  
+
   const [applicationPayload, setApplicationPayload] = useState({
     scholarshipId: "",
     fullName: "",
@@ -73,7 +73,7 @@ export default function ScholarshipsPage() {
     statement: "",
   });
   const [submitStatus, setSubmitStatus] = useState("");
-  
+
   const testimonialsTrackRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -98,9 +98,9 @@ export default function ScholarshipsPage() {
           mobile: parsed.mobile || prev.mobile,
           currentCourse: parsed.studentCourse || parsed.currentCourse || parsed.jobTitle || prev.currentCourse,
         }));
-      } catch {}
+      } catch { }
     } else if (authUser) {
-        setApplicationPayload(prev => ({ ...prev, email: localStorage.getItem("auth_user_email") || "" }));
+      setApplicationPayload(prev => ({ ...prev, email: localStorage.getItem("auth_user_email") || "" }));
     }
 
     const fetchScholarships = async () => {
@@ -264,7 +264,7 @@ export default function ScholarshipsPage() {
                   className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
                   placeholder="Student full name"
                   value={applicationPayload.fullName}
-                  onChange={(e) => setApplicationPayload({...applicationPayload, fullName: e.target.value})}
+                  onChange={(e) => setApplicationPayload({ ...applicationPayload, fullName: e.target.value })}
                   readOnly={Boolean(profilePrefill.fullName)}
                 />
                 <input
@@ -272,7 +272,7 @@ export default function ScholarshipsPage() {
                   className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
                   placeholder="Current class or course"
                   value={applicationPayload.currentCourse}
-                  onChange={(e) => setApplicationPayload({...applicationPayload, currentCourse: e.target.value})}
+                  onChange={(e) => setApplicationPayload({ ...applicationPayload, currentCourse: e.target.value })}
                   readOnly={Boolean(profilePrefill.currentCourse)}
                 />
                 <input
@@ -281,7 +281,7 @@ export default function ScholarshipsPage() {
                   placeholder="Email address"
                   type="email"
                   value={applicationPayload.email}
-                  onChange={(e) => setApplicationPayload({...applicationPayload, email: e.target.value})}
+                  onChange={(e) => setApplicationPayload({ ...applicationPayload, email: e.target.value })}
                   readOnly={Boolean(profilePrefill.email)}
                 />
                 <input
@@ -289,7 +289,7 @@ export default function ScholarshipsPage() {
                   className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
                   placeholder="Phone number"
                   value={applicationPayload.mobile}
-                  onChange={(e) => setApplicationPayload({...applicationPayload, mobile: e.target.value})}
+                  onChange={(e) => setApplicationPayload({ ...applicationPayload, mobile: e.target.value })}
                   readOnly={Boolean(profilePrefill.mobile)}
                 />
                 <div className="grid grid-cols-2 gap-3">
@@ -298,20 +298,20 @@ export default function ScholarshipsPage() {
                     className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
                     placeholder="Latest Percentage/CGPA"
                     value={applicationPayload.percentage}
-                    onChange={(e) => setApplicationPayload({...applicationPayload, percentage: e.target.value})}
+                    onChange={(e) => setApplicationPayload({ ...applicationPayload, percentage: e.target.value })}
                   />
                   <input
                     required
                     className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
                     placeholder="Family Annual Income"
                     value={applicationPayload.annualIncome}
-                    onChange={(e) => setApplicationPayload({...applicationPayload, annualIncome: e.target.value})}
+                    onChange={(e) => setApplicationPayload({ ...applicationPayload, annualIncome: e.target.value })}
                   />
                 </div>
-                <select 
+                <select
                   required
                   value={applicationPayload.scholarshipId}
-                  onChange={(e) => setApplicationPayload({...applicationPayload, scholarshipId: e.target.value})}
+                  onChange={(e) => setApplicationPayload({ ...applicationPayload, scholarshipId: e.target.value })}
                   className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
                 >
                   <option value="">Select scholarship</option>
@@ -319,13 +319,13 @@ export default function ScholarshipsPage() {
                     <option key={item.id} value={item.id}>{item.scholarshipName}</option>
                   ))}
                 </select>
-                <textarea 
+                <textarea
                   required
                   value={applicationPayload.statement}
-                  onChange={(e) => setApplicationPayload({...applicationPayload, statement: e.target.value})}
-                  className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" 
-                  rows={4} 
-                  placeholder="Why are you applying? (short statement)" 
+                  onChange={(e) => setApplicationPayload({ ...applicationPayload, statement: e.target.value })}
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
+                  rows={4}
+                  placeholder="Why are you applying? (short statement)"
                 />
                 <p className="text-xs text-text-secondary">
                   Basic information is auto-filled from your profile when available.
@@ -393,17 +393,17 @@ export default function ScholarshipsPage() {
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {loading ? (
             Array.from({ length: 3 }).map((_, i) => (
-               <article key={i} className="rounded-2xl border border-border bg-card p-6 animate-pulse">
+              <article key={i} className="rounded-2xl border border-border bg-card p-6 animate-pulse">
                 <div className="h-8 bg-border/50 rounded mb-4"></div>
                 <div className="h-4 bg-border/50 rounded w-3/4 mb-4"></div>
                 <div className="space-y-2 mt-4">
-                   <div className="h-4 bg-border/50 rounded w-full"></div>
-                   <div className="h-4 bg-border/50 rounded w-5/6"></div>
+                  <div className="h-4 bg-border/50 rounded w-full"></div>
+                  <div className="h-4 bg-border/50 rounded w-5/6"></div>
                 </div>
-               </article>
+              </article>
             ))
           ) : runningScholarships.length === 0 ? (
-             <div className="col-span-full py-12 text-center text-text-secondary">
+            <div className="col-span-full py-12 text-center text-text-secondary">
               <p>No active scholarships available at the moment.</p>
             </div>
           ) : (
@@ -478,57 +478,78 @@ export default function ScholarshipsPage() {
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold">Student Testimonial Stories</h2>
-        </div>
+      {testimonials.length > 0 && Array.isArray(visibleTestimonials) && visibleTestimonials.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
-        <div className="flex items-center gap-3 lg:gap-5 mt-16">
-          <button
-            type="button"
-            onClick={handlePrev}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-card text-text-secondary shadow-sm transition hover:-translate-y-0.5 hover:text-primary hover:shadow-md"
-            aria-label="Previous testimonials"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-
-          <div ref={testimonialsTrackRef} className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
-            {visibleTestimonials.map((item, index) => {
-              const isCenterCard = itemsPerView === 3 && index === 1;
-              return (
-                <article
-                  key={`${item.id}-${activeIndex}-${index}`}
-                  className={`rounded-2xl border p-5 transition-all duration-500 ${
-                    isCenterCard
-                      ? "scale-100 border-primary/30 bg-card shadow-xl lg:scale-[1.06]"
-                      : "border-border bg-card/80 shadow-md lg:scale-95"
-                  }`}
-                >
-                  <div className="inline-flex rounded-lg bg-primary/10 p-2 text-primary">
-                    <Quote className="h-5 w-5" />
-                  </div>
-                  <p className="mt-4 text-sm leading-relaxed text-text-secondary">{item.quote}</p>
-                  <Link href={`/directory/${item.id}`} className="mt-4 inline-flex text-sm font-semibold text-primary hover:underline">
-                    {item.student}
-                  </Link>
-                  <p className="mt-1 text-xs text-text-secondary">{item.note}</p>
-                </article>
-              );
-            })}
+          <div className="mb-8 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold">
+              Student Testimonial Stories
+            </h2>
           </div>
 
-          <button
-            type="button"
-            onClick={handleNext}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-card text-text-secondary shadow-sm transition hover:-translate-y-0.5 hover:text-primary hover:shadow-md"
-            aria-label="Next testimonials"
-          >
-            <ArrowRight className="h-5 w-5" />
-          </button>
-        </div>
+          <div className="flex items-center gap-3 lg:gap-5 mt-16">
 
-      </section>
+            <button
+              type="button"
+              onClick={handlePrev}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-card text-text-secondary shadow-sm transition hover:-translate-y-0.5 hover:text-primary hover:shadow-md"
+              aria-label="Previous testimonials"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+
+            <div
+              ref={testimonialsTrackRef}
+              className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6"
+            >
+              {visibleTestimonials.map((item, index) => {
+                if (!item) return null;
+
+                const isCenterCard = itemsPerView === 3 && index === 1;
+
+                return (
+                  <article
+                    key={`${item.id}-${activeIndex}-${index}`}
+                    className={`rounded-2xl border p-5 transition-all duration-500 ${isCenterCard
+                        ? "scale-100 border-primary/30 bg-card shadow-xl lg:scale-[1.06]"
+                        : "border-border bg-card/80 shadow-md lg:scale-95"
+                      }`}
+                  >
+                    <div className="inline-flex rounded-lg bg-primary/10 p-2 text-primary">
+                      <Quote className="h-5 w-5" />
+                    </div>
+
+                    <p className="mt-4 text-sm leading-relaxed text-text-secondary">
+                      {item.quote}
+                    </p>
+
+                    <Link
+                      href={`/directory/${item.id}`}
+                      className="mt-4 inline-flex text-sm font-semibold text-primary hover:underline"
+                    >
+                      {item.student}
+                    </Link>
+
+                    <p className="mt-1 text-xs text-text-secondary">
+                      {item.note}
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleNext}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-card text-text-secondary shadow-sm transition hover:-translate-y-0.5 hover:text-primary hover:shadow-md"
+              aria-label="Next testimonials"
+            >
+              <ArrowRight className="h-5 w-5" />
+            </button>
+
+          </div>
+        </section>
+      )}
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <div className="rounded-2xl border border-border bg-card p-6 sm:p-7">

@@ -146,6 +146,14 @@ export async function toggleNewsStory(id: string, isActive: boolean) {
   return { ok: true };
 }
 
+export async function updateNewsStory(id: string, payload: { title: string; author: string; excerpt: string }) {
+  await postgresPool.query(
+    `UPDATE news_stories SET title = $1, author = $2, excerpt = $3 WHERE id = $4`,
+    [payload.title.trim(), payload.author.trim(), payload.excerpt.trim(), id]
+  );
+  return { ok: true };
+}
+
 // ============ MENTORSHIP TRACKS ============
 
 export async function getActiveMentorshipTracks() {

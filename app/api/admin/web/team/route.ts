@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api-guard";
-import { getAllTeam, addTeamMember, deleteTeamMember, toggleTeamMember } from "@/lib/site-content";
+import { getAllTeam, addTeamMember, deleteTeamMember, toggleTeamMember, updateTeamMember } from "@/lib/site-content";
 
 export async function GET(request: NextRequest) {
   const d = requireAdminApiAccess(request); if (d) return d;
@@ -34,5 +34,15 @@ export async function PATCH(request: NextRequest) {
     const { id, isActive } = await request.json();
     await toggleTeamMember(id, isActive);
     return NextResponse.json({ message: "Updated" });
+  } catch (e) { console.error(e); return NextResponse.json({ message: "Failed" }, { status: 500 }); }
+}
+
+export async function PUT(request: NextRequest) {
+  const d = requireAdminApiAccess(request); if (d) return d;
+  try {
+    const body = await request.json();
+    if (!body.id || !body.name || !body.role) return NextResponse.json({ message: "ID, name, and role required" }, { status: 400 });
+    await updateTeamMember(body.id, body);
+    return NextResponse.json({ message: "Team member updated" });
   } catch (e) { console.error(e); return NextResponse.json({ message: "Failed" }, { status: 500 }); }
 }

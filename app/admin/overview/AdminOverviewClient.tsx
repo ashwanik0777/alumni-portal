@@ -11,7 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { type ComponentType, useEffect, useMemo, useState } from "react";
+import { type ComponentType, useEffect, useMemo, useRef, useState } from "react";
 
 type Stat = {
   label: string;
@@ -89,6 +89,94 @@ function OverviewSkeleton() {
           ))}
         </article>
       </section>
+    </div>
+  );
+}
+
+/* ===== Auto-scrolling Activity Feed ===== */
+function ActivityFeed({ feed }: { feed: FeedItem[] }) {
+  const displayFeed = feed.slice(0, 10);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isPaused, setIsPaused] = useState(false);
+
+  // Duplicate items for seamless infinite loop
+  const items = displayFeed.length > 5
+    ? [...displayFeed, ...displayFeed]
+    : displayFeed;
+
+  const singleSetHeight = displayFeed.length * 60; // ~60px per item
+
+  useEffect(() => {
+    if (displayFeed.length <= 5) return;
+    const el = scrollRef.current;
+    if (!el) return;
+
+    let animFrame: number;
+    let offset = 0;
+    const speed = 0.4; // px per frame
+
+    const tick = () => {
+      if (!isPaused) {
+        offset += speed;
+        if (offset >= singleSetHeight) offset = 0;
+        el.style.transform = `translateY(-${offset}px)`;
+      }
+      animFrame = requestAnimationFrame(tick);
+    };
+
+    animFrame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animFrame);
+  }, [displayFeed.length, singleSetHeight, isPaused]);
+
+  if (displayFeed.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-border bg-background p-4 text-sm text-text-secondary">
+        No activity feed available yet.
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="relative overflow-hidden"
+      style={{ maxHeight: `${Math.min(displayFeed.length, 5) * 60}px` }}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      {/* Hide scrollbar + gradient fade */}
+      <style>{`
+        .activity-scroll-wrap::-webkit-scrollbar { display: none; }
+        .activity-scroll-wrap { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
+      <div ref={scrollRef} className="activity-scroll-wrap" style={{ willChange: "transform" }}>
+        {items.map((item, idx) => (
+          <div
+            key={`${item.id}-${idx}`}
+            className="flex items-center justify-between rounded-xl border border-border bg-background p-3 mb-2"
+            style={{ height: "52px" }}
+          >
+            <div className="flex items-center gap-3">
+              {item.status === "success" ? (
+                <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+              ) : (
+                <Clock3 className="h-4 w-4 text-secondary shrink-0" />
+              )}
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate">{item.title}</p>
+                <p className="text-xs text-text-secondary">{item.time}</p>
+              </div>
+            </div>
+            <CalendarCheck className="h-4 w-4 text-text-secondary shrink-0" />
+          </div>
+        ))}
+      </div>
+      {/* Top & bottom fade gradients */}
+      {displayFeed.length > 5 && (
+        <>
+          <div className="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-card to-transparent pointer-events-none z-10" />
+          <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-card to-transparent pointer-events-none z-10" />
+        </>
+      )}
     </div>
   );
 }
@@ -200,30 +288,7 @@ export default function AdminOverviewClient() {
             <h3 className="text-lg font-bold">Recent Admin Activity</h3>
             <span className="text-sm font-semibold text-text-secondary">Live Feed</span>
           </div>
-          <div className="space-y-3">
-            {!hasFeed && (
-              <div className="rounded-xl border border-dashed border-border bg-background p-4 text-sm text-text-secondary">
-                No activity feed available yet.
-              </div>
-            )}
-
-            {feed.map((item) => (
-              <div key={item.id} className="flex items-center justify-between rounded-xl border border-border bg-background p-3">
-                <div className="flex items-center gap-3">
-                  {item.status === "success" ? (
-                    <CheckCircle2 className="h-4 w-4 text-primary" />
-                  ) : (
-                    <Clock3 className="h-4 w-4 text-secondary" />
-                  )}
-                  <div>
-                    <p className="text-sm font-semibold">{item.title}</p>
-                    <p className="text-xs text-text-secondary">{item.time}</p>
-                  </div>
-                </div>
-                <CalendarCheck className="h-4 w-4 text-text-secondary" />
-              </div>
-            ))}
-          </div>
+          <ActivityFeed feed={feed} />
         </article>
 
         <article className="rounded-2xl border border-border bg-card p-5">

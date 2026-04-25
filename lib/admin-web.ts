@@ -26,6 +26,14 @@ export async function deleteWebTestimonial(id: string) {
   return { ok: true };
 }
 
+export async function updateWebTestimonial(id: string, payload: { quote: string; author: string; meta: string; company: string; outcome: string }) {
+  await postgresPool.query(
+    `UPDATE home_testimonials SET quote = $1, author = $2, meta = $3, company = $4, outcome = $5 WHERE id = $6`,
+    [payload.quote.trim(), payload.author.trim(), payload.meta.trim(), payload.company.trim(), payload.outcome.trim(), id]
+  );
+  return { ok: true };
+}
+
 export async function toggleTestimonialStatus(id: string, isActive: boolean) {
   await postgresPool.query(`UPDATE home_testimonials SET is_active = $1 WHERE id = $2`, [isActive, id]);
   return { ok: true };
@@ -57,6 +65,14 @@ export async function addWebCommittee(payload: { role: string; name: string; bat
 
 export async function deleteWebCommittee(id: string) {
   await postgresPool.query(`DELETE FROM home_committee WHERE id = $1`, [id]);
+  return { ok: true };
+}
+
+export async function updateWebCommittee(id: string, payload: { role: string; name: string; batch: string }) {
+  await postgresPool.query(
+    `UPDATE home_committee SET role = $1, name = $2, batch = $3 WHERE id = $4`,
+    [payload.role.trim(), payload.name.trim(), payload.batch.trim(), id]
+  );
   return { ok: true };
 }
 
