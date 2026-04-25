@@ -1,31 +1,35 @@
-import Link from "next/link";
-import { ArrowRight, CalendarDays, Newspaper, Sparkles, Users } from "lucide-react";
+"use client";
 
-const featuredStories = [
-  {
-    title: "From Campus to Startup Founder",
-    author: "Ananya Singh, Batch 2014",
-    date: "02 Apr 2026",
-    excerpt:
-      "How a student innovation project became a funded startup creating impact in rural education.",
-  },
-  {
-    title: "Global Reunion 2026 Highlights",
-    author: "Alumni Office",
-    date: "25 Mar 2026",
-    excerpt:
-      "A snapshot of key moments, keynote sessions, and milestone announcements from this year\'s reunion.",
-  },
-  {
-    title: "Mentorship Stories That Changed Careers",
-    author: "Community Team",
-    date: "12 Mar 2026",
-    excerpt:
-      "Three mentees share how guidance from alumni mentors accelerated their confidence and career growth.",
-  },
-];
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowRight, CalendarDays, Newspaper, Users } from "lucide-react";
+
+type NewsStory = {
+  id: string;
+  title: string;
+  author: string;
+  excerpt: string;
+  published_at: string;
+};
 
 export default function NewsPage() {
+  const [stories, setStories] = useState<NewsStory[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/public/news")
+      .then(res => res.json())
+      .then(data => setStories(data.stories || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  function formatDate(dateStr: string) {
+    try {
+      return new Date(dateStr).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    } catch { return dateStr; }
+  }
+
   return (
     <div className="bg-background text-text-primary">
       <section className="relative overflow-hidden border-b border-border">
@@ -45,19 +49,38 @@ export default function NewsPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {featuredStories.map((story) => (
-            <article key={story.title} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="inline-flex items-center gap-2 text-xs font-semibold text-text-secondary">
-                <CalendarDays className="h-3.5 w-3.5" />
-                {story.date}
-              </p>
-              <h2 className="mt-3 text-xl font-bold leading-tight">{story.title}</h2>
-              <p className="mt-2 text-sm text-text-secondary">{story.excerpt}</p>
-              <p className="mt-4 text-xs font-semibold text-primary">{story.author}</p>
-            </article>
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="rounded-2xl border border-border bg-card p-5 animate-pulse">
+                <div className="h-4 w-24 rounded bg-border/60 mb-3" />
+                <div className="h-6 w-3/4 rounded bg-border/60 mb-3" />
+                <div className="h-4 w-full rounded bg-border/60 mb-2" />
+                <div className="h-4 w-2/3 rounded bg-border/60" />
+              </div>
+            ))}
+          </div>
+        ) : stories.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border bg-card px-4 py-16 text-center">
+            <Newspaper className="h-10 w-10 text-text-secondary mx-auto mb-3 opacity-50" />
+            <p className="text-lg font-bold">No stories yet</p>
+            <p className="mt-1 text-sm text-text-secondary">Check back later for news and updates from the alumni community.</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {stories.map((story) => (
+              <article key={story.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all">
+                <p className="inline-flex items-center gap-2 text-xs font-semibold text-text-secondary">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  {formatDate(story.published_at)}
+                </p>
+                <h2 className="mt-3 text-xl font-bold leading-tight">{story.title}</h2>
+                <p className="mt-2 text-sm text-text-secondary">{story.excerpt}</p>
+                <p className="mt-4 text-xs font-semibold text-primary">{story.author}</p>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">

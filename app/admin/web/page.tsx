@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Globe2, MessageSquareQuote, Plus, Trash2, Users } from "lucide-react";
+import { Globe2, MessageSquareQuote, Newspaper, Plus, Trash2, Users } from "lucide-react";
 
 type WebTestimonial = {
   id: string;
@@ -22,18 +22,29 @@ type WebCommittee = {
   isActive: boolean;
 };
 
+type NewsStory = {
+  id: string;
+  title: string;
+  author: string;
+  excerpt: string;
+  is_active: boolean;
+  published_at: string;
+};
+
 let cachedWebData: any = null;
 let cachedDirectoryData: any = null;
+let cachedNewsData: NewsStory[] | null = null;
 let webCacheTime = 0;
 const WEB_CACHE_TTL_MS = 300_000; // 5 min
 
 export default function AdminWebPage() {
   const isCached = Date.now() - webCacheTime < WEB_CACHE_TTL_MS;
 
-  const [tab, setTab] = useState<"committee" | "testimonials" | "directory">("committee");
+  const [tab, setTab] = useState<"committee" | "testimonials" | "directory" | "news">("committee");
   const [testimonials, setTestimonials] = useState<WebTestimonial[]>(() => isCached ? cachedWebData?.testimonials || [] : []);
   const [committee, setCommittee] = useState<WebCommittee[]>(() => isCached ? cachedWebData?.committee || [] : []);
   const [directory, setDirectory] = useState<any[]>(() => isCached ? cachedDirectoryData?.profiles || [] : []);
+  const [news, setNews] = useState<NewsStory[]>(() => isCached ? cachedNewsData || [] : []);
   const [loading, setLoading] = useState(!isCached);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -61,6 +72,15 @@ export default function AdminWebPage() {
         setDirectory(dirData.profiles || []);
         cachedDirectoryData = dirData;
       }
+
+      // Fetch news
+      const newsRes = await fetch("/api/admin/web/news");
+      if (newsRes.ok) {
+        const newsData = await newsRes.json();
+        setNews(newsData.stories || []);
+        cachedNewsData = newsData.stories || [];
+      }
+
       webCacheTime = Date.now();
     } catch {
       setMessage("Network error loading data.");
@@ -71,12 +91,13 @@ export default function AdminWebPage() {
 
   useEffect(() => { void loadData(); }, [loadData]);
 
-  // Modals state
   const [showCommitteeModal, setShowCommitteeModal] = useState(false);
   const [showTestimonialModal, setShowTestimonialModal] = useState(false);
+  const [showNewsModal, setShowNewsModal] = useState(false);
   
   const [newCommittee, setNewCommittee] = useState({ role: "", name: "", batch: "" });
   const [newTestimonial, setNewTestimonial] = useState({ quote: "", author: "", meta: "", company: "", outcome: "" });
+  const [newNews, setNewNews] = useState({ title: "", author: "", excerpt: "" });
 
   const handleAction = async (type: string, action: string, payload?: any, id?: string, isActive?: boolean) => {
     setActionLoading(true);
@@ -147,6 +168,14 @@ export default function AdminWebPage() {
             }`}
           >
             <Globe2 className="h-4 w-4" /> Directory
+          </button>
+          <button
+            onClick={() => setTab("news")}
+            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+              tab === "news" ? "border-primary bg-primary text-white" : "border-border bg-background hover:border-primary/50"
+            }`}
+          >
+            <Newspaper className="h-4 w-4" /> News
           </button>
         </div>
       </header>
@@ -443,6 +472,119 @@ export default function AdminWebPage() {
                 className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
               >
                 Save Story
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== NEWS TAB ===== */}
+      {tab === "news" && (
+        <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-text-primary">News & Stories</h3>
+            <button
+              onClick={() => setShowNewsModal(true)}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4" /> Add Story
+            </button>
+          </div>
+
+          {news.length === 0 ? (
+            <div className="text-center py-12 text-text-secondary">
+              <Newspaper className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p className="font-semibold">No news stories</p>
+              <p className="text-sm">Add stories that will appear on the public News page.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {news.map(story => (
+                <div key={story.id} className="flex items-start justify-between gap-4 rounded-xl border border-border bg-background p-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-text-primary">{story.title}</p>
+                    <p className="text-sm text-text-secondary mt-1">{story.excerpt}</p>
+                    <p className="text-xs text-primary font-semibold mt-2">{story.author}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={actionLoading}
+                      onClick={async () => {
+                        setActionLoading(true);
+                        try {
+                          await fetch("/api/admin/web/news", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: story.id, isActive: !story.is_active }) });
+                          cachedNewsData = null; webCacheTime = 0;
+                          await loadData(true);
+                        } finally { setActionLoading(false); }
+                      }}
+                      className={`rounded-lg px-3 py-1 text-xs font-semibold border ${
+                        story.is_active ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-border bg-card text-text-secondary"
+                      }`}
+                    >
+                      {story.is_active ? "Active" : "Hidden"}
+                    </button>
+                    <button
+                      disabled={actionLoading}
+                      onClick={async () => {
+                        if (!confirm("Delete this story?")) return;
+                        setActionLoading(true);
+                        try {
+                          await fetch("/api/admin/web/news", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: story.id }) });
+                          cachedNewsData = null; webCacheTime = 0;
+                          await loadData(true);
+                        } finally { setActionLoading(false); }
+                      }}
+                      className="rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ===== ADD NEWS MODAL ===== */}
+      {showNewsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-xl">
+            <h3 className="text-xl font-bold mb-4">Add News Story</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium">Title</label>
+                <input value={newNews.title} onChange={e => setNewNews(n => ({...n, title: e.target.value}))} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" placeholder="Story title" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Author</label>
+                <input value={newNews.author} onChange={e => setNewNews(n => ({...n, author: e.target.value}))} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" placeholder="Author name" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Excerpt / Summary</label>
+                <textarea rows={3} value={newNews.excerpt} onChange={e => setNewNews(n => ({...n, excerpt: e.target.value}))} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary resize-y" placeholder="Brief summary of the story..." />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => setShowNewsModal(false)} className="rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary hover:bg-background">Cancel</button>
+              <button
+                disabled={actionLoading || !newNews.title || !newNews.author || !newNews.excerpt}
+                onClick={async () => {
+                  setActionLoading(true);
+                  try {
+                    const res = await fetch("/api/admin/web/news", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newNews) });
+                    if (res.ok) {
+                      setShowNewsModal(false);
+                      setNewNews({ title: "", author: "", excerpt: "" });
+                      cachedNewsData = null; webCacheTime = 0;
+                      await loadData(true);
+                      setMessage("News story added successfully.");
+                    }
+                  } finally { setActionLoading(false); }
+                }}
+                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
+              >
+                Publish Story
               </button>
             </div>
           </div>

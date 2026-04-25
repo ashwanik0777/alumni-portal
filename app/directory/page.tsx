@@ -53,7 +53,7 @@ export default function DirectoryPage() {
   useEffect(() => {
     // Initial load
     void loadData();
-  }, []); // Load once initially. Subsequent loads happen on "Apply Filters" button click.
+  }, []);
 
   const handleApplyFilters = () => {
     void loadData();

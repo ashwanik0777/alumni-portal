@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -15,43 +15,24 @@ import {
   Users,
 } from "lucide-react";
 
-const mentorshipTracks = [
-  {
-    icon: Briefcase,
-    title: "Career Mentorship",
-    text: "Get role-specific guidance on interviews, transitions, and long-term career planning.",
-    audience: "Students & Early Professionals",
-  },
-  {
-    icon: Compass,
-    title: "Leadership Mentorship",
-    text: "Learn decision making, stakeholder influence, and growth into senior leadership roles.",
-    audience: "Mid-Career Alumni",
-  },
-  {
-    icon: Lightbulb,
-    title: "Startup Mentorship",
-    text: "Work with founders and operators on idea validation, execution, and fundraising readiness.",
-    audience: "Builders & Entrepreneurs",
-  },
-];
+type TrackData = { id: string; title: string; description: string; audience: string; icon_name: string; sort_order: number };
+type StepData = { id: string; title: string; description: string; sort_order: number };
+type StatData = { value: string; label: string };
 
-const process = [
-  { title: "Share Your Goals", text: "Tell us your career stage, interests, and what outcomes you want from mentorship." },
-  { title: "Smart Mentor Match", text: "We pair you with relevant alumni mentors based on domain, role, and growth goals." },
-  { title: "Structured Sessions", text: "Follow a guided session plan with milestones, action items, and progress feedback." },
-  { title: "Continuous Growth", text: "Track outcomes and expand your network with peer circles and advanced mentor groups." },
-];
-
-const impact = [
-  { value: "1,300+", label: "Mentorship sessions" },
-  { value: "420+", label: "Active mentors" },
-  { value: "89%", label: "Goal completion rate" },
-];
+const iconMap: Record<string, ComponentType<{ className?: string }>> = {
+  Briefcase, Compass, Lightbulb, BookOpen, Users, Sparkles,
+};
 
 export default function MentorshipPage() {
   const router = useRouter();
   const [activeForm, setActiveForm] = useState<"mentee" | "mentor">("mentee");
+  const [showForm, setShowForm] = useState(false);
+
+  // Dynamic data from API
+  const [mentorshipTracks, setMentorshipTracks] = useState<TrackData[]>([]);
+  const [processSteps, setProcessSteps] = useState<StepData[]>([]);
+  const [impact, setImpact] = useState<StatData[]>([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
   
   // Mentee Form State
   const [menteeName, setMenteeName] = useState("");
@@ -67,6 +48,37 @@ export default function MentorshipPage() {
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  // Load dynamic content from backend
+  useEffect(() => {
+    fetch("/api/public/mentorship-data")
+      .then(res => res.json())
+      .then(data => {
+        setMentorshipTracks(data.tracks || []);
+        setProcessSteps(data.steps || []);
+        setImpact(data.stats || []);
+        setDataLoaded(true);
+      })
+      .catch(() => setDataLoaded(true));
+  }, []);
+
+  const isLoggedIn = () => {
+    return document.cookie.split(";").some(c => c.trim().startsWith("auth_user="));
+  };
+
+  const handleFormAccess = (formType: "mentee" | "mentor") => {
+    if (!isLoggedIn()) {
+      router.push("/login?redirect=/mentorship");
+      return;
+    }
+    setActiveForm(formType);
+    setShowForm(true);
+    setMessage("");
+    // Scroll to form after state update
+    setTimeout(() => {
+      document.getElementById("mentor-form")?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
 
   const submitMentee = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,20 +172,18 @@ export default function MentorshipPage() {
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row gap-4">
-            <a
-              href="#mentor-form"
-              onClick={() => setActiveForm("mentee")}
+            <button
+              onClick={() => handleFormAccess("mentee")}
               className="inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
             >
               Apply For Mentorship
-            </a>
-            <a
-              href="#mentor-form"
-              onClick={() => setActiveForm("mentor")}
+            </button>
+            <button
+              onClick={() => handleFormAccess("mentor")}
               className="inline-flex items-center justify-center rounded-xl border border-border bg-card px-6 py-3.5 font-semibold text-text-primary hover:border-primary/30 transition-colors"
             >
               Become a Mentor
-            </a>
+            </button>
           </div>
 
           <div className="mt-9 grid sm:grid-cols-3 gap-3 max-w-3xl">
@@ -194,21 +204,33 @@ export default function MentorshipPage() {
         </div>
 
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {mentorshipTracks.map((track) => (
-            <article
-              key={track.title}
-              className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all"
-            >
-              <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary mb-4">
-                <track.icon className="h-5 w-5" />
+          {!dataLoaded ? (
+            [1, 2, 3].map(i => (
+              <div key={i} className="rounded-2xl border border-border bg-card p-6 animate-pulse">
+                <div className="h-11 w-11 rounded-xl bg-border/60 mb-4" />
+                <div className="h-6 w-3/4 rounded bg-border/60 mb-3" />
+                <div className="h-4 w-full rounded bg-border/60 mb-2" />
+                <div className="h-4 w-1/2 rounded bg-border/60" />
               </div>
-              <h3 className="text-xl font-bold">{track.title}</h3>
-              <p className="text-text-secondary text-sm mt-2 leading-relaxed">{track.text}</p>
-              <p className="mt-4 inline-flex rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-text-secondary">
-                {track.audience}
-              </p>
-            </article>
-          ))}
+            ))
+          ) : mentorshipTracks.map((track) => {
+            const IconComp = iconMap[track.icon_name] || Briefcase;
+            return (
+              <article
+                key={track.id}
+                className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all"
+              >
+                <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary mb-4">
+                  <IconComp className="h-5 w-5" />
+                </div>
+                <h3 className="text-xl font-bold">{track.title}</h3>
+                <p className="text-text-secondary text-sm mt-2 leading-relaxed">{track.description}</p>
+                <p className="mt-4 inline-flex rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-text-secondary">
+                  {track.audience}
+                </p>
+              </article>
+            );
+          })}
         </div>
       </section>
 
@@ -241,8 +263,8 @@ export default function MentorshipPage() {
               <div className="lg:col-span-8 relative">
                 <div className="hidden sm:block absolute left-4 top-3 bottom-3 w-px bg-primary/20" />
                 <ol className="space-y-4 sm:space-y-5">
-                  {process.map((step, index) => (
-                    <li key={step.title} className="relative sm:pl-11">
+                  {processSteps.map((step, index) => (
+                    <li key={step.id} className="relative sm:pl-11">
                       <span className="hidden sm:inline-flex absolute left-0 top-5 h-8 w-8 items-center justify-center rounded-full bg-primary text-white text-xs font-bold ring-4 ring-background">
                         {index + 1}
                       </span>
@@ -253,7 +275,7 @@ export default function MentorshipPage() {
                             Step 0{index + 1}
                           </span>
                         </div>
-                        <p className="mt-2 text-sm text-text-secondary leading-relaxed">{step.text}</p>
+                        <p className="mt-2 text-sm text-text-secondary leading-relaxed">{step.description}</p>
                       </article>
                     </li>
                   ))}
@@ -265,6 +287,30 @@ export default function MentorshipPage() {
       </section>
 
       <section id="mentor-form" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-16">
+        {!showForm ? (
+          <div className="rounded-3xl border border-border bg-card p-8 sm:p-10 lg:p-12 shadow-sm text-center">
+            <MessageSquareText className="h-10 w-10 text-primary mx-auto mb-4" />
+            <h2 className="text-2xl sm:text-3xl font-bold">Ready to get started?</h2>
+            <p className="mt-3 text-text-secondary max-w-xl mx-auto">
+              Whether you want guidance from a mentor or want to share your experience as one — click below to begin.
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={() => handleFormAccess("mentee")}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
+              >
+                <Sparkles className="h-4 w-4" /> Request a Mentor
+              </button>
+              <button
+                onClick={() => handleFormAccess("mentor")}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-8 py-3.5 font-semibold text-text-primary hover:border-primary/30 transition-colors"
+              >
+                <Users className="h-4 w-4" /> Become a Mentor
+              </button>
+            </div>
+            <p className="mt-5 text-xs text-text-secondary">You must be logged in to access the form.</p>
+          </div>
+        ) : (
         <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 lg:p-10 shadow-sm">
           <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
             <div className="flex items-center gap-2 text-primary">
@@ -386,6 +432,7 @@ export default function MentorshipPage() {
             </form>
           )}
         </div>
+        )}
       </section>
     </div>
   );
