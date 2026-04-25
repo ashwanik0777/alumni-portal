@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Globe2, MessageSquareQuote, Newspaper, Plus, Trash2, Users } from "lucide-react";
+import { Globe2, MessageSquareQuote, Newspaper, Phone, Plus, Trash2, Users, UserPlus } from "lucide-react";
 
 type WebTestimonial = {
   id: string;
@@ -40,11 +40,13 @@ const WEB_CACHE_TTL_MS = 300_000; // 5 min
 export default function AdminWebPage() {
   const isCached = Date.now() - webCacheTime < WEB_CACHE_TTL_MS;
 
-  const [tab, setTab] = useState<"committee" | "testimonials" | "directory" | "news">("committee");
+  const [tab, setTab] = useState<"committee" | "testimonials" | "directory" | "news" | "team" | "contacts">("committee");
   const [testimonials, setTestimonials] = useState<WebTestimonial[]>(() => isCached ? cachedWebData?.testimonials || [] : []);
   const [committee, setCommittee] = useState<WebCommittee[]>(() => isCached ? cachedWebData?.committee || [] : []);
   const [directory, setDirectory] = useState<any[]>(() => isCached ? cachedDirectoryData?.profiles || [] : []);
   const [news, setNews] = useState<NewsStory[]>(() => isCached ? cachedNewsData || [] : []);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(!isCached);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -81,6 +83,20 @@ export default function AdminWebPage() {
         cachedNewsData = newsData.stories || [];
       }
 
+      // Fetch team
+      const teamRes = await fetch("/api/admin/web/team");
+      if (teamRes.ok) {
+        const teamData = await teamRes.json();
+        setTeamMembers(teamData.team || []);
+      }
+
+      // Fetch contacts
+      const contactsRes = await fetch("/api/admin/web/contacts");
+      if (contactsRes.ok) {
+        const contactsData = await contactsRes.json();
+        setContacts(contactsData.contacts || []);
+      }
+
       webCacheTime = Date.now();
     } catch {
       setMessage("Network error loading data.");
@@ -94,10 +110,14 @@ export default function AdminWebPage() {
   const [showCommitteeModal, setShowCommitteeModal] = useState(false);
   const [showTestimonialModal, setShowTestimonialModal] = useState(false);
   const [showNewsModal, setShowNewsModal] = useState(false);
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
   
   const [newCommittee, setNewCommittee] = useState({ role: "", name: "", batch: "" });
   const [newTestimonial, setNewTestimonial] = useState({ quote: "", author: "", meta: "", company: "", outcome: "" });
   const [newNews, setNewNews] = useState({ title: "", author: "", excerpt: "" });
+  const [newTeam, setNewTeam] = useState({ name: "", role: "", batch: "", bio: "", image: "", github: "", linkedin: "" });
+  const [newContact, setNewContact] = useState({ channel_type: "email", title: "", detail: "", note: "" });
 
   const handleAction = async (type: string, action: string, payload?: any, id?: string, isActive?: boolean) => {
     setActionLoading(true);
@@ -176,6 +196,22 @@ export default function AdminWebPage() {
             }`}
           >
             <Newspaper className="h-4 w-4" /> News
+          </button>
+          <button
+            onClick={() => setTab("team")}
+            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+              tab === "team" ? "border-primary bg-primary text-white" : "border-border bg-background hover:border-primary/50"
+            }`}
+          >
+            <UserPlus className="h-4 w-4" /> Team
+          </button>
+          <button
+            onClick={() => setTab("contacts")}
+            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+              tab === "contacts" ? "border-primary bg-primary text-white" : "border-border bg-background hover:border-primary/50"
+            }`}
+          >
+            <Phone className="h-4 w-4" /> Contacts
           </button>
         </div>
       </header>
@@ -586,6 +622,135 @@ export default function AdminWebPage() {
               >
                 Publish Story
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== TEAM TAB ===== */}
+      {tab === "team" && (
+        <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-text-primary">Team / Builders Page</h3>
+            <button onClick={() => setShowTeamModal(true)} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90">
+              <Plus className="h-4 w-4" /> Add Member
+            </button>
+          </div>
+          {teamMembers.length === 0 ? (
+            <div className="text-center py-12 text-text-secondary">
+              <UserPlus className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p className="font-semibold">No team members</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {teamMembers.map((m: any) => (
+                <div key={m.id} className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background p-4">
+                  <div className="flex items-center gap-3">
+                    {m.image && <img src={m.image} alt={m.name} className="h-10 w-10 rounded-full object-cover" />}
+                    <div>
+                      <p className="font-bold text-text-primary">{m.name}</p>
+                      <p className="text-xs text-text-secondary">{m.role} {m.batch && `• Batch ${m.batch}`}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button disabled={actionLoading} onClick={async () => { setActionLoading(true); try { await fetch("/api/admin/web/team", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ id: m.id, isActive: !m.is_active }) }); webCacheTime = 0; await loadData(true); } finally { setActionLoading(false); } }} className={`rounded-lg px-3 py-1 text-xs font-semibold border ${m.is_active ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-border bg-card text-text-secondary"}`}>
+                      {m.is_active ? "Active" : "Hidden"}
+                    </button>
+                    <button disabled={actionLoading} onClick={async () => { if (!confirm("Delete?")) return; setActionLoading(true); try { await fetch("/api/admin/web/team", { method: "DELETE", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ id: m.id }) }); webCacheTime = 0; await loadData(true); } finally { setActionLoading(false); } }} className="rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ===== CONTACTS TAB ===== */}
+      {tab === "contacts" && (
+        <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-text-primary">Contact Channels (Contact Page)</h3>
+            <button onClick={() => setShowContactModal(true)} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90">
+              <Plus className="h-4 w-4" /> Add Channel
+            </button>
+          </div>
+          {contacts.length === 0 ? (
+            <div className="text-center py-12 text-text-secondary">
+              <Phone className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p className="font-semibold">No contact channels</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {contacts.map((c: any) => (
+                <div key={c.id} className="flex items-start justify-between gap-4 rounded-xl border border-border bg-background p-4">
+                  <div>
+                    <p className="font-bold text-text-primary">{c.title}</p>
+                    <p className="text-sm text-text-secondary">{c.detail}</p>
+                    <p className="text-xs text-text-secondary mt-1">{c.note}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button disabled={actionLoading} onClick={async () => { setActionLoading(true); try { await fetch("/api/admin/web/contacts", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ id: c.id, isActive: !c.is_active }) }); webCacheTime = 0; await loadData(true); } finally { setActionLoading(false); } }} className={`rounded-lg px-3 py-1 text-xs font-semibold border ${c.is_active ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-border bg-card text-text-secondary"}`}>
+                      {c.is_active ? "Active" : "Hidden"}
+                    </button>
+                    <button disabled={actionLoading} onClick={async () => { if (!confirm("Delete?")) return; setActionLoading(true); try { await fetch("/api/admin/web/contacts", { method: "DELETE", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ id: c.id }) }); webCacheTime = 0; await loadData(true); } finally { setActionLoading(false); } }} className="rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ===== ADD TEAM MODAL ===== */}
+      {showTeamModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold mb-4">Add Team Member</h3>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-sm font-medium">Name</label><input value={newTeam.name} onChange={e => setNewTeam(t => ({...t, name: e.target.value}))} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+                <div><label className="text-sm font-medium">Role</label><input value={newTeam.role} onChange={e => setNewTeam(t => ({...t, role: e.target.value}))} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-sm font-medium">Batch</label><input value={newTeam.batch} onChange={e => setNewTeam(t => ({...t, batch: e.target.value}))} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+                <div><label className="text-sm font-medium">Image URL</label><input value={newTeam.image} onChange={e => setNewTeam(t => ({...t, image: e.target.value}))} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+              </div>
+              <div><label className="text-sm font-medium">Bio</label><textarea rows={2} value={newTeam.bio} onChange={e => setNewTeam(t => ({...t, bio: e.target.value}))} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary resize-y" /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-sm font-medium">GitHub</label><input value={newTeam.github} onChange={e => setNewTeam(t => ({...t, github: e.target.value}))} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+                <div><label className="text-sm font-medium">LinkedIn</label><input value={newTeam.linkedin} onChange={e => setNewTeam(t => ({...t, linkedin: e.target.value}))} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" /></div>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => setShowTeamModal(false)} className="rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary hover:bg-background">Cancel</button>
+              <button disabled={actionLoading || !newTeam.name || !newTeam.role} onClick={async () => { setActionLoading(true); try { const r = await fetch("/api/admin/web/team", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(newTeam) }); if (r.ok) { setShowTeamModal(false); setNewTeam({ name:"", role:"", batch:"", bio:"", image:"", github:"", linkedin:"" }); webCacheTime = 0; await loadData(true); setMessage("Team member added."); } } finally { setActionLoading(false); } }} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== ADD CONTACT MODAL ===== */}
+      {showContactModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-xl">
+            <h3 className="text-xl font-bold mb-4">Add Contact Channel</h3>
+            <div className="space-y-3">
+              <div><label className="text-sm font-medium">Type</label>
+                <select value={newContact.channel_type} onChange={e => setNewContact(c => ({...c, channel_type: e.target.value}))} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary">
+                  <option value="email">Email</option><option value="phone">Phone</option><option value="address">Address</option>
+                </select>
+              </div>
+              <div><label className="text-sm font-medium">Title</label><input value={newContact.title} onChange={e => setNewContact(c => ({...c, title: e.target.value}))} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" placeholder="e.g. Email Support" /></div>
+              <div><label className="text-sm font-medium">Detail</label><input value={newContact.detail} onChange={e => setNewContact(c => ({...c, detail: e.target.value}))} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" placeholder="e.g. support@example.com" /></div>
+              <div><label className="text-sm font-medium">Note</label><input value={newContact.note} onChange={e => setNewContact(c => ({...c, note: e.target.value}))} className="mt-1 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary" placeholder="e.g. Mon-Sat 10AM-6PM" /></div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => setShowContactModal(false)} className="rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary hover:bg-background">Cancel</button>
+              <button disabled={actionLoading || !newContact.title || !newContact.detail} onClick={async () => { setActionLoading(true); try { const r = await fetch("/api/admin/web/contacts", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(newContact) }); if (r.ok) { setShowContactModal(false); setNewContact({ channel_type:"email", title:"", detail:"", note:"" }); webCacheTime = 0; await loadData(true); setMessage("Contact channel added."); } } finally { setActionLoading(false); } }} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50">Save</button>
             </div>
           </div>
         </div>

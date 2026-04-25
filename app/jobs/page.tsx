@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Briefcase, Building2, Clock3, Compass, Filter, MapPin, Search, Sparkles, TrendingUp, Users } from "lucide-react";
+import type { ComponentType } from "react";
 
 type PublicJob = {
   id: string;
@@ -18,12 +19,11 @@ type PublicJob = {
 };
 
 type Pagination = { page: number; pageSize: number; total: number; totalPages: number };
+type CareerTrack = { id: string; title: string; description: string; growth: string; focus: string; icon_name: string };
 
-const careerTracks = [
-  { icon: Briefcase, title: "Tech Roles", text: "Engineering, data, cloud, and platform opportunities from trusted alumni teams.", growth: "High Demand", focus: "Engineering, Data, Cloud" },
-  { icon: TrendingUp, title: "Product & Strategy", text: "Openings across product management, analytics, consulting, and growth functions.", growth: "Fast Growth", focus: "Product, Analytics, Consulting" },
-  { icon: Compass, title: "Design & Research", text: "User experience, visual design, and research positions in high-impact organizations.", growth: "Rising Opportunities", focus: "UX, Visual Design, Research" },
-];
+const jobIconMap: Record<string, ComponentType<{ className?: string }>> = {
+  Briefcase, TrendingUp, Compass, Sparkles,
+};
 
 export default function JobsPage() {
   const router = useRouter();
@@ -38,6 +38,7 @@ export default function JobsPage() {
   const [modes, setModes] = useState<string[]>([]);
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [careerTracks, setCareerTracks] = useState<CareerTrack[]>([]);
 
   const loadJobs = useCallback(async () => {
     setLoading(true);
@@ -58,7 +59,13 @@ export default function JobsPage() {
     }
   }, [search, locationFilter, modeFilter, page]);
 
-  useEffect(() => { loadJobs(); }, [loadJobs]);
+  useEffect(() => {
+    loadJobs();
+    fetch("/api/public/career-tracks")
+      .then(r => r.json())
+      .then(d => setCareerTracks(d.tracks || []))
+      .catch(() => {});
+  }, [loadJobs]);
 
   const handleApply = async (jobId: string) => {
     setApplyingId(jobId);
@@ -278,21 +285,24 @@ export default function JobsPage() {
             </div>
 
             <div className="mt-8 grid md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {careerTracks.map((track) => (
-                <article key={track.title} className="h-full rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col">
-                  <div className="flex items-center justify-between gap-3 mb-4">
-                    <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <track.icon className="h-5 w-5" />
+              {careerTracks.map((track) => {
+                const TrackIcon = jobIconMap[track.icon_name] || Briefcase;
+                return (
+                  <article key={track.id} className="h-full rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col">
+                    <div className="flex items-center justify-between gap-3 mb-4">
+                      <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <TrackIcon className="h-5 w-5" />
+                      </div>
+                      <p className="inline-flex rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px] font-semibold text-primary">{track.growth}</p>
                     </div>
-                    <p className="inline-flex rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px] font-semibold text-primary">{track.growth}</p>
-                  </div>
-                  <h3 className="text-xl font-bold">{track.title}</h3>
-                  <p className="text-sm text-text-secondary leading-relaxed mt-3">{track.text}</p>
-                  <div className="mt-5 pt-4 border-t border-border/80 text-xs text-text-secondary">
-                    Focus Areas: <span className="text-text-primary font-semibold">{track.focus}</span>
-                  </div>
-                </article>
-              ))}
+                    <h3 className="text-xl font-bold">{track.title}</h3>
+                    <p className="text-sm text-text-secondary leading-relaxed mt-3">{track.description}</p>
+                    <div className="mt-5 pt-4 border-t border-border/80 text-xs text-text-secondary">
+                      Focus Areas: <span className="text-text-primary font-semibold">{track.focus}</span>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </div>
         </div>

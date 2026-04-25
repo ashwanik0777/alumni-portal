@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Briefcase, GraduationCap, MapPin, ShieldCheck, Star, Users } from "lucide-react";
-import { alumniProfiles } from "../data";
+import { getDirectoryProfileBySlug } from "@/lib/site-content";
 
 export default async function AlumniProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const profile = alumniProfiles.find((item) => item.id === id);
+  const profile = await getDirectoryProfileBySlug(id);
 
   if (!profile) {
     notFound();
   }
+
+  const achievements: string[] = Array.isArray(profile.achievements) ? profile.achievements : [];
+  const mentorshipAreas: string[] = Array.isArray(profile.mentorship_areas) ? profile.mentorship_areas : [];
 
   return (
     <div className="bg-background text-text-primary">
@@ -65,7 +68,7 @@ export default async function AlumniProfilePage({ params }: { params: Promise<{ 
           <article className="rounded-2xl border border-border bg-card p-6">
             <h2 className="text-xl font-bold">Achievements</h2>
             <ul className="mt-3 space-y-2 text-text-secondary">
-              {profile.achievements.map((item) => (
+              {achievements.map((item) => (
                 <li key={item} className="inline-flex items-start gap-2">
                   <ShieldCheck className="h-4 w-4 text-primary mt-0.5" />
                   <span>{item}</span>
@@ -78,7 +81,7 @@ export default async function AlumniProfilePage({ params }: { params: Promise<{ 
         <article className="mt-6 rounded-2xl border border-border bg-card p-6">
           <h2 className="text-xl font-bold">Mentorship Areas</h2>
           <div className="mt-4 flex flex-wrap gap-2">
-            {profile.mentorshipAreas.map((item) => (
+            {mentorshipAreas.map((item) => (
               <span key={item} className="inline-flex items-center rounded-full border border-border bg-background px-3 py-1.5 text-sm text-text-primary">
                 {item}
               </span>
@@ -91,7 +94,7 @@ export default async function AlumniProfilePage({ params }: { params: Promise<{ 
             <Users className="h-4 w-4 text-primary" />
             Public Profile Policy
           </p>
-          <p className="mt-2">{profile.contactPolicy}</p>
+          <p className="mt-2">Only approved professional profile information is public. Direct contact is shared after mutual consent.</p>
         </article>
       </section>
     </div>

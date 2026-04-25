@@ -19,12 +19,8 @@ type PublicEvent = {
 };
 
 type Pagination = { page: number; pageSize: number; total: number; totalPages: number };
+type TimelineItem = { id: string; month: string; milestone: string };
 
-const timeline = [
-  { month: "May 2026", milestone: "Regional chapter meetups begin in 5 cities" },
-  { month: "July 2026", milestone: "Mentor matchmaking sessions and career circles" },
-  { month: "September 2026", milestone: "Campus impact day and scholarship fundraiser" },
-];
 
 export default function EventsPage() {
   const router = useRouter();
@@ -34,6 +30,7 @@ export default function EventsPage() {
   const [modeFilter, setModeFilter] = useState("All");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, pageSize: 12, total: 0, totalPages: 0 });
+  const [timeline, setTimeline] = useState<TimelineItem[]>([]);
   const [modes, setModes] = useState<string[]>([]);
   const [registeringId, setRegisteringId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -56,7 +53,14 @@ export default function EventsPage() {
     }
   }, [search, modeFilter, page]);
 
-  useEffect(() => { loadEvents(); }, [loadEvents]);
+  useEffect(() => {
+    void loadEvents();
+    // Load timeline
+    fetch("/api/public/event-timeline")
+      .then(r => r.json())
+      .then(d => setTimeline(d.timeline || []))
+      .catch(() => {});
+  }, [loadEvents]);
 
   const handleRegister = async (eventId: string) => {
     setRegisteringId(eventId);

@@ -38,78 +38,7 @@ type Testimonial = {
 
 // Static running scholarships removed (fetched dynamically)
 
-const recipients: Recipient[] = [
-  {
-    student: "Aditi Verma (Public Consent Shared)",
-    id: "aditi-verma",
-    scholarship: "Merit Excellence Scholarship",
-    year: "2025",
-    provider: "Aman Tiwari",
-    amount: "INR 50,000",
-  },
-  {
-    student: "Rohit Mishra (Public Consent Shared)",
-    id: "rohit-mishra",
-    scholarship: "STEM Future Grant",
-    year: "2025",
-    provider: "Nidhi Sharma",
-    amount: "INR 35,000",
-  },
-  {
-    student: "Nidhi Chauhan (Public Consent Shared)",
-    id: "nidhi-chauhan",
-    scholarship: "Girls Higher Education Fund",
-    year: "2024",
-    provider: "Ruchi Verma",
-    amount: "INR 70,000",
-  },
-];
 
-const testimonials: Testimonial[] = [
-  {
-    quote:
-      "The scholarship reduced my financial stress. I could focus on exams and secure admission in my preferred college.",
-    student: "Aditi Verma",
-    id: "aditi-verma",
-    note: "Scholarship Recipient",
-  },
-  {
-    quote:
-      "I received support at the right time. The alumni mentors also guided me during entrance preparation.",
-    student: "Rohit Mishra",
-    id: "rohit-mishra",
-    note: "Scholarship Recipient",
-  },
-  {
-    quote:
-      "This support helped my family continue my education journey without interruption.",
-    student: "Nidhi Chauhan",
-    id: "nidhi-chauhan",
-    note: "Scholarship Recipient",
-  },
-  {
-    quote:
-      "The process was transparent and simple. I got both financial support and academic direction.",
-    student: "Sneha Dubey",
-    id: "sneha-dubey",
-    note: "Scholarship Recipient",
-  },
-  {
-    quote:
-      "I felt supported by the alumni network. The scholarship gave me confidence to continue higher studies.",
-    student: "Kunal Saxena",
-    id: "kunal-saxena",
-    note: "Scholarship Recipient",
-  },
-];
-
-const providers = [
-  "Aman Tiwari (Batch 2008)",
-  "Nidhi Sharma (Batch 2011)",
-  "Ruchi Verma (Batch 2006)",
-  "Rajat Singh (Batch 2009)",
-  "Megha Chauhan (Batch 2013)",
-];
 
 export default function ScholarshipsPage() {
   const [activeModal, setActiveModal] = useState<ModalType>("none");
@@ -120,6 +49,8 @@ export default function ScholarshipsPage() {
   const [gateMessage, setGateMessage] = useState("");
   
   const [runningScholarships, setRunningScholarships] = useState<any[]>([]);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [profilePrefill, setProfilePrefill] = useState({
@@ -174,10 +105,18 @@ export default function ScholarshipsPage() {
 
     const fetchScholarships = async () => {
       try {
-        const res = await fetch("/api/scholarships");
-        if (res.ok) {
-          const data = await res.json();
+        const [schRes, dataRes] = await Promise.all([
+          fetch("/api/scholarships"),
+          fetch("/api/public/scholarships-data"),
+        ]);
+        if (schRes.ok) {
+          const data = await schRes.json();
           setRunningScholarships(data.scholarships || []);
+        }
+        if (dataRes.ok) {
+          const sData = await dataRes.json();
+          setRecipients((sData.recipients || []).map((r: Record<string, string>, i: number) => ({ ...r, id: r.id || `r-${i}` })));
+          setTestimonials((sData.testimonials || []).map((t: Record<string, string>, i: number) => ({ ...t, id: t.id || `t-${i}` })));
         }
       } catch (err) {
         console.error(err);
@@ -596,7 +535,7 @@ export default function ScholarshipsPage() {
           <h2 className="text-2xl font-bold">Active Alumni Providers</h2>
           <p className="mt-2 text-text-secondary">These alumni are currently sponsoring scholarships in approved cycles.</p>
           <div className="mt-5 flex flex-wrap gap-2">
-            {providers.map((name) => (
+            {Array.from(new Set(recipients.map(r => r.provider).filter(Boolean))).map((name) => (
               <span key={name} className="inline-flex items-center rounded-full border border-border bg-background px-3 py-1.5 text-sm text-text-primary">
                 {name}
               </span>

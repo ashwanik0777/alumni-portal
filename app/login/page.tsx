@@ -242,8 +242,6 @@ function LoginPageContent() {
           <aside
             className="relative lg:col-span-6 p-7 sm:p-9 lg:p-12 text-white overflow-hidden"
             style={{
-              backgroundImage:
-                "radial-gradient(ellipse 70% 60% at 10% 10%, rgba(255,255,255,0.12), transparent 65%), radial-gradient(ellipse 70% 60% at 90% 90%, rgba(201,162,39,0.22), transparent 70%)",
               backgroundColor: "var(--color-primary)",
             }}
           >
@@ -251,10 +249,7 @@ function LoginPageContent() {
               aria-hidden
               className="pointer-events-none absolute -left-20 -top-24 h-72 w-72 rounded-full border border-white/20 bg-white/10 blur-2xl"
             />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-20 top-1/3 h-80 w-80 rounded-full border border-secondary/30 bg-secondary/20 blur-2xl"
-            />
+          
             <div
               aria-hidden
               className="pointer-events-none absolute -left-24 bottom-10 h-64 w-64 rounded-full border border-white/10 bg-white/5 blur-2xl"
@@ -351,8 +346,20 @@ function LoginPageContent() {
           <div
             aria-hidden
             className="pointer-events-none absolute inset-y-0 z-20 hidden lg:block"
-            style={{ left: "calc(50% - 40px)", width: "80px" }}
+            style={{ left: "calc(50% - 40px)", width: "80px"}}
           >
+              <div
+              aria-hidden
+              className="pointer-events-none absolute -right-10 top-10 h-80 w-80 rounded-full border border-secondary/30 bg-secondary/20 blur-2xl"
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0"
+              style={{
+                backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px)",
+                backgroundSize: "28px 28px",
+              }}
+            />
             <svg className="h-full w-full" viewBox="0 0 80 900" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
               <path
                 d="M 0 0 L 40 0 C 78 82, 80 162, 60 242 C 40 322, 0 402, 20 482 C 40 562, 80 642, 60 722 C 40 802, 0 882, 40 900 L 0 900 Z"
@@ -365,6 +372,13 @@ function LoginPageContent() {
                 className="text-card"
               />
             </svg>
+
+              <div
+              aria-hidden
+              className="pointer-events-none absolute right-20 bottom-1 h-80 w-60 border border-secondary/30 bg-secondary/20 blur-2xl"
+            />
+            
+            
           </div>
 
           <main className="lg:col-span-6 flex items-center justify-center px-6 py-10 sm:px-10 bg-card">

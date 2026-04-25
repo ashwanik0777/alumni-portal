@@ -32,16 +32,18 @@ export async function GET(request: NextRequest) {
     const whereString = `WHERE ${whereClauses.join(" AND ")}`;
 
     const countRes = await postgresPool.query(
-      `SELECT COUNT(*) FROM admin_events ${whereString}`,
+      `SELECT COUNT(*) FROM admin_events e ${whereString.replace(/\b(status|title|location|mode)\b/g, 'e.$1')}`,
       values
     );
     const totalCount = parseInt(countRes.rows[0].count, 10);
 
     const offset = (page - 1) * pageSize;
     const result = await postgresPool.query(
-      `SELECT id, title, event_type, event_date, location, mode, organizer_name, attendee_count, going_count, submitted_at
-       FROM admin_events ${whereString}
-       ORDER BY event_date ASC
+      `SELECT e.id, e.title, e.event_type, e.event_date, e.location, e.mode, e.organizer_name, e.submitted_at,
+              COALESCE((SELECT COUNT(*) FROM admin_event_registrations a WHERE a.event_id = e.id), 0) AS attendee_count,
+              COALESCE((SELECT COUNT(*) FROM admin_event_registrations a WHERE a.event_id = e.id AND a.registration_status = 'Going'), 0) AS going_count
+       FROM admin_events e ${whereString.replace(/\b(status|title|location|mode)\b/g, 'e.$1')}
+       ORDER BY e.event_date ASC
        LIMIT $${valueIdx} OFFSET $${valueIdx + 1}`,
       [...values, pageSize, offset]
     );
