@@ -29,7 +29,7 @@ export default function TeamPage() {
 
   return (
     <div className="bg-background min-h-screen">
-      {/* Hero Section */}
+
       <div className="bg-primary/5 py-20">
         <div className="container mx-auto px-4 text-center">
           <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-full mb-6 text-primary">
