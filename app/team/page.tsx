@@ -88,7 +88,7 @@ export default function TeamPage() {
             </div>
           ))}
 
-
+          {/* Join the team card */}
           <div className="group bg-gradient-to-br from-primary/5 to-secondary/5 rounded-2xl p-8 border border-dashed border-border hover:border-primary/50 transition-all duration-300 flex flex-col items-center text-center justify-center min-h-[400px]">
             <div className="w-20 h-20 bg-background rounded-full flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform">
               <Coffee className="w-8 h-8 text-secondary" />
