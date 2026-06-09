@@ -23,7 +23,7 @@ import {
   Users,
 } from "lucide-react";
 
-const stats = [
+const defaultLoginStats = [
   { value: "4,200+", label: "Active members", icon: Users },
   { value: "1,300+", label: "Mentor sessions", icon: BookOpen },
   { value: "89%", label: "Positive outcomes", icon: TrendingUp },
@@ -79,6 +79,23 @@ function LoginPageContent() {
   const [pendingFirstName, setPendingFirstName] = useState("");
   const [firstLoginEmail, setFirstLoginEmail] = useState("");
   const [firstLoginFirstName, setFirstLoginFirstName] = useState("Alumni");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [stats, setStats] = useState(defaultLoginStats);
+
+  useEffect(() => {
+    fetch("/api/home")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.stats) {
+          setStats([
+            { value: data.stats.activeAlumni || "4,200+", label: "Active members", icon: Users },
+            { value: data.stats.mentorSessions || "1,300+", label: "Mentor sessions", icon: BookOpen },
+            { value: "89%", label: "Positive outcomes", icon: TrendingUp },
+          ]);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const resolveFirstNameFromEmail = (email: string) => {
     const localPart = email.trim().split("@")[0] || "Alumni";
@@ -120,13 +137,16 @@ function LoginPageContent() {
     localStorage.setItem(FIRST_LOGIN_USERS_KEY, JSON.stringify(users));
   };
 
-  const continueLogin = (targetRole: "user" | "admin", firstName = "Alumni") => {
+  const continueLogin = (targetRole: "user" | "admin", firstName = "Alumni", email = "") => {
     const cookieAge = 60 * 60 * 8;
     document.cookie = `auth_user=active; path=/; max-age=${cookieAge}; samesite=strict`;
     document.cookie = `auth_role=${targetRole}; path=/; max-age=${cookieAge}; samesite=strict`;
     localStorage.setItem("auth_user", "active");
     localStorage.setItem("auth_role", targetRole);
     localStorage.setItem("auth_first_name", firstName);
+    if (email) {
+      localStorage.setItem("auth_email", email.trim().toLowerCase());
+    }
     setSuccess(true);
     setLoginMessage(`Signed in successfully. Redirecting to ${targetRole === "admin" ? "Admin" : "User"} dashboard.`);
     const nextPath = searchParams.get("next");
@@ -143,6 +163,7 @@ function LoginPageContent() {
     const password = String(form.get("password") || "");
     const firstName = resolveFirstNameFromEmail(email);
     setPendingFirstName(firstName);
+    setLoginEmail(email);
 
     setSuccess(false);
     setIsSubmitting(true);
@@ -174,7 +195,7 @@ function LoginPageContent() {
       }
 
       setMultiAccess(false);
-      continueLogin(payload.user.roles[0], userFirstName);
+      continueLogin(payload.user.roles[0], userFirstName, payload.user.email);
     } catch {
       setMultiAccess(false);
       setLoginMessage("Login service is currently unavailable. Please try again.");
@@ -225,7 +246,7 @@ function LoginPageContent() {
     savePendingUsers(updated);
 
     setLoginMessage("Password set successfully. Redirecting to user dashboard.");
-    continueLogin("user", firstLoginFirstName || "Alumni");
+    continueLogin("user", firstLoginFirstName || "Alumni", firstLoginEmail);
   };
 
   return (
@@ -467,14 +488,14 @@ function LoginPageContent() {
                           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <button
                               type="button"
-                              onClick={() => continueLogin("user", pendingFirstName || "Alumni")}
+                              onClick={() => continueLogin("user", pendingFirstName || "Alumni", loginEmail)}
                               className="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
                             >
                               Continue as User
                             </button>
                             <button
                               type="button"
-                              onClick={() => continueLogin("admin", pendingFirstName || "Alumni")}
+                              onClick={() => continueLogin("admin", pendingFirstName || "Alumni", loginEmail)}
                               className="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text-primary hover:border-primary/30 hover:text-primary"
                             >
                               Continue as Admin
