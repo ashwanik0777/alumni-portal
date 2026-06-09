@@ -1,6 +1,6 @@
 "use client";
 
-import { type ComponentType, type ReactNode, useMemo, useState } from "react";
+import { type ComponentType, type ReactNode, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -10,7 +10,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Compass,
-  ClipboardList,
   GraduationCapIcon,
   LayoutDashboard,
   LogOut,
@@ -33,7 +32,6 @@ const navItems: NavItem[] = [
   { label: "Overview", href: "/user", icon: LayoutDashboard },
   { label: "My Profile", href: "/user/profile", icon: User },
   { label: "My Network", href: "/user/network", icon: Users },
-  { label: "Request Queue", href: "/user/requests", icon: ClipboardList },
   { label: "Mentorship", href: "/user/mentorship", icon: Compass },
   { label: "Mentor Dashboard", href: "/user/mentor", icon: ShieldCheck },
   { label: "Jobs", href: "/user/jobs", icon: Briefcase },
@@ -53,6 +51,25 @@ export default function UserLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [userName, setUserName] = useState("Aman Sharma");
+  const [userEmail, setUserEmail] = useState("aman.alumni@jnvportal.in");
+
+  useEffect(() => {
+    const email = localStorage.getItem("auth_email");
+    const name = localStorage.getItem("auth_first_name");
+    if (email) setUserEmail(email);
+    if (name) setUserName(name);
+
+    try {
+      const draft = localStorage.getItem("user_profile_draft_v1");
+      if (draft) {
+        const parsed = JSON.parse(draft);
+        if (parsed?.fullName) {
+          setUserName(parsed.fullName);
+        }
+      }
+    } catch {}
+  }, []);
 
   const handleSidebarToggle = () => {
     if (window.matchMedia("(max-width: 1023px)").matches) {
@@ -67,6 +84,8 @@ export default function UserLayout({ children }: { children: ReactNode }) {
     document.cookie = "auth_role=; path=/; max-age=0; samesite=strict";
     localStorage.removeItem("auth_role");
     localStorage.removeItem("auth_user");
+    localStorage.removeItem("auth_email");
+    localStorage.removeItem("auth_first_name");
     router.push("/login");
   };
 
@@ -169,8 +188,8 @@ export default function UserLayout({ children }: { children: ReactNode }) {
                     <User className="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-text-primary">Aman Sharma</p>
-                    <p className="truncate text-xs text-text-secondary">aman.alumni@jnvportal.in</p>
+                    <p className="truncate text-sm font-bold text-text-primary">{userName}</p>
+                    <p className="truncate text-xs text-text-secondary">{userEmail}</p>
                   </div>
                 </>
               )}

@@ -5,6 +5,7 @@ export type HomeStats = {
   mentorSessions: string;
   citiesConnected: string;
   opportunitiesShared: string;
+  storiesShared: string;
 };
 
 export type HomeFeedEvent = { title: string; time: string; venue: string; };
@@ -185,12 +186,16 @@ export async function getHomeDynamicData(): Promise<HomeDataPayload> {
   const citiesCount = queries[2].status === "fulfilled" ? Number(queries[2].value.rows[0]?.count || "0") : 0;
   const jobsCount = queries[3].status === "fulfilled" ? Number(queries[3].value.rows[0]?.count || "0") : 0;
 
+  const testimonialsCountRes = await postgresPool.query(`SELECT COUNT(*) AS count FROM home_testimonials WHERE is_active = true`);
+  const testimonialsCount = Number(testimonialsCountRes.rows[0]?.count || 0);
+
   // Format stats with baseline numbers to ensure the UI looks good even if DB is brand new
   const stats: HomeStats = {
     activeAlumni: `${alumniCount > 100 ? alumniCount : 4200 + alumniCount}+`,
     mentorSessions: `${sessionsCount > 50 ? sessionsCount : 1300 + sessionsCount}+`,
     citiesConnected: `${citiesCount > 5 ? citiesCount : 28 + citiesCount}`,
     opportunitiesShared: `${jobsCount > 20 ? jobsCount : 950 + jobsCount}+`,
+    storiesShared: `${testimonialsCount > 5 ? testimonialsCount : 1300 + testimonialsCount}+`,
   };
 
   // Safely extract feeds

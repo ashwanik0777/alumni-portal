@@ -119,30 +119,57 @@ export default function UserProfilePage() {
 
   useEffect(() => {
     setMounted(true);
-    let initialEmail = "";
+    const loggedInEmail = localStorage.getItem("auth_email") || "aman.alumni@jnvportal.in";
+    let initialForm = { ...defaultState, email: loggedInEmail };
 
+    // 1. Try loading from draft profile
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as Partial<ProfileFormState>;
-        setForm((prev) => ({ ...prev, ...parsed }));
-        if (parsed.email) initialEmail = parsed.email;
+        initialForm = { ...initialForm, ...parsed };
       }
     } catch { /* ignore */ }
 
-    // Always attempt to fetch latest profile from backend if we have an email
-    if (initialEmail) {
-      fetch(`/api/user/profile?email=${encodeURIComponent(initialEmail)}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.profile) setForm((prev) => ({ ...prev, ...data.profile }));
-          setLoading(false);
-        })
-        .catch(() => setLoading(false));
-    } else {
-      setLoading(false);
+    // 2. If name or email or mobile is empty, check registration data for autofill
+    if (!initialForm.fullName || !initialForm.passingYear || !initialForm.house || !initialForm.mobile || !initialForm.fatherName) {
+      try {
+        const regRaw = localStorage.getItem("admin_member_registrations_v1");
+        if (regRaw) {
+          const regs = JSON.parse(regRaw);
+          // Find matching registration by email
+          const match = regs.find((r: any) => r.email?.trim().toLowerCase() === loggedInEmail.trim().toLowerCase());
+          if (match) {
+            if (!initialForm.fullName && match.fullName) initialForm.fullName = match.fullName;
+            if (!initialForm.passingYear && match.passingYear) initialForm.passingYear = match.passingYear;
+            if (!initialForm.house && match.house) initialForm.house = match.house;
+            if (!initialForm.mobile && match.mobile) initialForm.mobile = match.mobile;
+            if (!initialForm.fatherName && match.fatherName) initialForm.fatherName = match.fatherName;
+          }
+        }
+      } catch { /* ignore */ }
     }
+
+    setForm(initialForm);
+
+    // 3. Always attempt to fetch latest profile from database (source of truth)
+    fetch(`/api/user/profile?email=${encodeURIComponent(loggedInEmail)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.profile) {
+          setForm((prev) => ({ ...prev, ...data.profile }));
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
+
+  // Auto-save form draft to localStorage as user types
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+    }
+  }, [form, mounted]);
 
   const requiredCommonFields: Array<keyof ProfileFormState> = [
     "fullName",
@@ -410,7 +437,7 @@ export default function UserProfilePage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="inline-flex items-center gap-2 text-xs text-text-secondary">
               <BadgeCheck className="h-4 w-4 text-primary" />
-              Complete Your Profile to Unlock More Benefits.
+              Draft is auto-saved locally. Complete all required fields to save to DB.
             </p>
             <div className="flex flex-wrap gap-2">
               <button
@@ -426,7 +453,7 @@ export default function UserProfilePage() {
                 className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
               >
                 <UserCircle2 className="h-4 w-4" />
-                Submit Profile
+                Save Profile
               </button>
             </div>
           </div>

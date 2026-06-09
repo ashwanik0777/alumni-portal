@@ -9,6 +9,7 @@ type HomeStats = {
   mentorSessions: string;
   citiesConnected: string;
   opportunitiesShared: string;
+  storiesShared: string;
 };
 
 type HomeFeedEvent = { title: string; time: string; venue: string; };
@@ -255,8 +256,8 @@ export default function Home() {
                     <p className="text-xs text-text-secondary mt-1">Positive outcomes</p>
                   </div>
                   <div className="rounded-xl border border-border bg-background p-4">
-                    <p className="text-2xl font-black text-primary">{loading ? "..." : (data?.testimonials.length ? "1,300+" : "0")}</p>
-                    <p className="text-xs text-text-secondary mt-1">Stories shared</p>
+                     <p className="text-2xl font-black text-primary">{loading ? "..." : (data?.stats.storiesShared || "0")}</p>
+                     <p className="text-xs text-text-secondary mt-1">Stories shared</p>
                   </div>
                 </div>
               </div>

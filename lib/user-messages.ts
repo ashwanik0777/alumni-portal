@@ -28,7 +28,7 @@ const seedConversations = [
   { participant_id: "p3", name: "Career Support Desk", role: "Admin Team", is_online: true },
 ];
 
-async function ensureMessagesTables() {
+export async function ensureMessagesTables() {
   if (messagesTableReady) return;
   if (messagesTableInitPromise) { await messagesTableInitPromise; return; }
 

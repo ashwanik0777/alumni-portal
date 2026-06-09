@@ -36,7 +36,7 @@ const seedJobs: Array<Omit<JobListing, "id" | "postedAt">> = [
   { title: "UX Design Intern", company: "BlueOrbit", location: "Hyderabad", mode: "Onsite", type: "Internship", salary: "25K/month", description: "Work on user research and interface design", postedBy: "meenal.sharma@example.com", isActive: true },
 ];
 
-async function ensureJobsTables() {
+export async function ensureJobsTables() {
   if (jobsTableReady) return;
   if (jobsTableInitPromise) { await jobsTableInitPromise; return; }
 

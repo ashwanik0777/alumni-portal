@@ -68,10 +68,19 @@ const NETWORK_CACHE_TTL_MS = 10_000;
 function getStoredUserProfile() {
   if (typeof window === "undefined") return { fullName: "", email: "" };
   try {
+    const authEmail = localStorage.getItem("auth_email");
+    const authName = localStorage.getItem("auth_first_name");
+    
     const raw = localStorage.getItem("user_profile_draft_v1");
     if (raw) {
       const p = JSON.parse(raw) as { fullName?: string; email?: string };
-      return { fullName: p.fullName?.trim() || "", email: p.email?.trim().toLowerCase() || "" };
+      return {
+        fullName: p.fullName?.trim() || authName || "Aman Sharma",
+        email: p.email?.trim().toLowerCase() || authEmail || "aman.alumni@jnvportal.in",
+      };
+    }
+    if (authEmail) {
+      return { fullName: authName || "Aman Sharma", email: authEmail };
     }
   } catch { /* skip */ }
   return { fullName: "Aman Sharma", email: "aman.alumni@jnvportal.in" };

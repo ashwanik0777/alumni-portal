@@ -8,7 +8,6 @@ import {
   ArrowUpRight,
   Award,
   BookOpen,
-  Briefcase,
   CalendarDays,
   CheckCircle2,
   Clock3,
@@ -88,8 +87,8 @@ function OverviewSkeleton() {
         <div className="mt-3 h-8 w-80 max-w-full rounded bg-border/60" />
         <div className="mt-2 h-4 w-96 max-w-full rounded bg-border/50" />
       </section>
-      <section className="grid grid-cols-2 gap-4 xl:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
           <div key={`stat-${i}`} className="h-24 rounded-2xl border border-border bg-card" />
         ))}
       </section>
@@ -127,6 +126,10 @@ export default function UserDashboardPage() {
 
   const userEmail = typeof window !== "undefined"
     ? (() => {
+        try {
+          const email = localStorage.getItem("auth_email");
+          if (email) return email;
+        } catch { /* skip */ }
         try {
           const saved = localStorage.getItem("user_event_registration_profile_v1");
           if (saved) {
@@ -194,11 +197,9 @@ export default function UserDashboardPage() {
   if (!data) return null;
 
   const statCards = [
-    { label: "Connections", value: data.stats.totalConnections, hint: data.stats.pendingRequests > 0 ? `${data.stats.pendingRequests} pending` : "All caught up", icon: Users, color: "text-emerald-600" },
     { label: "Registered Events", value: data.stats.registeredEvents, hint: `${data.stats.upcomingEvents} upcoming`, icon: CalendarDays, color: "text-blue-600" },
     { label: "Scholarship Apps", value: data.stats.scholarshipApplications, hint: `${data.applicationStatus.pending} pending`, icon: Award, color: "text-amber-600" },
     { label: "Upcoming Events", value: data.stats.upcomingEvents, hint: "Events you're attending", icon: BookOpen, color: "text-violet-600" },
-    { label: "Pending Requests", value: data.stats.pendingRequests, hint: "Needs your attention", icon: Briefcase, color: "text-rose-600" },
   ];
 
   const totalApps = data.applicationStatus.pending + data.applicationStatus.verified + data.applicationStatus.completed;
@@ -229,7 +230,7 @@ export default function UserDashboardPage() {
       </section>
 
       {/* Stats Cards */}
-      <section className="grid grid-cols-2 gap-4 xl:grid-cols-5">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {statCards.map((item) => (
           <article key={item.label} className="rounded-2xl border border-border bg-card p-5 transition-shadow hover:shadow-md">
             <div className="mb-3 flex items-start justify-between">
