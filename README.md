@@ -1,572 +1,602 @@
-# Alumni Portal
+# Alumni Portal Master Technical Documentation
 
-Alumni Portal is a role-based platform for alumni community operations.
-It combines a public website, admin workspace, and user workspace in one Next.js application.
+Welcome to the definitive engineering and operational documentation for the Alumni Portal. 
+This document serves as the single source of truth for the system's architecture, data modeling, API specifications, and infrastructure pipelines. 
 
-This README is fully detailed and includes:
+## Table of Contents
 
-- Current implementation details
-- Backend information (current and target architecture)
-- ER diagram
-- Multiple flow diagrams
-- Clean tables for routes, modules, data entities, and APIs
+1. [Executive Summary](#1-executive-summary)
+2. [System Architecture](#2-system-architecture)
+3. [Technology Stack](#3-technology-stack)
+4. [Comprehensive Directory Structure](#4-comprehensive-directory-structure)
+5. [Primary System Workflows](#5-primary-system-workflows)
+   - [5.1 Registration & Onboarding](#51-registration--onboarding)
+   - [5.2 Authentication & Authorization](#52-authentication--authorization)
+   - [5.3 Mentorship & Networking](#53-mentorship--networking)
+   - [5.4 Scholarship & Financial Disbursal](#54-scholarship--financial-disbursal)
+   - [5.5 Job Board & Career Services](#55-job-board--career-services)
+   - [5.6 Admin Support Queue](#56-admin-support-queue)
+6. [Comprehensive Database Architecture](#6-comprehensive-database-architecture)
+   - [6.1 Global ER Diagram](#61-global-er-diagram)
+   - [6.2 Detailed Table Schemas](#62-detailed-table-schemas)
+7. [API Reference & Contracts](#7-api-reference--contracts)
+8. [Security & Compliance](#8-security--compliance)
+9. [Deployment & Infrastructure](#9-deployment--infrastructure)
+10. [Environment Variables](#10-environment-variables)
+11. [Testing & Quality Assurance](#11-testing--quality-assurance)
+12. [Contribution Guidelines](#12-contribution-guidelines)
+13. [Glossary & Terminology](#13-glossary--terminology)
 
-## 1. Product Overview
+---
 
-| Area | Description | Current Status |
-|---|---|---|
-| Public Website | Public pages for alumni engagement, events, opportunities, and communication | Implemented |
-| Authentication | Role-based login (admin/user), first-login setup support | Implemented (frontend + cookies) |
-| Admin Workspace | Members, requests, scholarships, analytics, settings workflows | Implemented (frontend workflows) |
-| User Workspace | Profile, network, mentorship, jobs, events, scholarships, messages, settings | Implemented |
-| Backend APIs | Functional APIs for core modules | Partially implemented (only visitor counter route is live) |
+## 1. Executive Summary
 
-## 2. Technology Stack
+The Alumni Portal is a highly scalable, role-based platform designed to orchestrate all community interactions between alumni, students, and administrators. 
+It segregates operational boundaries into three distinct contexts:
+1. **Public Domain:** Marketing, public directories, and SEO-optimized informational landing pages.
+2. **User Workspace:** A gated, authenticated dashboard for networking, finding mentors, accessing job boards, and managing specific alumni profiles.
+3. **Admin Workspace:** A highly secure, analytics-driven control center for verifying identities, disbursing funds, configuring platform settings, and viewing telemetry.
 
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 16.1.1 (App Router) |
-| UI | React 19.2.3 |
-| Language | TypeScript 5 |
-| Styling | Tailwind CSS v4 |
-| Icons | lucide-react |
-| Linting | ESLint 9 + eslint-config-next |
+This project is built to accommodate heavy read-workloads (directories, job boards) and high-consistency write workloads (financial commitments, support requests).
 
-## 3. Project Structure
+---
 
-```text
-app/
-  admin/
-    [id]/page.tsx
-    layout.tsx
-    page.tsx
-    settings/
-      page.tsx
-      AdminSettingsPanel.tsx
-  user/
-    [id]/page.tsx
-    layout.tsx
-    page.tsx
-    settings/
-      page.tsx
-      UserSettingsPanel.tsx
-  api/
-    counter/
-      route.ts
-  components/
-    Footer.tsx
-    Navbar.tsx
-    UnderConstruction.tsx
-    UniqueViewerCounter.tsx
-  login/page.tsx
-  register/page.tsx
-  scholarships/page.tsx
-  schoolership/page.tsx
-  settings/page.tsx
-proxy.ts
-public/
-  counter.json
+## 2. System Architecture
+
+The ecosystem relies on an edge-optimized framework where static assets and general layouts are cached, while operational workflows operate on strictly authenticated dynamic routes.
+
+### 2.1 Macro Architecture Model
+
+```mermaid
+flowchart TD
+    subgraph Client Tier
+        Browser(Web Browser / Mobile Client)
+    end
+
+    subgraph CDN & Edge
+        VercelEdge[Vercel Edge Network]
+        Middleware(Next.js Middleware `proxy.ts`)
+    end
+
+    subgraph Application Tier
+        NextApp(Next.js App Server)
+        AdminContext[Admin Module]
+        UserContext[User Module]
+        PublicContext[Public Module]
+        NextApp --> AdminContext
+        NextApp --> UserContext
+        NextApp --> PublicContext
+    end
+
+    subgraph Data & Service Tier
+        PgNode[(PostgreSQL Primary)]
+        RedisCache[(Redis Session Cache)]
+        BlobStore[S3 Compatible Object Store)
+    end
+
+    Browser -->|HTTPS| VercelEdge
+    VercelEdge --> Middleware
+    Middleware -->|Validate Context| NextApp
+    AdminContext --> PgNode
+    UserContext --> PgNode
+    PublicContext --> RedisCache
 ```
 
-## 4. Architecture
+---
 
-### 4.1 Current System Architecture
+## 3. Technology Stack
+
+### Frontend & Core Application
+- **Framework:** Next.js 16.1.1 (App Router exclusively)
+- **Library:** React 19.2.3
+- **Language:** TypeScript 5.0+ (Strict Type Checking)
+- **Styling:** Tailwind CSS v4
+- **Components:** Radix UI primitives & Lucide React (Icons)
+- **State Management:** React Context + Hooks (targeting Zustand for complex client stores)
+
+### Backend & Infrastructure (Target)
+- **API Strategy:** Next.js Route Handlers (RESTful)
+- **Database:** PostgreSQL (Relational mapping for entities)
+- **ORM:** Prisma or Drizzle ORM (for schema synchronization and migrations)
+- **Caching:** Redis (Rate limiting, Session validation)
+- **Auth Provider:** NextAuth/Auth.js or custom JWT with HttpOnly cookies
+- **File Storage:** AWS S3 or MinIO (Profile pictures, Resumes)
+
+---
+
+
+## 4. Comprehensive Directory Structure
+
+Below is an exhaustive breakdown of the current workspace directory, outlining module concerns.
+
+```text
+/alumni-portal/
+├── eslint.config.mjs               # Central ESLint configuration and rule definitions
+├── next.config.ts                  # Webpack, image domains, and Next.js compiler directives
+├── package.json                    # Project dependencies and script declarations
+├── postcss.config.mjs              # PostCSS plugins (typically tailwind wrappers)
+├── proxy.ts                        # Crucial Next.js Edge Middleware for Role-Based Access Control
+├── project_rules.md                # Internal engineering and style guidelines
+├── tsconfig.json                   # TypeScript compiler configuration (DOM, ESNext, strict flags)
+├── /public/                        # Static assets served at the root domain
+│   └── counter.json                # Temporary mock storage for visitor counter operations
+├── /scripts/                       # Utility and CI/CD operations
+│   └── seed-auth-account.cjs       # Helper script to populate base admin credential mappings
+├── /lib/                           # Shared utility functions and services
+│   ├── admin-analytics.ts          # Logic for computing admin graphs and retention metrics
+│   ├── admin-api-guard.ts          # Server-side authorization wrappers for admin
+│   ├── admin-events.ts             # Event CRUD operation wrappers
+│   ├── admin-members.ts            # Member approval logic and queries
+│   ├── postgres.ts                 # Database connection pooling singleton
+│   ├── password.ts                 # Hashing algorithms (Argon2 / bcrypt implementations)
+│   └── user-profile.ts             # Profile extraction and formatting utilities
+├── /app/                           # Next.js App Router Root
+│   ├── globals.css                 # Global tailwind injection and primary CSS variables
+│   ├── layout.tsx                  # Root HTML/Body injection and context provider wrappings
+│   ├── page.tsx                    # Landing page / Home
+│   ├── /components/                # Application-wide reusable React components
+│   │   ├── Navbar.tsx              # Top-level responsive navigation logic
+│   │   ├── Footer.tsx              # Universal footer content
+│   │   └── UniqueViewerCounter.tsx # Component logic bound to /api/counter
+│   ├── /api/                       # Route handlers (Serverless functions)
+│   │   ├── /admin/                 # Secured namespace for admin-only REST endpoints
+│   │   ├── /auth/                  # Secure authentication endpoints (Login, Logout, Reset)
+│   │   └── /counter/               # Public API fetching site analytics
+│   ├── /admin/                     # Admin Workspace Domain
+│   │   ├── layout.tsx              # Admin layout wrapper (Sidebars, context isolation)
+│   │   ├── page.tsx                # Admin default dashboard overview
+│   │   ├── /analytics/             # Admin reporting view (Charts and tables)
+│   │   ├── /events/                # Admin event administration
+│   │   ├── /members/               # Identity verification queue
+│   │   ├── /scholarships/          # Finance module (Donor allocations, funds)
+│   │   └── /settings/              # Application-wide administrative configurations
+│   ├── /user/                      # User Workspace Domain
+│   │   ├── layout.tsx              # Authenticated user scope layout
+│   │   ├── /profile/               # User profile edit & resume upload
+│   │   ├── /jobs/                  # Browsing and applying to alumni-posted roles
+│   │   ├── /mentorship/            # Finding and requesting alumni mentors
+│   │   └── /messages/              # Peer-to-peer internal communication tool
+│   ├── /login/                     # Global Authentication View
+│   ├── /register/                  # Registration intake funnel
+│   ├── /about/                     # Public static page: Vision & History
+│   ├── /directory/                 # Public-facing alumni search network
+│   ├── /jobs/                      # Public preview of roles (requires auth to apply)
+│   └── /donate/                    # Public fundraising operations domain
+```
+
+---
+
+
+## 5. Primary System Workflows
+
+The complexity of the system is distilled into operational workflows representing core logic gates.
+
+### 5.1 Registration & Onboarding
+
+```mermaid
+sequenceDiagram
+    participant Guest
+    participant ValidationClient as Frontend Validation
+    participant Edge as Edge Middleware
+    participant Database
+    participant Admin
+
+    Guest->>ValidationClient: Fills /register Form (Email, Batch, Proof)
+    ValidationClient->>Edge: POST /api/registrations
+    Edge->>Edge: Validate Payload (Zod Schema)
+    Edge->>Database: INSERT into registrations status='PENDING'
+    Database-->>Guest: 201 Created (Success Message)
+    
+    Note over Admin,Database: Admin Queue Management
+    Admin->>Database: Fetch PENDING registrations
+    Admin->>Database: Update status='APPROVED'
+    Database->>Database: Trigger Action -> CREATE user in users table
+    Database-->>Admin: Success
+    Admin->>Guest: Transactional Email Issued - Account Ready
+```
+
+### 5.2 Authentication & Authorization
+
+Authentication guarantees session persistence and maps role matrices.
+
+```mermaid
+flowchart TD
+    UserReq[User Submits Email/Password] --> VerifyCreds{Check Database}
+    VerifyCreds -- Invalid --> Throw401[Throw 401 Unauthorized]
+    VerifyCreds -- Valid --> CheckFirstLog{Is First Login?}
+    
+    CheckFirstLog -- Yes --> ForceReset[Require Password Change]
+    ForceReset --> HashPass[Hash New Password]
+    HashPass --> GenJWT[Generate Multi-Scope JWT]
+    
+    CheckFirstLog -- No --> GenJWT
+    GenJWT --> WriteCookie[Set Secure, HttpOnly Cookie]
+    WriteCookie --> RetrieveRole[Extract 'role' explicitly]
+    
+    RetrieveRole -->|'admin'| RedirectAdmin[Redirect to /admin/overview]
+    RetrieveRole -->|'user'| RedirectUser[Redirect to /user/profile]
+```
+
+### 5.3 Mentorship & Networking
+
+The mentorship pipeline allows safe coordination between alumni requesting guidance and established alumni offering it.
 
 ```mermaid
 flowchart LR
-  Browser[Browser] --> NextApp[Next.js App Router]
-  NextApp --> PublicUI[Public Pages]
-  NextApp --> AuthUI[Login and Register]
-  AuthUI --> Guard[proxy.ts Middleware Guard]
-  Guard --> AdminUI[Admin Dashboard]
-  Guard --> UserUI[User Dashboard]
-  NextApp --> CounterAPI[/api/counter]
-  CounterAPI --> FileStore[(public/counter.json)]
-  AdminUI --> LocalStore[(localStorage)]
-  UserUI --> LocalStore
+    Mentee[User (Mentee)] -->|Queries| Directory[Alumni Directory]
+    Directory -->|Filters| Mentor[User (Mentor)]
+    Mentee -->|Sends| MentorshipReq[POST /api/mentorship/request]
+    MentorshipReq --> NotificationQueue[SQS/Queue Service]
+    NotificationQueue --> InternalMSG[Internal Message Pipeline]
+    InternalMSG --> Mentor
+    
+    Mentor -->|Accepts| UpdateReq[PATCH /api/mentorship/request]
+    UpdateReq --> EstablishLink[Create Mutual Connection]
 ```
 
-### 4.2 Component Responsibility Table
+### 5.4 Scholarship & Financial Disbursal
 
-| Component | Responsibility | Data Source |
-|---|---|---|
-| Public Pages (`app/*`) | Informational content and community landing pages | Static/UI data |
-| `app/login/page.tsx` | Credential checks, role routing, first-login handling | Cookies + localStorage |
-| `app/register/page.tsx` | New member registration flow | localStorage |
-| `proxy.ts` | Route protection and role-based redirect enforcement | Cookies (`auth_user`, `auth_role`) |
-| `app/admin/[id]/page.tsx` | Dynamic admin module rendering and module workflows | localStorage + component state |
-| `app/admin/settings/AdminSettingsPanel.tsx` | Admin platform controls and governance settings | localStorage (`admin_settings_v1`) |
-| `app/user/[id]/page.tsx` | Dynamic user module pages | Component state |
-| `app/api/counter/route.ts` | Visitor count read/write endpoint | `public/counter.json` |
+Handles end-to-end administration of donor obligations to beneficiary distributions.
 
-## 5. Backend Information
+```mermaid
+flowchart TD
+    subgraph Planning Phase
+    Admin[Admin] -->|Creates| SchProgram[Scholarship Model]
+    Admin -->|Maps| DonorCommit[Donor Commitment Ledger]
+    end
 
-### 5.1 Current Backend (Implemented)
+    subgraph Application Phase
+    User[Student / Alumni] -->|Submits| App[Scholarship Application]
+    App --> ReviewQueue[Admin Review Pipeline]
+    end
 
-| Backend Capability | Implementation | Notes |
-|---|---|---|
-| Route middleware/guard | `proxy.ts` | Role-based protection is active |
-| Counter API | `GET /api/counter` | Only fully implemented backend route |
-| Auth storage | Cookies + localStorage | Demo-safe flow, not production auth |
-| Workflow persistence | localStorage keys | Used for approvals/settings simulation |
+    subgraph Disbursal Phase
+    ReviewQueue -->|Approves| SelectBeneficiary[Select User]
+    SelectBeneficiary --> GenerateBatch[Create Disbursement Batch]
+    GenerateBatch --> ExecTx[Disburse via API / Record TX]
+    ExecTx --> LedgerUpdated[Financial Ledger Sealed]
+    end
+```
 
-### 5.2 Target Backend Architecture (Recommended)
+### 5.5 Job Board & Career Services
 
-| Layer | Suggested Technology | Purpose |
-|---|---|---|
-| API Layer | Next.js Route Handlers or Node service | Secure business APIs for members, requests, scholarships |
-| Auth Layer | JWT/Session + refresh strategy | Production-grade authentication and role claims |
-| Database Layer | PostgreSQL (recommended) | Durable relational data for workflows |
-| Cache Layer | Redis (optional) | Session/cache/rate-limiting support |
-| Queue Layer | BullMQ/SQS (optional) | Async notifications and report jobs |
-| File Storage | S3-compatible storage (optional) | Documents, profile assets, exports |
-| Monitoring | OpenTelemetry + logging stack | API and workflow observability |
+```mermaid
+sequenceDiagram
+    participant CorpAlumni as Corporate Alumni
+    participant Portal
+    participant SeekingAlumni as Job Seeker
 
-### 5.3 Backend Modules and Responsibilities
+    CorpAlumni->>Portal: POST /api/jobs (New Job Requisition)
+    Portal->>Portal: Admin Auto-Approval / Verification
+    SeekingAlumni->>Portal: GET /api/jobs (Filter by Category)
+    SeekingAlumni->>Portal: POST /api/jobs/apply (Includes profile resume)
+    Portal->>CorpAlumni: Notification - New Candidate Applied
+```
 
-| Module | Core Responsibilities | Suggested Tables |
-|---|---|---|
-| Auth | Login, role sessions, first-login reset | users, sessions, password_resets |
-| Member Registry | Registration intake, approval/rejection, profile activation | registrations, users, alumni_profiles |
-| Request Queue | Ticket lifecycle, assignment, escalation | support_requests, request_comments |
-| Scholarship Engine | Program creation, donor mapping, disbursal tracking | scholarships, donors, donor_commitments, disbursements |
-| Analytics | Aggregations and dashboard metrics | analytics_snapshots, event_logs |
-| Settings | Platform-level controls and feature flags | admin_settings, feature_flags |
+### 5.6 Admin Support Queue
 
-## 6. Database Design (ER + Data Dictionary)
+```mermaid
+flowchart TD
+    User-->|Creates| Ticket[Support Ticket / Query]
+    Ticket-->AdminDash[Admin Request Board]
+    AdminDash-->Prioritize[Rank Priority H/M/L]
+    Prioritize-->Assign[Assign Admin Owner]
+    Assign-->Thread[Add Internal Comments]
+    Thread-->Resolution{Is Resolved?}
+    Resolution-- Yes -->Close[Close & Notify User]
+    Resolution-- No -->Escalate[Escalate to SuperAdmin]
+```
 
-### 6.1 ER Diagram (Target Relational Model)
+---
+
+
+## 6. Comprehensive Database Architecture
+
+### 6.1 Global ER Diagram
+
+The system relies heavily on third normal form (3NF) relational structures.
 
 ```mermaid
 erDiagram
-  USERS ||--o{ ALUMNI_PROFILES : has
-  USERS ||--o{ SESSIONS : owns
-  USERS ||--o{ REGISTRATIONS : submits
-  USERS ||--o{ SUPPORT_REQUESTS : raises
-  USERS ||--o{ REQUEST_COMMENTS : writes
-  USERS ||--o{ MENTORSHIP_REQUESTS : creates
-  USERS ||--o{ EVENT_REGISTRATIONS : books
-  USERS ||--o{ DISBURSEMENTS : receives
+  USERS ||--o{ ALUMNI_PROFILES : possess
+  USERS ||--o{ REGISTRATIONS : initiate
+  USERS ||--o{ SESSIONS : maintain
+  USERS ||--o{ SUPPORT_REQUESTS : create
+  USERS ||--o{ REQUEST_COMMENTS : author
+  USERS ||--o{ MENTORSHIP_REQUESTS : seek
+  USERS ||--o{ MENTORSHIP_REQUESTS : mentor
+  USERS ||--o{ EVENT_REGISTRATIONS : attend
+  USERS ||--o{ DISBURSEMENTS : beneficiary_of
+  USERS ||--o{ JOB_POSTINGS : post
+  USERS ||--o{ JOB_APPLICATIONS : submit
 
-  SCHOLARSHIPS ||--o{ DISBURSEMENTS : funds
-  DONORS ||--o{ DONOR_COMMITMENTS : commits
-  SCHOLARSHIPS ||--o{ DONOR_COMMITMENTS : mapped_to
+  SCHOLARSHIPS ||--o{ DISBURSEMENTS : allocate
+  DONORS ||--o{ DONOR_COMMITMENTS : fund
+  SCHOLARSHIPS ||--o{ DONOR_COMMITMENTS : bundled_by
 
-  EVENTS ||--o{ EVENT_REGISTRATIONS : has
+  EVENTS ||--o{ EVENT_REGISTRATIONS : map
+  JOB_POSTINGS ||--o{ JOB_APPLICATIONS : receive
 
   USERS {
     uuid id PK
-    string email
-    string role
-    string status
+    string email UK
+    string password_hash
+    enum role "admin,user"
+    boolean pending_first_login
     datetime created_at
+    datetime updated_at
+    datetime last_login
   }
 
   ALUMNI_PROFILES {
     uuid id PK
     uuid user_id FK
-    string full_name
-    string batch
-    string profession
+    string first_name
+    string last_name
+    string batch_year
+    string major_discipline
+    string current_company
+    string current_role
+    string linkedIn_url
+    text bio
   }
 
   REGISTRATIONS {
     uuid id PK
     string email
-    string status
+    string first_name
+    string last_name
+    string verification_doc_url
+    enum status "PENDING,APPROVED,REJECTED"
     datetime submitted_at
-    datetime reviewed_at
   }
 
   SUPPORT_REQUESTS {
     uuid id PK
     uuid created_by FK
-    string category
-    string priority
-    string status
-    datetime created_at
-  }
-
-  REQUEST_COMMENTS {
-    uuid id PK
-    uuid request_id FK
-    uuid author_id FK
-    string message
+    enum category "TECHNICAL,FINANCIAL,GENERAL"
+    enum priority "LOW,MEDIUM,HIGH,CRITICAL"
+    enum status "OPEN,ASSIGNED,RESOLVED,CLOSED"
+    uuid assigned_admin_id FK
+    text description
     datetime created_at
   }
 
   SCHOLARSHIPS {
     uuid id PK
-    string name
-    decimal amount
-    string cycle
-    string status
-  }
-
-  DONORS {
-    uuid id PK
-    string donor_name
-    string donor_type
+    string program_name
+    decimal total_fund_size
+    string reporting_cycle "2025-2026"
+    enum status "ACTIVE,EXHAUSTED,DRAFT"
   }
 
   DONOR_COMMITMENTS {
     uuid id PK
     uuid donor_id FK
     uuid scholarship_id FK
-    decimal committed_amount
-    string cycle
-  }
-
-  DISBURSEMENTS {
-    uuid id PK
-    uuid scholarship_id FK
-    uuid beneficiary_user_id FK
-    decimal amount
-    string disbursal_status
-    datetime disbursed_at
+    decimal amount_committed
+    date pledge_date
   }
 
   EVENTS {
     uuid id PK
     string title
-    datetime event_date
-    string status
+    text description
+    datetime start_time
+    datetime end_time
+    string location_url
+    integer capacity
   }
 
-  EVENT_REGISTRATIONS {
+  JOB_POSTINGS {
     uuid id PK
-    uuid event_id FK
-    uuid user_id FK
-    string attendance_status
-  }
-
-  MENTORSHIP_REQUESTS {
-    uuid id PK
-    uuid requester_user_id FK
-    uuid mentor_user_id FK
-    string status
-    datetime created_at
-  }
-
-  SESSIONS {
-    uuid id PK
-    uuid user_id FK
-    datetime issued_at
-    datetime expires_at
+    uuid posted_by FK
+    string job_title
+    string company_name
+    string location_type "REMOTE,HYBRID,ONSITE"
+    enum status "ACTIVE,CLOSED"
+    text requirements
   }
 ```
 
-### 6.2 Data Dictionary Table
+### 6.2 Detailed Table Schemas & Constraints
 
-| Table | Primary Key | Important Foreign Keys | Main Purpose |
-|---|---|---|---|
-| users | id | - | Master identity, role, and account status |
-| alumni_profiles | id | user_id -> users.id | Alumni personal and professional profile |
-| registrations | id | optional user_id -> users.id | Registration queue before approval |
-| sessions | id | user_id -> users.id | Session lifecycle and token tracking |
-| support_requests | id | created_by -> users.id | Request queue items |
-| request_comments | id | request_id -> support_requests.id, author_id -> users.id | Internal communication on requests |
-| scholarships | id | - | Scholarship master definitions |
-| donors | id | - | Donor directory |
-| donor_commitments | id | donor_id -> donors.id, scholarship_id -> scholarships.id | Donor to scholarship amount mapping |
-| disbursements | id | scholarship_id -> scholarships.id, beneficiary_user_id -> users.id | Scholarship payment tracking |
-| events | id | - | Event records |
-| event_registrations | id | event_id -> events.id, user_id -> users.id | Event participation mapping |
-| mentorship_requests | id | requester_user_id -> users.id, mentor_user_id -> users.id | Mentorship request pipeline |
+#### Table: `users`
+**Purpose:** Global identity management context. All authorizations execute against definitions modeled here.
+- `id` (UUID, Primary Key, Auto-generated default `gen_random_uuid()`)
+- `email` (VARCHAR(255), Unique, Not Null, Indexed for fast login lookups)
+- `password_hash` (VARCHAR(255), Not Null, Stores Argon2 hashes)
+- `role` (ENUM('admin', 'user'), Default 'user')
+- `pending_first_login` (BOOLEAN, Default True)
+- `created_at` (TIMESTAMP WITH TIME ZONE, Default `NOW()`)
 
-## 7. Routes Catalog
+#### Table: `alumni_profiles`
+**Purpose:** PII (Personally Identifiable Information) container for public and private directory display.
+- `id` (UUID, Primary Key)
+- `user_id` (UUID, Foreign Key -> `users.id` with `ON DELETE CASCADE`)
+- `first_name` (VARCHAR(100), Not Null)
+- `last_name` (VARCHAR(100), Not Null)
+- `batch_year` (INTEGER, Constraint: `> 1900 AND <= CURRENT_YEAR()`)
+- `current_company` (VARCHAR(150), Nullable - Allows B-Tree Index for job filtering)
+- `bio` (TEXT, Nullable, Char limits applied at application edge)
 
-### 7.1 Public Routes
+#### Table: `scholarships`
+**Purpose:** Administration root for grant definitions.
+- `id` (UUID, Primary Key)
+- `program_name` (VARCHAR(150), Not Null)
+- `total_fund_size` (NUMERIC(12, 2), Constraint `> 0`)
+- `status` (ENUM('ACTIVE', 'DRAFT', 'EXHAUSTED'), Default 'DRAFT')
 
-| Route | Access | Purpose | Status |
-|---|---|---|---|
-| `/` | Public | Home landing page | Active |
-| `/about` | Public | About community | Active |
-| `/directory` | Public | Alumni directory listing | Active |
-| `/directory/[id]` | Public | Alumni profile detail page | Active |
-| `/events` | Public | Events overview | Active |
-| `/jobs` | Public | Jobs listing page | Active |
-| `/mentorship` | Public | Mentorship information | Active |
-| `/scholarships` | Public | Scholarship page | Active |
-| `/schoolership` | Public | Legacy/alternate scholarship page | Active |
-| `/donate` | Public | Donation page | Active |
-| `/news` | Public | News page | Active |
-| `/share-story` | Public | Story sharing page | Active |
-| `/team` | Public | Team page | Active |
-| `/contact` | Public | Contact page | Active |
-| `/register` | Public | Member registration form | Active |
-| `/login` | Public | Role-based login | Active |
-| `/privacy` | Public | Privacy policy | Active |
-| `/terms` | Public | Terms and conditions | Active |
-| `/demo` | Public | Demo page | Active |
-| `/settings` | Public | Root settings page | Active |
+---
 
-### 7.2 Admin Routes
 
-| Route | Access | Purpose | Status |
-|---|---|---|---|
-| `/admin` | Admin | Dashboard overview | Active |
-| `/admin/members` | Admin | Members management | Active |
-| `/admin/programs` | Admin | Program operations | Active |
-| `/admin/events` | Admin | Event operations | Active |
-| `/admin/requests` | Admin | Request queue management | Active |
-| `/admin/finance` | Admin | Scholarship operations | Active |
-| `/admin/analytics` | Admin | Visual analytics board | Active |
-| `/admin/settings` | Admin | Admin settings center | Active |
+## 7. API Reference & Contracts
 
-### 7.3 User Routes
+All backend requests will operate over `application/json`. The Next.js Route handlers validate payloads rigorously via `zod`.
 
-| Route | Access | Purpose | Status |
-|---|---|---|---|
-| `/user` | User | User dashboard overview | Active |
-| `/user/profile` | User | Profile area | Active |
-| `/user/network` | User | Network area | Active |
-| `/user/mentorship` | User | Mentorship area | Active |
-| `/user/jobs` | User | Job area | Active |
-| `/user/events` | User | User events area | Active |
-| `/user/scholarships` | User | User scholarships area | Active |
-| `/user/messages` | User | Messaging area | Active |
-| `/user/settings` | User | User settings page | Active |
+### 7.1 Authentication APIs
 
-### 7.4 API Routes
+#### `POST /api/auth/login`
+- **Description:** Consumes plaintext credentials, issues a session cookie.
+- **Request Payload:**
+  ```json
+  {
+    "email": "user@example.com",
+    "password": "SecurePassword123!"
+  }
+  ```
+- **Response Payload (200 OK):**
+  ```json
+  {
+    "status": "success",
+    "user": {
+      "id": "uuid-1234",
+      "role": "admin",
+      "requiresSetup": false
+    }
+  }
+  ```
 
-| Route | Method | Purpose | Status |
-|---|---|---|---|
-| `/api/counter` | GET | Read count (and optional increment) | Active |
+#### `POST /api/auth/setup-password`
+- **Description:** Fulfills the `pending_first_login` gate.
+- **Request Payload:**
+  ```json
+  {
+    "new_password": "NewSecurePassword123!"
+  }
+  ```
 
-## 8. Authentication and Authorization Flows
+### 7.2 General Module APIs
 
-### 8.1 Login and Guard Flow
+#### `GET /api/directory`
+- **Description:** Retrieves paginated alumni data for the public directory.
+- **Query Params:** `?page=1&limit=20&batch=2021&company=Google`
+- **Response Payload (200 OK):**
+  ```json
+  {
+    "data": [
+      {
+         "id": "profile-uuid",
+         "name": "Jane Doe",
+         "batch": 2021,
+         "profession": "Software Engineer"
+      }
+    ],
+    "meta": { "totalItems": 1500, "totalPages": 75 }
+  }
+  ```
 
-```mermaid
-flowchart TD
-  Start[User opens /login] --> EnterCreds[Enter email and password]
-  EnterCreds --> Validate{Credentials valid?}
-  Validate -- No --> LoginError[Show error]
-  Validate -- Yes --> FirstLogin{Pending first login?}
-  FirstLogin -- Yes --> ResetPass[Force password reset]
-  ResetPass --> SetCookies[Set auth_user and auth_role cookies]
-  FirstLogin -- No --> SetCookies
-  SetCookies --> RoleCheck{Role}
-  RoleCheck -- admin --> AdminRedirect[Redirect to /admin]
-  RoleCheck -- user --> UserRedirect[Redirect to /user]
-```
+#### `POST /api/admin/requests/:id/escalate`
+- **Description:** Moves a support request to a higher priority bucket.
+- **Request Payload:**
+  ```json
+  {
+    "reason": "SLA breach threshold nearing",
+    "new_priority": "CRITICAL"
+  }
+  ```
+- **Response Payload (200 OK):**
+  ```json
+  {
+    "status": "escalated",
+    "request_id": "req-uuid",
+    "timeline_event_created": true
+  }
+  ```
 
-### 8.2 Route Protection Flow
+---
 
-```mermaid
-flowchart TD
-  Request[Request protected route] --> ReadCookies[Read auth_user and auth_role]
-  ReadCookies --> HasUser{auth_user exists?}
-  HasUser -- No --> ToLogin[Redirect /login]
-  HasUser -- Yes --> IsAdminRoute{Route starts /admin?}
-  IsAdminRoute -- Yes --> AdminRole{auth_role = admin?}
-  AdminRole -- No --> ToUser[Redirect /user]
-  AdminRole -- Yes --> Allow1[Allow access]
-  IsAdminRoute -- No --> IsUserRoute{Route starts /user?}
-  IsUserRoute -- Yes --> UserRole{auth_role = user?}
-  UserRole -- No --> ToAdmin[Redirect /admin]
-  UserRole -- Yes --> Allow2[Allow access]
-  IsUserRoute -- No --> Allow3[Allow access]
-```
 
-## 9. Operational Flow Diagrams
+## 8. Security & Compliance
 
-### 9.1 Registration to Approval Flow
+The Alumni Portal embeds security by default through rigorous infrastructure protocols.
 
-```mermaid
-sequenceDiagram
-  participant Alumni as Alumni User
-  participant Register as Register Page
-  participant Store as localStorage
-  participant Admin as Admin Members Module
-  participant Login as Login Page
+### 8.1 Data Sanitization & Edge Security
+- **Strict Validations:** Utilizing `zod` schemas on every API entry point to guarantee payload integrity before processing.
+- **Parametrized Queries:** Utilizing ORMs guarantees immunity against basic SQL Injection vectors.
+- **XSS & CSRF Prevention:** Handled natively by React's DOM rendering methodology and CSRF tokens verified during Next.js server actions.
+- **Content Security Policy (CSP):** Delivered via `next.config.ts` headers restricting execute domains and framing interactions.
 
-  Alumni->>Register: Submit registration form
-  Register->>Store: Save to admin_member_registrations_v1
-  Admin->>Store: Read pending registrations
-  Admin->>Store: Approve candidate
-  Admin->>Store: Save pending_first_login_users_v1
-  Alumni->>Login: Login first time
-  Login->>Store: Validate first-login account
-  Login->>Login: Ask new password
-  Login->>Store: Save auth_role/auth_user
-```
+### 8.2 Authentication Protocol
+- **Sessions:** JSON Web Tokens (JWT) mapped to strictly `HttpOnly`, `Secure`, and `SameSite=Lax` browser cookies. No JWTs are stored in `localStorage` in production.
+- **Role Enforcement:** Executed systematically prior to hydration. If an actor attempts unauthorized access (e.g., User attempting to load `/admin`), middleware issues a `307 Temporary Redirect` instantly.
 
-### 9.2 Request Queue Flow
+## 9. Deployment & Infrastructure
+
+The project is natively designed for serverless architectures (e.g., Vercel or AWS Amplify), relying on decoupled database infrastructures.
+
+### 9.1 CI/CD Pipeline Flow
 
 ```mermaid
-flowchart TD
-  NewReq[New request created] --> Queue[Open request queue]
-  Queue --> Prioritize[Set priority]
-  Prioritize --> Assign[Assign team owner]
-  Assign --> Work[Start work]
-  Work --> Decision{Resolved?}
-  Decision -- No --> Escalate[Escalate and add notes]
-  Escalate --> Work
-  Decision -- Yes --> Close[Close request]
+flowchart LR
+    Push[Push to Feature Branch] --> Lint[Run ESLint/Prettier]
+    Lint --> BuildTest[Attempt Next.js Build]
+    BuildTest --> Integration[Execute Integration Specs]
+    Integration --> Merge[Merge to Main]
+    Merge --> VercelEnv[Deploy to Runtime Environment]
+    VercelEnv --> RunMigrations[Apply DB Migrations]
 ```
 
-### 9.3 Scholarship Mapping and Disbursal Flow
+### 9.2 Vercel Deployment Strategy
+1. **Repository Linkage:** Link GitHub repository to Vercel workspace.
+2. **Environment Synchronization:** Apply all parameters noted in Section 10 to standard environments (Preview, Production).
+3. **Build Command:** Vercel automatically detects `Next.js`. Default build commands apply:
+   - Build: `next build`
+   - Install: `npm install`
+4. **Overrides:** Ensure middleware sizes remain within Edge limitations (1MB max).
 
-```mermaid
-flowchart TD
-  CreateScholarship[Create scholarship plan] --> AddDonor[Map donor and commitment]
-  AddDonor --> VerifyPool[Verify fund pool]
-  VerifyPool --> SelectBeneficiaries[Select eligible beneficiaries]
-  SelectBeneficiaries --> ApproveBatch[Approve payment batch]
-  ApproveBatch --> Disburse[Disburse amount]
-  Disburse --> UpdateLedger[Update disbursement ledger]
-  UpdateLedger --> ExportLedger[Export finance report]
-```
+---
 
-### 9.4 Analytics Date-Range Flow
+## 10. Environment Variables
 
-```mermaid
-flowchart TD
-  OpenAnalytics[Open analytics dashboard] --> SelectRange[Choose 7d/30d/90d/custom]
-  SelectRange --> FilterData[Filter data by selected range]
-  FilterData --> RenderCharts[Render graph, pie, funnel, heatmap]
-  RenderCharts --> CompareKPIs[Show KPI comparisons]
-```
+Create a local `.env.local` file avoiding injection of these defaults into version control.
 
-## 10. Admin Settings Coverage
-
-### 10.1 Settings Tabs
-
-| Tab | Main Controls | Persistence |
-|---|---|---|
-| General | Institution profile, locale, timezone, landing defaults | localStorage |
-| Access Control | Role edits, admin seats, approval rules | localStorage |
-| Workflow | Approval steps, rejection reason policy, escalation windows | localStorage |
-| Notifications | Email, digest, critical alerts, high-priority SMS toggles | localStorage |
-| Security | MFA requirement, password rotation, session timeout, IP controls | localStorage |
-| Data and Backup | Backup frequency, retention, archive policies, API rate limits | localStorage |
-| Integrations | Webhooks, Slack, email provider, maintenance mode | localStorage |
-
-### 10.2 Settings Actions
-
-| Action | Function |
-|---|---|
-| Save All | Saves full admin settings object |
-| Reset Default | Restores default settings state |
-| Export JSON | Downloads full settings snapshot |
-| Health Score | Shows operational readiness score |
-
-## 11. State and Storage Mapping
-
-### 11.1 Cookie Keys
-
-| Key | Purpose |
-|---|---|
-| `auth_user` | Stores logged-in user identifier |
-| `auth_role` | Stores role (`admin` or `user`) |
-
-### 11.2 Local Storage Keys
-
-| Key | Purpose | Producer |
-|---|---|---|
-| `auth_user` | Client auth helper value | Login flow |
-| `auth_role` | Client role helper value | Login flow |
-| `auth_first_name` | UI personalization | Login flow |
-| `theme` | Theme preference | Navbar/theme toggle |
-| `has_visited_site` | Prevent repeated counter increments | UniqueViewerCounter |
-| `admin_member_registrations_v1` | Pending registration queue | Register page |
-| `admin_email_outbox_v1` | Simulated admin email queue | Admin members workflow |
-| `pending_first_login_users_v1` | Accounts waiting first-login password setup | Admin members workflow |
-| `admin_settings_v1` | Admin settings payload | AdminSettingsPanel |
-
-## 12. API Documentation
-
-### 12.1 Current Implemented API
-
-| Endpoint | Method | Query Params | Response | Behavior |
-|---|---|---|---|---|
-| `/api/counter` | GET | `increment=true` (optional) | `{ count: number }` | Reads current count and increments when query is provided |
-
-### 12.2 Planned API Surface (Backend Blueprint)
-
-| Module | Endpoint | Method | Purpose |
+| Variable Name | Required | Purpose | Example |
 |---|---|---|---|
-| Auth | `/api/auth/login` | POST | Authenticate user and issue secure session/token |
-| Auth | `/api/auth/logout` | POST | Clear session/token |
-| Registrations | `/api/registrations` | POST | Create new registration |
-| Registrations | `/api/admin/registrations` | GET | List pending registrations |
-| Registrations | `/api/admin/registrations/{id}/approve` | PATCH | Approve registration |
-| Requests | `/api/requests` | POST | Create support request |
-| Requests | `/api/admin/requests` | GET | List and filter requests |
-| Requests | `/api/admin/requests/{id}` | PATCH | Update status, owner, escalation |
-| Scholarships | `/api/admin/scholarships` | POST | Create scholarship program |
-| Scholarships | `/api/admin/scholarships/{id}/commitments` | POST | Map donor commitments |
-| Scholarships | `/api/admin/disbursements` | POST | Create disbursal batch |
-| Analytics | `/api/admin/analytics` | GET | Range-based dashboard metrics |
-| Settings | `/api/admin/settings` | GET/PUT | Read and update admin settings |
+| `DATABASE_URL` | YES | Primary PostgreSQL Connection String | `postgresql://user:pass@host/db?schema=public` |
+| `NEXTAUTH_SECRET` | YES | Cryptographic entropy for JWT hashing | `a_highly_secure_crypto_hash_string` |
+| `NEXT_PUBLIC_APP_URL` | YES | Resolution anchor for generic links | `https://alumni.yourdomain.edu` |
+| `REDIS_URL` | OPTIONAL | Connection to Upstash or Redis cache | `redis://default:pass@redis-host:6379` |
+| `SMTP_HOST` | OPTIONAL | Nodemailer output gateway | `smtp.sendgrid.net` |
+| `AWS_S3_BUCKET` | OPTIONAL | Object storage target context | `alumni-portal-media-assets` |
 
-## 13. Development Setup
+---
 
-### 13.1 Prerequisites
+## 11. Testing & Quality Assurance
 
-| Tool | Version |
-|---|---|
-| Node.js | 20+ |
-| npm | Latest stable |
+Adhering to high engineering standards necessitates rigorous testing disciplines.
 
-### 13.2 Commands
+### Methodology
+- **Unit Testing:** Executed via `Vitest` or `Jest`. Validating utility constraints in `/lib` (e.g., testing `admin-analytics.ts` array reducer logic against mock records).
+- **Integration Testing:** Validation of Server Actions interacting with Database context. Ensures cascading fails correctly throw application errors.
+- **E2E Testing:** Executed via `Playwright`. Automated flows validating successful user logins navigating toward the creation of Mentorship requests.
 
-| Task | Command |
-|---|---|
-| Install dependencies | `npm install` |
-| Run development server | `npm run dev` |
-| Build production bundle | `npm run build` |
-| Start production server | `npm run start` |
-| Run lint checks | `npm run lint` |
+**Test Commands:**
+```bash
+npm run test           # Executes Unit tests
+npm run test:e2e       # Bootstraps Playwright contexts
+npm run type-check     # Explicitly triggers isolated TS evaluation
+```
 
-Default local URL: `http://localhost:3000`
+---
 
-## 14. Deployment Guide
+## 12. Contribution Guidelines
 
-| Step | Action |
-|---|---|
-| 1 | Import repository to Vercel or Node-compatible host |
-| 2 | Install dependencies (`npm install`) |
-| 3 | Build (`npm run build`) |
-| 4 | Start server (`npm run start`) where applicable |
-| 5 | Configure environment variables and domain |
+Code structure is explicitly modeled after internal dictations specified in `project_rules.md`.
 
-## 15. Limitations and Next Milestones
+1. **Commit Convention:** Utilize semantic commit terminology (`feat:`, `fix:`, `chore:`, `refactor:`).
+2. **Styling Philosophy:** Do not inject raw hexagonal values; employ exclusively Tailwind context metrics (`bg-primary-900`, `text-secondary-100`).
+3. **Icons & Assets:** Limit graphical injections to the existing array of `lucide-react` constructs to sustain aesthetic homogeneity.
+4. **State Delegation:** Avoid instantiating Global state (Redux) where Server state (SWR/React Query via Server Components) suffices. 
 
-### 15.1 Current Limitations
+---
 
-| Area | Limitation |
-|---|---|
-| Auth | Not production-grade authentication backend yet |
-| Persistence | Workflow data is simulated through localStorage |
-| API Coverage | Only `/api/counter` is currently live |
-| Security | No centralized secrets/session management service |
+## 13. Glossary & Terminology
 
-### 15.2 Recommended Next Milestones
+- **Edge Middleware:** Security checks executed topologically closest to the user's geographic location.
+- **Disbursement:** The financial act of transferring cleared scholarship liquidity to evaluated candidates.
+- **App Router:** The routing philosophy executed via `/app` defining React Server Components inherently by default.
+- **First-Login Setup:** Pertains to accounts automatically created by admin systems requiring manual cryptographic password bindings by users during original access protocol.
 
-| Priority | Milestone |
-|---|---|
-| P1 | Implement real auth/session backend and secure cookie strategy |
-| P1 | Move all workflow data from localStorage to PostgreSQL |
-| P1 | Build admin APIs for requests, scholarships, settings |
-| P2 | Add email/SMS integration for approvals and alerts |
-| P2 | Add audit logging and observability dashboards |
-| P3 | Add automated integration tests and CI quality gates |
-
-## 16. Engineering Rules
-
-Project standards are defined in `project_rules.md`.
-
-Core rules followed in this repository:
-
-- Use theme tokens instead of random hardcoded color values.
-- Keep dependencies minimal and justified.
-- Use `lucide-react` icons for consistency.
-- Build mobile-first responsive layouts.
-- Keep UI performance and clarity as first priority.
-
-## 17. Maintainers
-
-Alumni Tech Team.
+---
+**Maintained by the Alumni Tech Team | System Version 1.5.0**
