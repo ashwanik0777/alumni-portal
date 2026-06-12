@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api-guard";
 import { requestMemberCreateOtp } from "@/lib/admin-members";
+import { sendMail, otpEmailTemplate } from "@/lib/mailer";
 
 export async function POST(request: NextRequest) {
   const denial = requireAdminApiAccess(request);
@@ -15,11 +16,17 @@ export async function POST(request: NextRequest) {
     }
 
     const otp = await requestMemberCreateOtp(email);
+
+    sendMail({
+      to: email,
+      subject: "Your Verification Code",
+      html: otpEmailTemplate(otp.otpCode, "registration"),
+    }).catch((err) => console.error("Member create OTP email error", err));
+
     return NextResponse.json({
       message: "OTP generated for member creation.",
       verificationId: otp.verificationId,
       expiresAt: otp.expiresAt,
-      devOtp: otp.otpCode,
     });
   } catch (error) {
     console.error("Member create OTP request error", error);

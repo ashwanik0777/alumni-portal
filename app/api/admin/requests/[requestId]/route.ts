@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api-guard";
 import { updateAdminRequestStatus, type RequestStatus } from "@/lib/admin-requests";
+import { sendMail, requestStatusUpdateTemplate } from "@/lib/mailer";
 
 export async function PATCH(
   request: NextRequest,
@@ -26,6 +27,19 @@ export async function PATCH(
 
     if (!updated) {
       return NextResponse.json({ message: "Request not found." }, { status: 404 });
+    }
+
+    if (updated.requesterEmail) {
+      sendMail({
+        to: updated.requesterEmail,
+        subject: `Request Update — ${updated.status}`,
+        html: requestStatusUpdateTemplate({
+          name: updated.requesterName,
+          subject: updated.subject,
+          status: updated.status,
+          adminNote: updated.adminNote,
+        }),
+      }).catch((err) => console.error("Request status email error", err));
     }
 
     return NextResponse.json({ message: "Request updated.", request: updated });
