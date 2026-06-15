@@ -32,16 +32,37 @@ export default function ContactPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormLoading(true);
     setMessage("");
-    // For now just show success (contact form storage can be added later)
-    setTimeout(() => {
-      setMessage("Your request has been submitted. We'll get back to you soon.");
-      setForm({ name: "", email: "", batch: "", type: "Event Planning", msg: "" });
+
+    try {
+      const response = await fetch("/api/public/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          batch: form.batch,
+          type: form.type,
+          message: form.msg,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage(data.message || "Your request has been submitted. We'll get back to you soon.");
+        setForm({ name: "", email: "", batch: "", type: "Event Planning", msg: "" });
+      } else {
+        setMessage(data.message || "Unable to submit your request. Please try again.");
+      }
+    } catch {
+      setMessage("Service unavailable. Please try again later.");
+    } finally {
       setFormLoading(false);
-    }, 800);
+    }
   };
 
   return (
