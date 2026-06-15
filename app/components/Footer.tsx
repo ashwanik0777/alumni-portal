@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GraduationCap, Mail, Phone, MapPin, Linkedin, Twitter, Facebook, Instagram } from "lucide-react";
+import { GraduationCap, Mail, Phone, MapPin, Linkedin, Twitter, Facebook, Instagram, Heart } from "lucide-react";
 import UniqueViewerCounter from "./UniqueViewerCounter";
 
 export default function Footer() {
@@ -130,10 +130,23 @@ export default function Footer() {
             </p>
           
           </div>
-          <div>
+          {/* <div>
               <p className="text-xs text-text-secondary opacity-80">
               Designed & Developed by <Link href="/team" className="text-secondary hover:text-primary transition-colors font-medium">Alumni Tech Team</Link>
             </p>
+          </div> */}
+          <div className="mx-auto flex w-fit items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 lg:justify-self-center">
+            <span>Built with</span>
+            <Heart className="h-3.5 w-3.5 text-rose-500" />
+            <span>by</span>
+            <Link 
+              href="/team"
+              target="_blank"
+              rel="noreferrer"
+              className="font-bold text-slate-900 underline-offset-2 transition hover:text-sky-700 hover:underline dark:text-slate-100 dark:hover:text-sky-300"
+            >
+              Ashwani Innovations
+            </Link>
           </div>
           <div className="flex gap-6 text-sm">
              <Link href="/privacy" className="text-text-secondary hover:text-primary transition-colors">
