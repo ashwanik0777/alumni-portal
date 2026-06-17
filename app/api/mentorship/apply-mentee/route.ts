@@ -4,29 +4,29 @@ import { requireUserApiAccess } from "@/lib/user-api-guard";
 import { ensureMentorshipTables } from "@/lib/mentorship";
 
 export async function POST(request: NextRequest) {
-  const denial = requireUserApiAccess(request);
+  const denial = await requireUserApiAccess(request);
   if (denial) return denial;
 
   try {
     await ensureMentorshipTables();
 
-    const email = request.cookies.get("auth_user")?.value;
+    const email = request.cookies.get("auth_email")?.value;
     if (!email) {
       return NextResponse.json({ message: "User not identified" }, { status: 401 });
     }
 
     const body = await request.json();
-    const { name, currentStage, track, goal, urgency } = body;
+    const { name, currentStage, track, goal, urgency, phone } = body;
 
     if (!name || !currentStage || !track || !goal || !urgency) {
       return NextResponse.json({ message: "All fields are required" }, { status: 400 });
     }
 
     // Sanitize inputs to prevent injection
-    const safeValues = [email, String(name), String(currentStage), String(track), String(goal), String(urgency)];
+    const safeValues = [email, String(name), String(phone || ""), String(currentStage), String(track), String(goal), String(urgency)];
 
     const result = await postgresPool.query(
-      `INSERT INTO mentorship_applications (mentee_email, mentee_name, current_stage, track, goal, urgency) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      `INSERT INTO mentorship_applications (mentee_email, mentee_name, mentee_phone, current_stage, track, goal, urgency) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       safeValues
     );
 
