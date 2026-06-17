@@ -10,9 +10,9 @@ export async function GET(request: NextRequest) {
 
     let profiles = await getActiveDirectoryProfiles();
 
-    if (batch !== "All") profiles = profiles.filter((p: Record<string, string>) => p.batch === batch);
-    if (location !== "All") profiles = profiles.filter((p: Record<string, string>) => p.location === location);
-    if (domain !== "All") profiles = profiles.filter((p: Record<string, string>) => p.expertise.includes(domain));
+    if (batch !== "All") profiles = profiles.filter((p: any) => p.batch === batch);
+    if (location !== "All") profiles = profiles.filter((p: any) => p.location === location);
+    if (domain !== "All") profiles = profiles.filter((p: any) => String(p.expertise).includes(domain));
 
     const filters = await getDirectoryFiltersFromSite();
 
