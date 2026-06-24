@@ -3,7 +3,7 @@ import { submitApplication } from "@/lib/admin-scholarships";
 import { requireUserApiAccess } from "@/lib/user-api-guard";
 
 export async function POST(request: NextRequest) {
-  const guardResult = requireUserApiAccess(request);
+  const guardResult = await requireUserApiAccess(request);
   if (guardResult) return guardResult;
 
   try {
