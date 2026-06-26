@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUserApiAccess } from "@/lib/user-api-guard";
 import { getUserConnectionsDashboard, sendConnectionRequest } from "@/lib/user-connections";
+import { isBlocked } from "@/lib/user-security";
 
 export async function GET(request: NextRequest) {
-  const denial = requireUserApiAccess(request);
+  const denial = await requireUserApiAccess(request);
   if (denial) return denial;
 
   try {
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const denial = requireUserApiAccess(request);
+  const denial = await requireUserApiAccess(request);
   if (denial) return denial;
 
   try {
@@ -43,6 +44,14 @@ export async function POST(request: NextRequest) {
 
     if (!senderEmail || !receiverEmail) {
       return NextResponse.json({ message: "Sender and receiver emails are required." }, { status: 400 });
+    }
+
+    const blocked = await isBlocked(senderEmail, receiverEmail);
+    if (blocked) {
+      return NextResponse.json(
+        { message: "Unable to send request. A block relationship exists between these users." },
+        { status: 403 }
+      );
     }
 
     const result = await sendConnectionRequest({
