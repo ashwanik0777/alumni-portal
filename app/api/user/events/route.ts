@@ -3,7 +3,7 @@ import { listUserEventsWithRegistration } from "@/lib/admin-events";
 import { requireUserApiAccess } from "@/lib/user-api-guard";
 
 export async function GET(request: NextRequest) {
-  const denial = requireUserApiAccess(request);
+  const denial = await requireUserApiAccess(request);
   if (denial) return denial;
 
   try {
