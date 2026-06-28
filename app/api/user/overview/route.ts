@@ -3,7 +3,7 @@ import { requireUserApiAccess } from "@/lib/user-api-guard";
 import { getUserOverview } from "@/lib/user-overview";
 
 export async function GET(request: NextRequest) {
-  const denial = requireUserApiAccess(request);
+  const denial = await requireUserApiAccess(request);
   if (denial) return denial;
 
   try {
