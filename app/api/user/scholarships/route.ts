@@ -3,7 +3,7 @@ import { requireUserApiAccess } from "@/lib/user-api-guard";
 import { listActiveScholarships, submitApplication, listUserApplications } from "@/lib/admin-scholarships";
 
 export async function GET(request: NextRequest) {
-  const denial = requireUserApiAccess(request);
+  const denial = await requireUserApiAccess(request);
   if (denial) return denial;
 
   try {
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const denial = requireUserApiAccess(request);
+  const denial = await requireUserApiAccess(request);
   if (denial) return denial;
 
   try {
