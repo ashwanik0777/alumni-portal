@@ -24,12 +24,12 @@ import {
 } from "lucide-react";
 
 const defaultLoginStats = [
-  { value: "4,200+", label: "Active members", icon: Users },
-  { value: "1,300+", label: "Mentor sessions", icon: BookOpen },
-  { value: "89%", label: "Positive outcomes", icon: TrendingUp },
+  { value: "0", label: "Active members", icon: Users },
+  { value: "0", label: "Mentor sessions", icon: BookOpen },
+  { value: "0%", label: "Positive outcomes", icon: TrendingUp },
 ];
 
-type FormMode = "login" | "forgot-request" | "forgot-reset" | "forgot-success" | "set-password";
+type FormMode = "login" | "forgot-request" | "forgot-reset" | "forgot-success" | "set-password" | "verify-2fa";
 
 const FIRST_LOGIN_USERS_KEY = "pending_first_login_users_v1";
 
@@ -45,10 +45,13 @@ type PendingFirstLoginUser = {
 
 type LoginApiResponse = {
   message: string;
+  authToken?: string;
+  twoFactorRequired?: boolean;
   user?: {
     email: string;
     firstName: string;
     roles: Array<"admin" | "user">;
+    mustSetPassword?: boolean;
   };
 };
 
@@ -75,6 +78,9 @@ function LoginPageContent() {
   const [success, setSuccess] = useState(false);
   const [loginMessage, setLoginMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [forgotVerificationId, setForgotVerificationId] = useState("");
+  const [isSendingResetCode, setIsSendingResetCode] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [multiAccess, setMultiAccess] = useState(false);
   const [pendingFirstName, setPendingFirstName] = useState("");
   const [firstLoginEmail, setFirstLoginEmail] = useState("");
@@ -88,9 +94,9 @@ function LoginPageContent() {
       .then((data) => {
         if (data?.stats) {
           setStats([
-            { value: data.stats.activeAlumni || "4,200+", label: "Active members", icon: Users },
-            { value: data.stats.mentorSessions || "1,300+", label: "Mentor sessions", icon: BookOpen },
-            { value: "89%", label: "Positive outcomes", icon: TrendingUp },
+            { value: data.stats.activeAlumni || "0", label: "Active members", icon: Users },
+            { value: data.stats.mentorSessions || "0", label: "Mentor sessions", icon: BookOpen },
+            { value: data.stats.positiveOutcomes || "0%", label: "Positive outcomes", icon: TrendingUp },
           ]);
         }
       })
@@ -137,7 +143,11 @@ function LoginPageContent() {
     localStorage.setItem(FIRST_LOGIN_USERS_KEY, JSON.stringify(users));
   };
 
-  const continueLogin = (targetRole: "user" | "admin", firstName = "Alumni", email = "") => {
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verify2faMessage, setVerify2faMessage] = useState("");
+  const [isVerifying2fa, setIsVerifying2fa] = useState(false);
+
+  const continueLogin = (targetRole: "user" | "admin", firstName = "Alumni", email = "", authToken?: string) => {
     const cookieAge = 60 * 60 * 8;
     document.cookie = `auth_user=active; path=/; max-age=${cookieAge}; samesite=strict`;
     document.cookie = `auth_role=${targetRole}; path=/; max-age=${cookieAge}; samesite=strict`;
@@ -145,7 +155,11 @@ function LoginPageContent() {
     localStorage.setItem("auth_role", targetRole);
     localStorage.setItem("auth_first_name", firstName);
     if (email) {
+      document.cookie = `auth_email=${encodeURIComponent(email.trim().toLowerCase())}; path=/; max-age=${cookieAge}; samesite=strict`;
       localStorage.setItem("auth_email", email.trim().toLowerCase());
+    }
+    if (authToken) {
+      document.cookie = `auth_token=${encodeURIComponent(authToken)}; path=/; max-age=${cookieAge}; samesite=strict`;
     }
     setSuccess(true);
     setLoginMessage(`Signed in successfully. Redirecting to ${targetRole === "admin" ? "Admin" : "User"} dashboard.`);
@@ -167,6 +181,7 @@ function LoginPageContent() {
 
     setSuccess(false);
     setIsSubmitting(true);
+    setLoginMessage("");
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -179,7 +194,21 @@ function LoginPageContent() {
 
       const payload = (await response.json()) as LoginApiResponse;
 
-      if (!response.ok || !payload.user) {
+      if (!response.ok) {
+        setMultiAccess(false);
+        setLoginMessage(payload.message || "Invalid credentials.");
+        return;
+      }
+
+      if (payload.twoFactorRequired) {
+        setLoginEmail(email);
+        setVerificationCode("");
+        setVerify2faMessage("");
+        switchMode("verify-2fa");
+        return;
+      }
+
+      if (!payload.user) {
         setMultiAccess(false);
         setLoginMessage(payload.message || "Invalid credentials.");
         return;
@@ -188,6 +217,13 @@ function LoginPageContent() {
       const userFirstName = payload.user.firstName || firstName;
       setPendingFirstName(userFirstName);
 
+      if (payload.user.mustSetPassword) {
+        setFirstLoginEmail(payload.user.email);
+        setFirstLoginFirstName(userFirstName);
+        switchMode("set-password");
+        return;
+      }
+
       if (payload.user.roles.length > 1) {
         setMultiAccess(true);
         setLoginMessage("Credentials are valid for both roles. Please choose which dashboard to open.");
@@ -195,7 +231,7 @@ function LoginPageContent() {
       }
 
       setMultiAccess(false);
-      continueLogin(payload.user.roles[0], userFirstName, payload.user.email);
+      continueLogin(payload.user.roles[0], userFirstName, payload.user.email, payload.authToken);
     } catch {
       setMultiAccess(false);
       setLoginMessage("Login service is currently unavailable. Please try again.");
@@ -204,20 +240,127 @@ function LoginPageContent() {
     }
   };
 
-  const onForgotRequest = (event: React.FormEvent<HTMLFormElement>) => {
+  const onVerify2FASubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!verificationCode) return;
+
+    setIsVerifying2fa(true);
+    setVerify2faMessage("");
+
+    try {
+      const response = await fetch("/api/auth/verify-2fa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: loginEmail, code: verificationCode }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok || !payload.authToken) {
+        setVerify2faMessage(payload.message || "Invalid or expired verification code.");
+        return;
+      }
+
+      const userFirstName = payload.user?.firstName || pendingFirstName || "Alumni";
+      setPendingFirstName(userFirstName);
+
+      if (payload.user?.roles && payload.user.roles.length > 1) {
+        setMultiAccess(true);
+        switchMode("login");
+        setLoginMessage("Credentials verified. Please choose which dashboard to open.");
+        return;
+      }
+
+      continueLogin(payload.user?.roles[0] || "user", userFirstName, payload.user?.email, payload.authToken);
+    } catch {
+      setVerify2faMessage("Verification service unavailable. Please try again.");
+    } finally {
+      setIsVerifying2fa(false);
+    }
+  };
+
+  const onForgotRequest = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const email = String(form.get("forgotEmail") || "");
-    setForgotEmail(email);
-    switchMode("forgot-reset");
+    const email = String(form.get("forgotEmail") || "").trim().toLowerCase();
+
+    if (!email) {
+      setLoginMessage("Please enter your email address.");
+      return;
+    }
+
+    setIsSendingResetCode(true);
+    setLoginMessage("");
+
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.verificationId) {
+        setForgotEmail(email);
+        setForgotVerificationId(data.verificationId);
+        switchMode("forgot-reset");
+      } else {
+        setLoginMessage(data.message || "Unable to send reset code. Please try again.");
+      }
+    } catch {
+      setLoginMessage("Service unavailable. Please try again later.");
+    } finally {
+      setIsSendingResetCode(false);
+    }
   };
 
-  const onForgotReset = (event: React.FormEvent<HTMLFormElement>) => {
+  const onForgotReset = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    switchMode("forgot-success");
+    const form = new FormData(event.currentTarget);
+    const otpCode = String(form.get("resetCode") || "").trim();
+    const newPassword = String(form.get("newPassword") || "").trim();
+
+    if (!otpCode) {
+      setLoginMessage("Please enter the reset code.");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setLoginMessage("Password must be at least 8 characters.");
+      return;
+    }
+
+    setIsResettingPassword(true);
+    setLoginMessage("");
+
+    try {
+      const response = await fetch("/api/auth/forgot-password/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: forgotEmail,
+          verificationId: forgotVerificationId,
+          otpCode,
+          newPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        switchMode("forgot-success");
+      } else {
+        setLoginMessage(data.message || "Invalid or expired reset code. Please try again.");
+      }
+    } catch {
+      setLoginMessage("Service unavailable. Please try again later.");
+    } finally {
+      setIsResettingPassword(false);
+    }
   };
 
-  const onSetPasswordSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const onSetPasswordSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const newPassword = String(form.get("newPassword") || "");
@@ -233,20 +376,36 @@ function LoginPageContent() {
       return;
     }
 
-    const pendingUsers = getPendingUsers();
-    const updated = pendingUsers.map((item) =>
-      item.email === firstLoginEmail
-        ? {
-            ...item,
-            currentPassword: newPassword,
-            mustSetPassword: false,
-          }
-        : item,
-    );
-    savePendingUsers(updated);
+    setIsSubmitting(true);
+    setLoginMessage("");
 
-    setLoginMessage("Password set successfully. Redirecting to user dashboard.");
-    continueLogin("user", firstLoginFirstName || "Alumni", firstLoginEmail);
+    try {
+      const response = await fetch("/api/auth/set-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: firstLoginEmail,
+          newPassword,
+          confirmPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setLoginMessage(data.message || "Failed to set password.");
+        return;
+      }
+
+      setLoginMessage("Password set successfully. Redirecting to user dashboard.");
+      continueLogin("user", firstLoginFirstName || "Alumni", firstLoginEmail);
+    } catch {
+      setLoginMessage("Service unavailable. Please try again later.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -519,6 +678,57 @@ function LoginPageContent() {
                   </>
                 )}
 
+                {formMode === "verify-2fa" && (
+                  <>
+                    <p className="text-[11px] uppercase tracking-[0.18em] font-bold text-primary">Two-Factor Security</p>
+                    <h2 className="mt-1 text-3xl sm:text-4xl font-black">Verify OTP</h2>
+                    <p className="mt-2 text-sm text-text-secondary">
+                      A 6-digit verification code has been sent to your email <span className="font-semibold text-text-primary">{loginEmail}</span>. Enter the code below to complete your sign in.
+                    </p>
+
+                    <form onSubmit={onVerify2FASubmit} className="mt-7 space-y-4">
+                      <label className="block">
+                        <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-text-secondary">6-Digit Code</span>
+                        <div className="relative">
+                          <input
+                            name="code"
+                            type="text"
+                            maxLength={6}
+                            placeholder="000000"
+                            value={verificationCode}
+                            onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
+                            className="w-full text-center text-2xl font-bold tracking-[0.3em] rounded-xl border border-border bg-background py-3 text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            required
+                          />
+                        </div>
+                      </label>
+
+                      {!!verify2faMessage && (
+                        <div className="flex items-center gap-2 rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-3 text-sm text-text-primary">
+                          {verify2faMessage}
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={success || isVerifying2fa}
+                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
+                      >
+                        {isVerifying2fa ? "Verifying..." : "Confirm Login"}
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => switchMode("login")}
+                        className="w-full mt-4 text-xs font-semibold text-text-secondary hover:text-primary transition-colors text-center"
+                      >
+                        Back to Login
+                      </button>
+                    </form>
+                  </>
+                )}
+
                 {formMode === "forgot-request" && (
                   <>
                     <button type="button" onClick={() => switchMode("login")} className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-primary">
@@ -544,8 +754,14 @@ function LoginPageContent() {
                         </div>
                       </label>
 
-                      <button type="submit" className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors">
-                        Send Reset Code
+                      {!!loginMessage && (
+                        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                          {loginMessage}
+                        </div>
+                      )}
+
+                      <button type="submit" disabled={isSendingResetCode} className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors disabled:opacity-50">
+                        {isSendingResetCode ? "Sending..." : "Send Reset Code"}
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     </form>
@@ -568,6 +784,7 @@ function LoginPageContent() {
                       <label className="block">
                         <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-text-secondary">Reset Code</span>
                         <input
+                          name="resetCode"
                           type="text"
                           placeholder="Enter 6-digit code"
                           className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -578,6 +795,7 @@ function LoginPageContent() {
                       <label className="block">
                         <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-text-secondary">New Password</span>
                         <input
+                          name="newPassword"
                           type="password"
                           placeholder="Minimum 8 characters"
                           className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -585,8 +803,14 @@ function LoginPageContent() {
                         />
                       </label>
 
-                      <button type="submit" className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors">
-                        Reset Password
+                      {!!loginMessage && (
+                        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                          {loginMessage}
+                        </div>
+                      )}
+
+                      <button type="submit" disabled={isResettingPassword} className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors disabled:opacity-50">
+                        {isResettingPassword ? "Resetting..." : "Reset Password"}
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     </form>
@@ -651,9 +875,10 @@ function LoginPageContent() {
 
                       <button
                         type="submit"
-                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
+                        disabled={isSubmitting}
+                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors disabled:opacity-50"
                       >
-                        Save Password And Continue
+                        {isSubmitting ? "Saving Password..." : "Save Password And Continue"}
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     </form>
