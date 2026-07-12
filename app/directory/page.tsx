@@ -1,8 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { Briefcase, Filter, GraduationCap, MapPin, Search, Star, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, useRef } from "react";
+import {
+  Briefcase,
+  Check,
+  Clock,
+  Filter,
+  GraduationCap,
+  Loader2,
+  MapPin,
+  Search,
+  Star,
+  UserPlus,
+  Users,
+} from "lucide-react";
 
 type AlumniProfile = {
   id: string;
@@ -20,7 +33,11 @@ type DirectoryFilters = {
   domains: string[];
 };
 
+// Connection status for each profile: "none" | "sent" | "received" | "connected"
+type ConnectionStatusMap = Record<string, string>;
+
 export default function DirectoryPage() {
+  const router = useRouter();
   const [profiles, setProfiles] = useState<AlumniProfile[]>([]);
   const [filterData, setFilterData] = useState<DirectoryFilters>({ batches: ["All Batches"], domains: ["All"] });
   const [loading, setLoading] = useState(true);
@@ -29,6 +46,38 @@ export default function DirectoryPage() {
   const [batch, setBatch] = useState("All Batches");
   const [domain, setDomain] = useState("All");
 
+  // Auth state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentEmail, setCurrentEmail] = useState("");
+  const [currentName, setCurrentName] = useState("");
+
+  // Connection statuses
+  const [connectionStatuses, setConnectionStatuses] = useState<ConnectionStatusMap>({});
+  const [sendingTo, setSendingTo] = useState<string | null>(null);
+
+  // Toast notification
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast({ message, type });
+    toastTimeoutRef.current = setTimeout(() => setToast(null), 4000);
+  };
+
+  // Check auth on mount
+  useEffect(() => {
+    const authUser = localStorage.getItem("auth_user");
+    const authRole = localStorage.getItem("auth_role");
+    const email = localStorage.getItem("auth_email");
+    const firstName = localStorage.getItem("auth_first_name");
+    if (authUser === "active" && authRole === "user" && email) {
+      setIsLoggedIn(true);
+      setCurrentEmail(email.trim().toLowerCase());
+      setCurrentName(firstName || "");
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -36,6 +85,7 @@ export default function DirectoryPage() {
       if (search) params.set("search", search);
       if (batch !== "All Batches") params.set("batch", batch);
       if (domain !== "All") params.set("domain", domain);
+      if (currentEmail) params.set("exclude_email", currentEmail);
 
       const res = await fetch(`/api/directory?${params.toString()}`);
       if (res.ok) {
@@ -48,12 +98,46 @@ export default function DirectoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, batch, domain]);
+  }, [search, batch, domain, currentEmail]);
 
   useEffect(() => {
-    // Initial load
     void loadData();
   }, []);
+
+  // Re-fetch when currentEmail changes (auth loaded)
+  const emailReadyRef = useRef(false);
+  useEffect(() => {
+    if (currentEmail && !emailReadyRef.current) {
+      emailReadyRef.current = true;
+      void loadData();
+    }
+  }, [currentEmail, loadData]);
+
+  // Fetch connection statuses after profiles load
+  useEffect(() => {
+    if (!isLoggedIn || !currentEmail || profiles.length === 0) return;
+
+    const targetEmails = profiles.map((p) => p.email).filter(Boolean);
+    if (targetEmails.length === 0) return;
+
+    const fetchStatuses = async () => {
+      try {
+        const params = new URLSearchParams({
+          email: currentEmail,
+          targets: targetEmails.join(","),
+        });
+        const res = await fetch(`/api/user/connections/status?${params.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          setConnectionStatuses(data.statuses || {});
+        }
+      } catch (error) {
+        console.error("Failed to fetch connection statuses", error);
+      }
+    };
+
+    void fetchStatuses();
+  }, [isLoggedIn, currentEmail, profiles]);
 
   const handleApplyFilters = () => {
     void loadData();
@@ -63,8 +147,96 @@ export default function DirectoryPage() {
     if (e.key === "Enter") handleApplyFilters();
   };
 
+  const handleConnect = async (profile: AlumniProfile) => {
+    // If not logged in, redirect to login
+    if (!isLoggedIn) {
+      router.push("/login");
+      return;
+    }
+
+    if (!profile.email) {
+      showToast("Unable to connect — profile email not available.", "error");
+      return;
+    }
+
+    if (sendingTo) return; // Prevent double-click
+
+    setSendingTo(profile.email);
+    try {
+      const res = await fetch("/api/user/connections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          senderEmail: currentEmail,
+          senderName: currentName,
+          receiverEmail: profile.email,
+          message: `Hi ${profile.name.split(" ")[0]}, I'd like to connect with you through the alumni network.`,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // Update local status
+        setConnectionStatuses((prev) => ({ ...prev, [profile.email.toLowerCase()]: "sent" }));
+        showToast(`Connection request sent to ${profile.name}!`, "success");
+      } else if (res.status === 409) {
+        // Already pending or connected
+        if (data.message?.includes("pending")) {
+          setConnectionStatuses((prev) => ({ ...prev, [profile.email.toLowerCase()]: "sent" }));
+          showToast("Request already pending.", "info");
+        } else {
+          setConnectionStatuses((prev) => ({ ...prev, [profile.email.toLowerCase()]: "connected" }));
+          showToast("Already connected!", "info");
+        }
+      } else if (res.status === 401) {
+        // Session expired
+        showToast("Session expired. Redirecting to login...", "error");
+        setTimeout(() => router.push("/login"), 1500);
+      } else {
+        showToast(data.message || "Failed to send request.", "error");
+      }
+    } catch (error) {
+      console.error("Connection request error", error);
+      showToast("Network error. Please try again.", "error");
+    } finally {
+      setSendingTo(null);
+    }
+  };
+
+  const getButtonState = (profile: AlumniProfile) => {
+    const status = connectionStatuses[profile.email?.toLowerCase()];
+    if (status === "sent" || status === "received") return "requested";
+    if (status === "connected") return "connected";
+    return "connect";
+  };
+
   return (
     <div className="bg-background text-text-primary">
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          className={`fixed top-6 right-6 z-50 flex items-center gap-3 rounded-xl px-5 py-3.5 shadow-2xl border backdrop-blur-sm transition-all animate-slide-in-right ${
+            toast.type === "success"
+              ? "bg-emerald-50 dark:bg-emerald-950/80 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200"
+              : toast.type === "error"
+              ? "bg-red-50 dark:bg-red-950/80 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
+              : "bg-blue-50 dark:bg-blue-950/80 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200"
+          }`}
+        >
+          {toast.type === "success" && <Check className="h-4 w-4 shrink-0" />}
+          {toast.type === "error" && <span className="text-sm shrink-0">⚠</span>}
+          {toast.type === "info" && <Clock className="h-4 w-4 shrink-0" />}
+          <span className="text-sm font-medium">{toast.message}</span>
+          <button
+            onClick={() => setToast(null)}
+            className="ml-2 text-current opacity-60 hover:opacity-100 transition-opacity"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <section className="relative overflow-hidden border-b border-border">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -top-14 left-8 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
@@ -171,11 +343,14 @@ export default function DirectoryPage() {
               <p>No profiles found matching your filters.</p>
             </div>
           ) : (
-            profiles.map((person) => (
-              <article
-                key={person.id}
-                className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col justify-between"
-              >
+            profiles.map((person) => {
+              const btnState = getButtonState(person);
+
+              return (
+                <article
+                  key={person.id}
+                  className="rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col justify-between"
+                >
                 <div>
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -210,12 +385,46 @@ export default function DirectoryPage() {
                   >
                     View Profile
                   </Link>
-                  <button className="rounded-xl bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
-                    Connect
-                  </button>
+
+                  {btnState === "connected" ? (
+                    <button
+                      disabled
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 py-2.5 text-sm font-semibold text-emerald-700 dark:text-emerald-300 cursor-default"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      Connected
+                    </button>
+                  ) : btnState === "requested" ? (
+                    <button
+                      disabled
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 py-2.5 text-sm font-semibold text-amber-700 dark:text-amber-300 cursor-default"
+                    >
+                      <Clock className="h-3.5 w-3.5" />
+                      Requested
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleConnect(person)}
+                      disabled={sendingTo === person.email}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors disabled:opacity-60"
+                    >
+                      {sendingTo === person.email ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="h-3.5 w-3.5" />
+                          Connect
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </article>
-            ))
+              );
+            })
           )}
         </div>
       </section>
@@ -244,6 +453,23 @@ export default function DirectoryPage() {
           </div>
         </div>
       </section>
+
+      {/* Inline animation keyframe */}
+      <style jsx>{`
+        @keyframes slide-in-right {
+          from {
+            opacity: 0;
+            transform: translateX(100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        .animate-slide-in-right {
+          animation: slide-in-right 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }

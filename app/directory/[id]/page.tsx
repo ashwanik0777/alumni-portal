@@ -22,7 +22,7 @@ export default async function AlumniProfilePage({ params }: { params: Promise<{ 
           <div className="absolute top-8 right-0 h-72 w-72 rounded-full bg-secondary/15 blur-3xl" />
         </div>
 
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-16">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-16">
           <Link href="/directory" className="inline-flex items-center text-sm font-semibold text-primary hover:underline">
             Back to Directory
           </Link>
@@ -56,7 +56,7 @@ export default async function AlumniProfilePage({ params }: { params: Promise<{ 
         </div>
       </section>
 
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="grid gap-6 lg:grid-cols-2">
           <article className="rounded-2xl border border-border bg-card p-6">
             <h2 className="text-xl font-bold">About</h2>
