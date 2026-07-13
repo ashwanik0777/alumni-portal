@@ -1,4 +1,5 @@
 import { postgresPool } from "@/lib/postgres";
+import { ensureUserProfileTable } from "@/lib/user-profile";
 
 let _siteTablesReady = false;
 let _siteInitPromise: Promise<void> | null = null;
@@ -257,26 +258,97 @@ export async function getAllScholarshipTestimonials() {
 }
 
 // ============ DIRECTORY PROFILES ============
+function mapProfileRowToDirectory(row: any) {
+  let achievements: string[] = [];
+  if (row.achievements) {
+    try {
+      if (typeof row.achievements === "string") {
+        if (row.achievements.trim().startsWith("[")) {
+          achievements = JSON.parse(row.achievements);
+        } else {
+          achievements = row.achievements.split(",").map((s: string) => s.trim()).filter(Boolean);
+        }
+      } else if (Array.isArray(row.achievements)) {
+        achievements = row.achievements;
+      }
+    } catch {
+      achievements = [row.achievements];
+    }
+  }
+
+  let expertise = row.key_skills || "";
+  let mentorshipAreas: string[] = [];
+  if (expertise) {
+    mentorshipAreas = expertise.split(",").map((s: string) => s.trim()).filter(Boolean);
+  }
+
+  const location = row.city ? (row.state ? `${row.city}, ${row.state}` : row.city) : (row.country || "India");
+
+  let role = "Alumni";
+  let company = "JNV Farrukhabad";
+  if (row.show_current_role !== false) {
+    if (row.profile_type === "employed") {
+      role = row.job_title || "Professional";
+      company = row.company_name || "Company";
+    } else if (row.profile_type === "student") {
+      role = "Student";
+      company = row.student_institution || "University";
+    }
+  }
+
+  return {
+    id: String(row.id),
+    slug: String(row.id),
+    name: row.full_name || "Anonymous",
+    email: row.email || "",
+    batch: row.passing_year || "2024",
+    role,
+    company,
+    location,
+    expertise,
+    about: row.bio || "No bio available.",
+    contribution: row.interests || "Interested in networking and community events.",
+    achievements,
+    mentorship_areas: mentorshipAreas,
+  };
+}
+
 export async function getActiveDirectoryProfiles() {
-  await ensureSiteContentTables();
-  return (await postgresPool.query(`SELECT id::text, slug, name, batch, role, company, location, expertise, about, contribution, achievements, mentorship_areas FROM site_directory_profiles WHERE is_active = true ORDER BY name ASC`)).rows;
+  await ensureUserProfileTable();
+  const res = await postgresPool.query(`SELECT * FROM user_profiles ORDER BY full_name ASC`);
+  return res.rows.map(mapProfileRowToDirectory);
 }
+
 export async function getDirectoryProfileBySlug(slug: string) {
-  await ensureSiteContentTables();
-  const result = await postgresPool.query(`SELECT id::text, slug, name, batch, role, company, location, expertise, about, contribution, achievements, mentorship_areas FROM site_directory_profiles WHERE slug = $1 AND is_active = true`, [slug]);
-  return result.rows[0] || null;
+  await ensureUserProfileTable();
+  const result = await postgresPool.query(
+    `SELECT * FROM user_profiles WHERE id::text = $1 OR email = $1 LIMIT 1`,
+    [slug]
+  );
+  if (result.rows.length === 0) return null;
+  return mapProfileRowToDirectory(result.rows[0]);
 }
+
 export async function getDirectoryFiltersFromSite() {
-  await ensureSiteContentTables();
+  await ensureUserProfileTable();
   const [batchRes, locRes, expRes] = await Promise.all([
-    postgresPool.query(`SELECT DISTINCT batch FROM site_directory_profiles WHERE is_active = true ORDER BY batch DESC`),
-    postgresPool.query(`SELECT DISTINCT location FROM site_directory_profiles WHERE is_active = true ORDER BY location`),
-    postgresPool.query(`SELECT DISTINCT expertise FROM site_directory_profiles WHERE is_active = true ORDER BY expertise`),
+    postgresPool.query(`SELECT DISTINCT passing_year AS batch FROM user_profiles WHERE passing_year != '' ORDER BY passing_year DESC`),
+    postgresPool.query(`SELECT DISTINCT city AS location FROM user_profiles WHERE city != '' ORDER BY city`),
+    postgresPool.query(`SELECT DISTINCT key_skills AS expertise FROM user_profiles WHERE key_skills != '' ORDER BY key_skills`),
   ]);
+
+  const domainsSet = new Set<string>();
+  for (const row of expRes.rows) {
+    const skills = row.expertise.split(",").map((s: string) => s.trim()).filter(Boolean);
+    for (const skill of skills) {
+      domainsSet.add(skill);
+    }
+  }
+
   return {
     batches: batchRes.rows.map(r => r.batch),
     locations: locRes.rows.map(r => r.location),
-    domains: expRes.rows.map(r => r.expertise),
+    domains: Array.from(domainsSet),
   };
 }
 

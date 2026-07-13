@@ -1,7 +1,7 @@
 import { postgresPool } from "@/lib/postgres";
 
 export type MessageConversation = {
-  id: string;
+  id: string; // participant's email
   name: string;
   role: string;
   isOnline: boolean;
@@ -12,59 +12,46 @@ export type MessageConversation = {
 
 export type ChatMessage = {
   id: string;
-  conversationId: string;
   sender: "me" | "them";
   text: string;
   time: string;
-  status: "sending" | "sent" | "delivered";
+  createdAt: string; // ISO string
+  isEdited: boolean;
+  status: "sent" | "delivered";
 };
 
 let messagesTableReady = false;
 let messagesTableInitPromise: Promise<void> | null = null;
 
-const seedConversations = [
-  { participant_id: "p1", name: "Nidhi Sharma", role: "Mentor • Product", is_online: true },
-  { participant_id: "p2", name: "Aman Tiwari", role: "Senior Alumni • Engineering", is_online: false },
-  { participant_id: "p3", name: "Career Support Desk", role: "Admin Team", is_online: true },
-];
-
 export async function ensureMessagesTables() {
   if (messagesTableReady) return;
-  if (messagesTableInitPromise) { await messagesTableInitPromise; return; }
+  if (messagesTableInitPromise) {
+    await messagesTableInitPromise;
+    return;
+  }
 
   messagesTableInitPromise = (async () => {
     try {
       await postgresPool.query(`
-        CREATE TABLE IF NOT EXISTS msg_conversations (
+        CREATE TABLE IF NOT EXISTS alumni_messages (
           id BIGSERIAL PRIMARY KEY,
-          owner_email TEXT NOT NULL,
-          participant_id TEXT NOT NULL,
-          name TEXT NOT NULL,
-          role TEXT NOT NULL,
-          is_online BOOLEAN NOT NULL DEFAULT false,
-          last_message TEXT NOT NULL DEFAULT '',
-          last_time TEXT NOT NULL DEFAULT '',
-          unread_count INTEGER NOT NULL DEFAULT 0,
-          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-          CONSTRAINT msg_conv_unique UNIQUE (owner_email, participant_id)
+          sender_email TEXT NOT NULL,
+          receiver_email TEXT NOT NULL,
+          message_text TEXT NOT NULL,
+          is_read BOOLEAN NOT NULL DEFAULT false,
+          is_edited BOOLEAN NOT NULL DEFAULT false,
+          deleted_by_sender BOOLEAN NOT NULL DEFAULT false,
+          deleted_by_receiver BOOLEAN NOT NULL DEFAULT false,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
       `);
-
       await postgresPool.query(`
-        CREATE TABLE IF NOT EXISTS msg_chat_messages (
-          id BIGSERIAL PRIMARY KEY,
-          conversation_id BIGINT NOT NULL REFERENCES msg_conversations(id) ON DELETE CASCADE,
-          sender TEXT NOT NULL,
-          text TEXT NOT NULL,
-          time TEXT NOT NULL,
-          status TEXT NOT NULL DEFAULT 'sent',
-          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
+        CREATE INDEX IF NOT EXISTS idx_alumni_messages_sender ON alumni_messages(sender_email)
       `);
-
-      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_msg_conv_owner ON msg_conversations(owner_email)`);
-      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_msg_chat_conv ON msg_chat_messages(conversation_id)`);
-
+      await postgresPool.query(`
+        CREATE INDEX IF NOT EXISTS idx_alumni_messages_receiver ON alumni_messages(receiver_email)
+      `);
       messagesTableReady = true;
     } finally {
       messagesTableInitPromise = null;
@@ -74,88 +61,215 @@ export async function ensureMessagesTables() {
   await messagesTableInitPromise;
 }
 
-export async function getUserConversations(userEmail: string) {
+export async function getUserConversations(userEmail: string): Promise<MessageConversation[]> {
   await ensureMessagesTables();
-  const normalized = userEmail.trim().toLowerCase();
+  const email = userEmail.trim().toLowerCase();
 
-  const count = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM msg_conversations WHERE owner_email = $1`, [normalized]);
-  if (Number(count.rows[0]?.count || "0") === 0) {
-    for (const c of seedConversations) {
-      const msg = c.participant_id === "p1" ? "Share your updated roadmap before next session." :
-                  c.participant_id === "p2" ? "Referral thread updated. Please check details." : "Your profile verification is in final stage.";
-      const unread = c.participant_id === "p1" ? 2 : c.participant_id === "p3" ? 1 : 0;
-      await postgresPool.query(
-        `INSERT INTO msg_conversations (owner_email, participant_id, name, role, is_online, last_message, last_time, unread_count) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-        [normalized, c.participant_id, c.name, c.role, c.is_online, msg, "10:42 AM", unread]
-      );
-    }
-  }
-
-  const result = await postgresPool.query(
-    `SELECT id::text, name, role, is_online, unread_count, last_message, last_time FROM msg_conversations WHERE owner_email = $1 ORDER BY updated_at DESC`,
-    [normalized]
+  // Fetch all accepted connections for this user.
+  const connectionsRes = await postgresPool.query<{
+    participant_email: string;
+    name: string;
+    role: string;
+  }>(
+    `
+      SELECT 
+        CASE WHEN r.sender_email = $1 THEN r.receiver_email ELSE r.sender_email END AS participant_email,
+        COALESCE(p.full_name, 'Alumni Member') AS name,
+        COALESCE(p.role, 'Alumni') AS role
+      FROM user_connection_requests r
+      LEFT JOIN user_connection_profiles p ON p.email = CASE WHEN r.sender_email = $1 THEN r.receiver_email ELSE r.sender_email END
+      WHERE r.status = 'Accepted' AND (r.sender_email = $1 OR r.receiver_email = $1)
+    `,
+    [email]
   );
 
-  return result.rows.map((r: Record<string, unknown>) => ({
-    id: String(r.id),
-    name: String(r.name),
-    role: String(r.role),
-    isOnline: Boolean(r.is_online),
-    unreadCount: Number(r.unread_count),
-    lastMessage: String(r.last_message),
-    lastTime: String(r.last_time),
+  const list: MessageConversation[] = [];
+
+  for (const conn of connectionsRes.rows) {
+    const pEmail = conn.participant_email;
+
+    // Fetch the last active message
+    const lastMsgRes = await postgresPool.query<{
+      message_text: string;
+      created_at: Date;
+    }>(
+      `
+        SELECT message_text, created_at
+        FROM alumni_messages
+        WHERE (
+          (sender_email = $1 AND receiver_email = $2 AND deleted_by_sender = false)
+          OR 
+          (sender_email = $2 AND receiver_email = $1 AND deleted_by_receiver = false)
+        )
+        ORDER BY created_at DESC
+        LIMIT 1
+      `,
+      [email, pEmail]
+    );
+
+    // Fetch unread count for messages received from this participant
+    const unreadRes = await postgresPool.query<{ count: string }>(
+      `
+        SELECT COUNT(*)::text AS count
+        FROM alumni_messages
+        WHERE sender_email = $2 AND receiver_email = $1 AND is_read = false AND deleted_by_receiver = false
+      `,
+      [email, pEmail]
+    );
+
+    let lastMessage = "No messages yet. Start chatting!";
+    let lastTime = "";
+
+    if (lastMsgRes.rowCount && lastMsgRes.rowCount > 0) {
+      lastMessage = lastMsgRes.rows[0].message_text;
+      const date = lastMsgRes.rows[0].created_at;
+      lastTime = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+
+    list.push({
+      id: pEmail,
+      name: conn.name,
+      role: conn.role,
+      isOnline: false,
+      unreadCount: Number(unreadRes.rows[0]?.count || "0"),
+      lastMessage,
+      lastTime,
+    });
+  }
+
+  // Sort conversations by unread count first, or status.
+  return list;
+}
+
+export async function getConversationMessages(userEmail: string, participantEmail: string): Promise<ChatMessage[]> {
+  await ensureMessagesTables();
+  const email = userEmail.trim().toLowerCase();
+  const pEmail = participantEmail.trim().toLowerCase();
+
+  // Mark all incoming messages from this participant as read
+  await postgresPool.query(
+    `
+      UPDATE alumni_messages
+      SET is_read = true
+      WHERE sender_email = $2 AND receiver_email = $1 AND is_read = false AND deleted_by_receiver = false
+    `,
+    [email, pEmail]
+  );
+
+  const result = await postgresPool.query<{
+    id: string;
+    sender_email: string;
+    message_text: string;
+    created_at: Date;
+    is_edited: boolean;
+  }>(
+    `
+      SELECT id::text, sender_email, message_text, created_at, is_edited
+      FROM alumni_messages
+      WHERE (
+        (sender_email = $1 AND receiver_email = $2 AND deleted_by_sender = false)
+        OR 
+        (sender_email = $2 AND receiver_email = $1 AND deleted_by_receiver = false)
+      )
+      ORDER BY created_at ASC
+    `,
+    [email, pEmail]
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    sender: row.sender_email === email ? "me" : "them",
+    text: row.message_text,
+    time: row.created_at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    createdAt: row.created_at.toISOString(),
+    isEdited: row.is_edited,
+    status: "delivered",
   }));
 }
 
-export async function getConversationMessages(conversationId: string) {
+export async function sendMessage(senderEmail: string, receiverEmail: string, text: string) {
   await ensureMessagesTables();
-  const result = await postgresPool.query(
-    `SELECT id::text, sender, text, time, status FROM msg_chat_messages WHERE conversation_id = $1 ORDER BY created_at ASC`,
-    [conversationId]
+  const sender = senderEmail.trim().toLowerCase();
+  const receiver = receiverEmail.trim().toLowerCase();
+
+  const insert = await postgresPool.query<{ id: string; created_at: Date }>(
+    `
+      INSERT INTO alumni_messages (sender_email, receiver_email, message_text)
+      VALUES ($1, $2, $3)
+      RETURNING id::text, created_at
+    `,
+    [sender, receiver, text.trim()]
   );
-  
-  if (result.rows.length === 0) {
-    await postgresPool.query(
-      `INSERT INTO msg_chat_messages (conversation_id, sender, text, time) VALUES ($1, $2, $3, $4)`,
-      [conversationId, "them", "Hi, let's catch up on the progress.", "10:28 AM"]
-    );
-    const retry = await postgresPool.query(`SELECT id::text, sender, text, time, status FROM msg_chat_messages WHERE conversation_id = $1 ORDER BY created_at ASC`, [conversationId]);
-    return retry.rows.map(mapMsg);
-  }
 
-  return result.rows.map(mapMsg);
-}
-
-function mapMsg(r: Record<string, unknown>) {
+  const row = insert.rows[0];
   return {
-    id: String(r.id),
-    conversationId: String(r.conversation_id),
-    sender: String(r.sender) as "me" | "them",
-    text: String(r.text),
-    time: String(r.time),
-    status: String(r.status) as "sending" | "sent" | "delivered",
+    id: row.id,
+    sender: "me" as const,
+    text: text.trim(),
+    time: row.created_at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    createdAt: row.created_at.toISOString(),
+    isEdited: false,
+    status: "delivered" as const,
   };
 }
 
-export async function sendMessage(conversationId: string, text: string) {
+export async function clearChatHistory(userEmail: string, participantEmail: string) {
   await ensureMessagesTables();
-  const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  
-  const insert = await postgresPool.query(
-    `INSERT INTO msg_chat_messages (conversation_id, sender, text, time, status) VALUES ($1, 'me', $2, $3, 'delivered') RETURNING id::text`,
-    [conversationId, text.trim(), time]
-  );
-  
+  const email = userEmail.trim().toLowerCase();
+  const pEmail = participantEmail.trim().toLowerCase();
+
   await postgresPool.query(
-    `UPDATE msg_conversations SET last_message = $1, last_time = $2, unread_count = 0, updated_at = NOW() WHERE id = $3`,
-    [text.trim(), time, conversationId]
+    `
+      UPDATE alumni_messages
+      SET deleted_by_sender = true
+      WHERE sender_email = $1 AND receiver_email = $2
+    `,
+    [email, pEmail]
   );
-  
-  return { id: String(insert.rows[0].id), text, time, status: "delivered", sender: "me" };
+
+  await postgresPool.query(
+    `
+      UPDATE alumni_messages
+      SET deleted_by_receiver = true
+      WHERE sender_email = $2 AND receiver_email = $1
+    `,
+    [email, pEmail]
+  );
+
+  return { ok: true };
 }
 
-export async function markConversationRead(conversationId: string) {
+export async function editMessage(messageId: string, senderEmail: string, newText: string) {
   await ensureMessagesTables();
-  await postgresPool.query(`UPDATE msg_conversations SET unread_count = 0 WHERE id = $1`, [conversationId]);
+  const email = senderEmail.trim().toLowerCase();
+
+  const check = await postgresPool.query<{ created_at: Date }>(
+    `
+      SELECT created_at
+      FROM alumni_messages
+      WHERE id = $1 AND sender_email = $2 AND deleted_by_sender = false
+      LIMIT 1
+    `,
+    [messageId, email]
+  );
+
+  if (check.rowCount === 0) {
+    return { ok: false, message: "Message not found or unauthorized." };
+  }
+
+  const ageInMs = Date.now() - new Date(check.rows[0].created_at).getTime();
+  if (ageInMs > 5 * 60 * 1000) {
+    return { ok: false, message: "Cannot edit message after 5 minutes." };
+  }
+
+  await postgresPool.query(
+    `
+      UPDATE alumni_messages
+      SET message_text = $1, is_edited = true, updated_at = NOW()
+      WHERE id = $2
+    `,
+    [newText.trim(), messageId]
+  );
+
   return { ok: true };
 }

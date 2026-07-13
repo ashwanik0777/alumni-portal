@@ -98,6 +98,66 @@ const seedMembers: Array<Omit<AdminMember, "id" | "submittedAt" | "updatedAt">> 
     status: "Pending",
     rejectionReason: null,
   },
+  {
+    fullName: "Aditi Verma",
+    email: "aditi.verma@example.com",
+    passingYear: "2015",
+    house: "Arawali",
+    mobile: "9876500123",
+    fatherName: "Suresh Verma",
+    status: "Approved",
+    rejectionReason: null,
+  },
+  {
+    fullName: "Rohit Mishra",
+    email: "rohit.mishra@example.com",
+    passingYear: "2012",
+    house: "Neelgiri",
+    mobile: "9876500456",
+    fatherName: "Mahesh Singh",
+    status: "Approved",
+    rejectionReason: null,
+  },
+  {
+    fullName: "Sneha Dubey",
+    email: "sneha.dubey@example.com",
+    passingYear: "2018",
+    house: "Shiwalik",
+    mobile: "9876500789",
+    fatherName: "Irfan Khan",
+    status: "Approved",
+    rejectionReason: null,
+  },
+  {
+    fullName: "Anurag Singh",
+    email: "anurag.singh@example.com",
+    passingYear: "2010",
+    house: "Arawali",
+    mobile: "9876500222",
+    fatherName: "Kamal Sharma",
+    status: "Approved",
+    rejectionReason: null,
+  },
+  {
+    fullName: "Nidhi Chauhan",
+    email: "nidhi.chauhan@example.com",
+    passingYear: "2016",
+    house: "Neelgiri",
+    mobile: "9876500111",
+    fatherName: "Ramesh Chauhan",
+    status: "Approved",
+    rejectionReason: null,
+  },
+  {
+    fullName: "Kunal Saxena",
+    email: "kunal.saxena@example.com",
+    passingYear: "2014",
+    house: "Shiwalik",
+    mobile: "9876500333",
+    fatherName: "Ashok Saxena",
+    status: "Approved",
+    rejectionReason: null,
+  },
 ];
 
 let membersTableReady = false;
@@ -418,6 +478,67 @@ export async function createAdminMember(payload: {
 }) {
   await ensureAdminMembersTable();
 
+  const cleanEmail = payload.email.trim().toLowerCase();
+
+  // Check if member already exists
+  const existing = await postgresPool.query<{
+    id: string;
+    status: MemberStatus;
+  }>(
+    `SELECT id, status FROM admin_members WHERE email = $1 LIMIT 1`,
+    [cleanEmail]
+  );
+
+  if (existing.rowCount && existing.rowCount > 0) {
+    const record = existing.rows[0];
+    if (record.status === 'Approved') {
+      const err = new Error("An account with this email already exists.");
+      (err as any).code = "ALREADY_APPROVED";
+      throw err;
+    }
+    if (record.status === 'Pending') {
+      const err = new Error("Your registration request is already pending review.");
+      (err as any).code = "ALREADY_PENDING";
+      throw err;
+    }
+
+    // Overwrite the existing Rejected or Needs Info record
+    const result = await postgresPool.query<{
+      id: string;
+      full_name: string;
+      email: string;
+      passing_year: string;
+      house: string;
+      mobile: string;
+      father_name: string;
+      status: MemberStatus;
+      rejection_reason: string | null;
+      submitted_at: string;
+      updated_at: string;
+    }>(
+      `
+      UPDATE admin_members
+      SET full_name = $2,
+          passing_year = $3,
+          house = $4,
+          mobile = $5,
+          father_name = $6,
+          status = 'Pending',
+          rejection_reason = NULL,
+          submitted_at = NOW(),
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING id::text, full_name, email, passing_year, house, mobile, father_name, status, rejection_reason, submitted_at::text, updated_at::text
+      `,
+      [record.id, payload.fullName, payload.passingYear, payload.house, payload.mobile, payload.fatherName]
+    );
+
+    const updated = mapRow(result.rows[0]);
+    clearMembersListCache();
+    return updated;
+  }
+
+  // Insert a new member if not exists
   const result = await postgresPool.query<{
     id: string;
     full_name: string;
@@ -436,7 +557,7 @@ export async function createAdminMember(payload: {
     VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING id::text, full_name, email, passing_year, house, mobile, father_name, status, rejection_reason, submitted_at::text, updated_at::text
     `,
-    [payload.fullName, payload.email.toLowerCase(), payload.passingYear, payload.house, payload.mobile, payload.fatherName],
+    [payload.fullName, cleanEmail, payload.passingYear, payload.house, payload.mobile, payload.fatherName],
   );
 
   const created = mapRow(result.rows[0]);

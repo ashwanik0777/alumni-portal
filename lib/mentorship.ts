@@ -23,6 +23,7 @@ export async function ensureMentorshipTables() {
         id BIGSERIAL PRIMARY KEY,
         mentee_email TEXT NOT NULL,
         mentee_name TEXT NOT NULL,
+        mentee_phone TEXT NOT NULL DEFAULT '',
         current_stage TEXT NOT NULL,
         track TEXT NOT NULL,
         goal TEXT NOT NULL,
@@ -36,6 +37,11 @@ export async function ensureMentorshipTables() {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+
+    // Add mentee_phone column if missing (for existing tables)
+    await client.query(`
+      ALTER TABLE mentorship_applications ADD COLUMN IF NOT EXISTS mentee_phone TEXT NOT NULL DEFAULT ''
     `);
   } finally {
     client.release();

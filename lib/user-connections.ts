@@ -117,6 +117,7 @@ async function ensureConnectionTables() {
 
   connectionTableInitPromise = (async () => {
     try {
+      // Create both tables in a single query
       await postgresPool.query(`
         CREATE TABLE IF NOT EXISTS user_connection_profiles (
           id BIGSERIAL PRIMARY KEY,
@@ -128,10 +129,7 @@ async function ensureConnectionTables() {
           company TEXT NOT NULL,
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
           updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-      `);
-
-      await postgresPool.query(`
+        );
         CREATE TABLE IF NOT EXISTS user_connection_requests (
           id BIGSERIAL PRIMARY KEY,
           sender_email TEXT NOT NULL,
@@ -142,40 +140,52 @@ async function ensureConnectionTables() {
           updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
           CONSTRAINT user_connection_requests_status_check CHECK (status IN ('Pending', 'Accepted', 'Declined', 'Cancelled')),
           CONSTRAINT user_connection_requests_no_self CHECK (sender_email <> receiver_email)
-        )
+        );
+        CREATE INDEX IF NOT EXISTS idx_user_connection_requests_sender ON user_connection_requests(sender_email);
+        CREATE INDEX IF NOT EXISTS idx_user_connection_requests_receiver ON user_connection_requests(receiver_email);
+        CREATE INDEX IF NOT EXISTS idx_user_connection_requests_status ON user_connection_requests(status);
+        CREATE INDEX IF NOT EXISTS idx_user_connection_requests_updated_at ON user_connection_requests(updated_at DESC);
       `);
 
-      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_user_connection_requests_sender ON user_connection_requests(sender_email)`);
-      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_user_connection_requests_receiver ON user_connection_requests(receiver_email)`);
-      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_user_connection_requests_status ON user_connection_requests(status)`);
-      await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_user_connection_requests_updated_at ON user_connection_requests(updated_at DESC)`);
+      // Seed profiles and requests in parallel
+      const [profileCount, reqCount] = await Promise.all([
+        postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM user_connection_profiles`),
+        postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM user_connection_requests`),
+      ]);
 
-      const countResult = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM user_connection_profiles`);
-      if (Number(countResult.rows[0]?.count || "0") === 0) {
-        for (const profile of seedProfiles) {
-          await postgresPool.query(
-            `
-              INSERT INTO user_connection_profiles (full_name, email, batch, city, role, company)
-              VALUES ($1, $2, $3, $4, $5, $6)
-            `,
-            [profile.fullName, profile.email.toLowerCase(), profile.batch, profile.city, profile.role, profile.company],
-          );
-        }
-      }
+      const seedOps: Promise<any>[] = [];
 
-      const reqCount = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM user_connection_requests`);
-      if (Number(reqCount.rows[0]?.count || "0") === 0) {
-        await postgresPool.query(
-          `
-            INSERT INTO user_connection_requests (sender_email, receiver_email, message, status)
-            VALUES
-              ('karan.verma@example.com', 'aman.alumni@jnvportal.in', 'Hi Aman, same batch cluster se hoon, connect karna hai.', 'Pending'),
-              ('riya.dubey@example.com', 'aman.alumni@jnvportal.in', 'Data role ke liye guidance chahiye, please connect.', 'Pending'),
-              ('aman.alumni@jnvportal.in', 'arjun.singh@example.com', 'Sir, backend referrals ke liye connect request bhej raha hoon.', 'Pending'),
-              ('aman.alumni@jnvportal.in', 'ritika.verma@example.com', 'Product mentorship ke liye connect request.', 'Accepted')
-          `,
+      if (Number(profileCount.rows[0]?.count || "0") === 0) {
+        // Batch insert all seed profiles in one query
+        const values = seedProfiles.map((_, i) => {
+          const base = i * 6;
+          return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`;
+        }).join(", ");
+        const params = seedProfiles.flatMap(p => [p.fullName, p.email.toLowerCase(), p.batch, p.city, p.role, p.company]);
+        seedOps.push(
+          postgresPool.query(
+            `INSERT INTO user_connection_profiles (full_name, email, batch, city, role, company) VALUES ${values}`,
+            params,
+          )
         );
       }
+
+      if (Number(reqCount.rows[0]?.count || "0") === 0) {
+        seedOps.push(
+          postgresPool.query(
+            `
+              INSERT INTO user_connection_requests (sender_email, receiver_email, message, status)
+              VALUES
+                ('karan.verma@example.com', 'aman.alumni@jnvportal.in', 'Hi Aman, same batch cluster se hoon, connect karna hai.', 'Pending'),
+                ('riya.dubey@example.com', 'aman.alumni@jnvportal.in', 'Data role ke liye guidance chahiye, please connect.', 'Pending'),
+                ('aman.alumni@jnvportal.in', 'arjun.singh@example.com', 'Sir, backend referrals ke liye connect request bhej raha hoon.', 'Pending'),
+                ('aman.alumni@jnvportal.in', 'ritika.verma@example.com', 'Product mentorship ke liye connect request.', 'Accepted')
+            `,
+          )
+        );
+      }
+
+      if (seedOps.length > 0) await Promise.all(seedOps);
 
       connectionTablesReady = true;
     } finally {
@@ -190,28 +200,18 @@ async function ensureProfileExists(email: string, fullName?: string) {
   const normalizedEmail = email.trim().toLowerCase();
   await ensureConnectionTables();
 
-  const existing = await postgresPool.query<{ id: string }>(
-    `SELECT id::text FROM user_connection_profiles WHERE email = $1 LIMIT 1`,
-    [normalizedEmail],
-  );
-
-  if ((existing.rowCount ?? 0) > 0) {
-    if (fullName?.trim()) {
-      await postgresPool.query(
-        `UPDATE user_connection_profiles SET full_name = $2, updated_at = NOW() WHERE email = $1`,
-        [normalizedEmail, fullName.trim()],
-      );
-    }
-    return;
-  }
-
   const derivedName = fullName?.trim() || normalizedEmail.split("@")[0].replace(/[._-]+/g, " ");
+
+  // Single upsert query instead of SELECT + conditional UPDATE/INSERT
   await postgresPool.query(
     `
       INSERT INTO user_connection_profiles (full_name, email, batch, city, role, company)
       VALUES ($1, $2, 'N/A', 'N/A', 'Alumni Member', 'Community')
+      ON CONFLICT (email) DO UPDATE SET
+        full_name = CASE WHEN $3::boolean THEN $1 ELSE user_connection_profiles.full_name END,
+        updated_at = CASE WHEN $3::boolean THEN NOW() ELSE user_connection_profiles.updated_at END
     `,
-    [derivedName, normalizedEmail],
+    [derivedName, normalizedEmail, !!fullName?.trim()],
   );
 }
 
@@ -221,6 +221,79 @@ function toPublicRequestId(id: string) {
 
 function toNumericRequestId(publicId: string) {
   return publicId.replace(/^CR-/, "");
+}
+
+export async function sendConnectionRequest(payload: {
+  senderEmail: string;
+  senderName?: string;
+  receiverEmail: string;
+  message?: string;
+}) {
+  const senderEmail = payload.senderEmail.trim().toLowerCase();
+  const receiverEmail = payload.receiverEmail.trim().toLowerCase();
+  if (senderEmail === receiverEmail) {
+    return { ok: false as const, reason: "self" as const };
+  }
+
+  // Ensure both profiles exist in parallel
+  await Promise.all([
+    ensureProfileExists(senderEmail, payload.senderName),
+    ensureProfileExists(receiverEmail),
+  ]);
+
+  const existing = await postgresPool.query<{
+    id: string;
+    sender_email: string;
+    receiver_email: string;
+    status: ConnectionRequestStatus;
+  }>(
+    `
+      SELECT id::text, sender_email, receiver_email, status
+      FROM user_connection_requests
+      WHERE (sender_email = $1 AND receiver_email = $2)
+         OR (sender_email = $2 AND receiver_email = $1)
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `,
+    [senderEmail, receiverEmail],
+  );
+
+  if ((existing.rowCount ?? 0) > 0) {
+    const previous = existing.rows[0];
+    if (previous.status === "Pending") {
+      return { ok: false as const, reason: "already-pending" as const };
+    }
+    if (previous.status === "Accepted") {
+      return { ok: false as const, reason: "already-connected" as const };
+    }
+
+    const updated = await postgresPool.query<{ id: string }>(
+      `
+        UPDATE user_connection_requests
+        SET sender_email = $2,
+            receiver_email = $3,
+            message = $4,
+            status = 'Pending',
+            updated_at = NOW()
+        WHERE id = $1
+        RETURNING id::text
+      `,
+      [previous.id, senderEmail, receiverEmail, payload.message?.trim() || "Let us connect through alumni network."],
+    );
+
+    return { ok: true as const, requestId: toPublicRequestId(updated.rows[0].id) };
+  }
+
+  const inserted = await postgresPool.query<{ id: string }>(
+    `
+      INSERT INTO user_connection_requests (sender_email, receiver_email, message, status)
+      VALUES ($1, $2, $3, 'Pending')
+      RETURNING id::text
+    `,
+    [senderEmail, receiverEmail, payload.message?.trim() || "Let us connect through alumni network."],
+  );
+
+  return { ok: true as const, requestId: toPublicRequestId(inserted.rows[0].id) };
 }
 
 export async function getUserConnectionsDashboard(userEmail: string, search = "") {
@@ -452,75 +525,6 @@ export async function getUserConnectionsDashboard(userEmail: string, search = ""
   };
 }
 
-export async function sendConnectionRequest(payload: {
-  senderEmail: string;
-  senderName?: string;
-  receiverEmail: string;
-  message?: string;
-}) {
-  await ensureProfileExists(payload.senderEmail, payload.senderName);
-  await ensureProfileExists(payload.receiverEmail);
-
-  const senderEmail = payload.senderEmail.trim().toLowerCase();
-  const receiverEmail = payload.receiverEmail.trim().toLowerCase();
-  if (senderEmail === receiverEmail) {
-    return { ok: false as const, reason: "self" as const };
-  }
-
-  const existing = await postgresPool.query<{
-    id: string;
-    sender_email: string;
-    receiver_email: string;
-    status: ConnectionRequestStatus;
-  }>(
-    `
-      SELECT id::text, sender_email, receiver_email, status
-      FROM user_connection_requests
-      WHERE (sender_email = $1 AND receiver_email = $2)
-         OR (sender_email = $2 AND receiver_email = $1)
-      ORDER BY updated_at DESC
-      LIMIT 1
-    `,
-    [senderEmail, receiverEmail],
-  );
-
-  if ((existing.rowCount ?? 0) > 0) {
-    const previous = existing.rows[0];
-    if (previous.status === "Pending") {
-      return { ok: false as const, reason: "already-pending" as const };
-    }
-    if (previous.status === "Accepted") {
-      return { ok: false as const, reason: "already-connected" as const };
-    }
-
-    const updated = await postgresPool.query<{ id: string }>(
-      `
-        UPDATE user_connection_requests
-        SET sender_email = $2,
-            receiver_email = $3,
-            message = $4,
-            status = 'Pending',
-            updated_at = NOW()
-        WHERE id = $1
-        RETURNING id::text
-      `,
-      [previous.id, senderEmail, receiverEmail, payload.message?.trim() || "Let us connect through alumni network."],
-    );
-
-    return { ok: true as const, requestId: toPublicRequestId(updated.rows[0].id) };
-  }
-
-  const inserted = await postgresPool.query<{ id: string }>(
-    `
-      INSERT INTO user_connection_requests (sender_email, receiver_email, message, status)
-      VALUES ($1, $2, $3, 'Pending')
-      RETURNING id::text
-    `,
-    [senderEmail, receiverEmail, payload.message?.trim() || "Let us connect through alumni network."],
-  );
-
-  return { ok: true as const, requestId: toPublicRequestId(inserted.rows[0].id) };
-}
 
 export async function respondToConnectionRequest(payload: {
   requestId: string;

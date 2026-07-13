@@ -63,7 +63,7 @@ const BRAND = {
   white: "#ffffff",
   border: "#e2e8f0",
   portalName: "JNV Farrukhabad Alumni Portal",
-  portalUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://jnvportal.in",
+  portalUrl: process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://alumni-portal.ashwanik.me/",
 };
 
 /* ------------------------------------------------------------------ */
@@ -513,3 +513,85 @@ export function memberApprovedWithCredentialsTemplate(name: string, loginEmail: 
 
   return emailWrapper(content);
 }
+
+/* ------------------------------------------------------------------ */
+/*  Mentor Assignment Notification                                     */
+/* ------------------------------------------------------------------ */
+
+export function mentorAssignmentEmailTemplate(payload: {
+  mentorName: string;
+  menteeName: string;
+  menteeEmail: string;
+  menteePhone: string;
+  menteeTrack: string;
+  menteeStage: string;
+  menteeGoal: string;
+  menteeUrgency: string;
+}) {
+  const content = `
+    <h2 style="margin:0 0 6px;font-size:22px;font-weight:700;color:${BRAND.textDark};">
+      New Mentee Assigned to You 🎯
+    </h2>
+    <p style="margin:0 0 20px;font-size:14px;color:${BRAND.textMuted};line-height:1.6;">
+      Hi <strong>${payload.mentorName}</strong>, a new mentee has been assigned to you through the alumni mentorship program.
+      Please review the details below and reach out to begin the mentorship journey.
+    </p>
+
+    <div style="background:${BRAND.bgLight};border:1px solid ${BRAND.border};border-radius:12px;padding:20px;margin:0 0 20px;">
+      <p style="margin:0 0 14px;font-size:13px;font-weight:700;color:${BRAND.primary};text-transform:uppercase;letter-spacing:1px;">
+        Mentee Details
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:${BRAND.textDark};">
+        <tr>
+          <td style="padding:6px 0;font-weight:600;width:120px;vertical-align:top;">Name</td>
+          <td style="padding:6px 0;">${payload.menteeName}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;font-weight:600;vertical-align:top;">Email</td>
+          <td style="padding:6px 0;"><a href="mailto:${payload.menteeEmail}" style="color:${BRAND.primary};text-decoration:none;">${payload.menteeEmail}</a></td>
+        </tr>
+        ${payload.menteePhone ? `<tr>
+          <td style="padding:6px 0;font-weight:600;vertical-align:top;">Phone</td>
+          <td style="padding:6px 0;"><a href="tel:${payload.menteePhone}" style="color:${BRAND.primary};text-decoration:none;">${payload.menteePhone}</a></td>
+        </tr>` : ""}
+        <tr>
+          <td style="padding:6px 0;font-weight:600;vertical-align:top;">Track</td>
+          <td style="padding:6px 0;">${payload.menteeTrack}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;font-weight:600;vertical-align:top;">Stage</td>
+          <td style="padding:6px 0;">${payload.menteeStage}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;font-weight:600;vertical-align:top;">Urgency</td>
+          <td style="padding:6px 0;"><span style="color:${payload.menteeUrgency.includes("Urgent") ? "#dc2626" : BRAND.textDark};font-weight:${payload.menteeUrgency.includes("Urgent") ? "700" : "400"};">${payload.menteeUrgency}</span></td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="background:${BRAND.bgLight};border:1px solid ${BRAND.border};border-radius:12px;padding:20px;margin:0 0 20px;">
+      <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${BRAND.primary};text-transform:uppercase;letter-spacing:1px;">
+        Mentee's Goal
+      </p>
+      <p style="margin:0;font-size:14px;color:${BRAND.textDark};line-height:1.7;">
+        ${payload.menteeGoal}
+      </p>
+    </div>
+
+    <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:14px 18px;margin:0 0 20px;">
+      <p style="margin:0;font-size:12px;color:#065f46;line-height:1.5;">
+        💡 <strong>Next Steps:</strong> Please reach out to your mentee within the next 48 hours via email or phone to introduce yourself and set up your first session.
+      </p>
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center">
+          <a href="${BRAND.portalUrl}/user/mentor" style="display:inline-block;background:${BRAND.primary};color:${BRAND.white};font-size:14px;font-weight:600;padding:12px 28px;border-radius:10px;text-decoration:none;">View Mentor Dashboard</a>
+        </td>
+      </tr>
+    </table>`;
+
+  return emailWrapper(content);
+}
+

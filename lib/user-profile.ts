@@ -1,4 +1,5 @@
 import { postgresPool } from "@/lib/postgres";
+import { randomBytes } from "node:crypto";
 
 export type UserProfile = {
   id: string;
@@ -36,6 +37,8 @@ export type UserProfile = {
   achievements: string;
   createdAt: string;
   updatedAt: string;
+  username: string | null;
+  usernameChangesLeft: number;
 };
 
 let profileTableReady = false;
@@ -88,6 +91,211 @@ export async function ensureUserProfileTable() {
       `);
 
       await postgresPool.query(`CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON user_profiles(email)`);
+
+      await postgresPool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS username TEXT UNIQUE`);
+      await postgresPool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS username_changes_left INTEGER NOT NULL DEFAULT 2`);
+      
+      // User Settings Columns
+      await postgresPool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS profile_visibility TEXT NOT NULL DEFAULT 'alumni-only'`);
+      await postgresPool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS show_email BOOLEAN NOT NULL DEFAULT false`);
+      await postgresPool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS show_mobile BOOLEAN NOT NULL DEFAULT false`);
+      await postgresPool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS show_current_role BOOLEAN NOT NULL DEFAULT true`);
+      await postgresPool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS email_updates BOOLEAN NOT NULL DEFAULT true`);
+      await postgresPool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS mentorship_notifications BOOLEAN NOT NULL DEFAULT true`);
+      await postgresPool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS jobs_notifications BOOLEAN NOT NULL DEFAULT true`);
+      await postgresPool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS events_notifications BOOLEAN NOT NULL DEFAULT true`);
+      await postgresPool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS message_notifications BOOLEAN NOT NULL DEFAULT true`);
+      await postgresPool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS weekly_digest BOOLEAN NOT NULL DEFAULT true`);
+      await postgresPool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS compact_layout BOOLEAN NOT NULL DEFAULT true`);
+      await postgresPool.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS timezone TEXT NOT NULL DEFAULT 'Asia/Kolkata'`);
+
+      const existingCount = await postgresPool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM user_profiles`);
+      if (Number(existingCount.rows[0]?.count || "0") === 0) {
+        const seedProfiles = [
+          {
+            email: "aditi.verma@example.com",
+            profile_type: "employed",
+            full_name: "Aditi Verma",
+            passing_year: "2015",
+            house: "Arawali",
+            mobile: "9876500123",
+            father_name: "Suresh Verma",
+            city: "Bengaluru",
+            state: "Karnataka",
+            country: "India",
+            bio: "Aditi works on distributed backend systems and helps teams design scalable cloud services.",
+            interests: "Supports coding interview preparation circles and mentors final-year students in backend fundamentals.",
+            linkedin: "https://linkedin.com",
+            github: "https://github.com",
+            portfolio: "https://portfolio.com",
+            certifications: "AWS Certified Solution Architect",
+            languages: "English, Hindi",
+            job_title: "Senior Software Engineer",
+            company_name: "Microsoft",
+            employment_type: "Full-time",
+            industry: "IT/Software",
+            experience_years: "8",
+            work_location: "Bengaluru",
+            key_skills: "Backend, Cloud Architecture",
+            achievements: '["Led migration of critical services to cloud-native architecture","Mentored 40+ early career engineers","Speaker at two national developer conferences"]',
+          },
+          {
+            email: "rohit.mishra@example.com",
+            profile_type: "employed",
+            full_name: "Rohit Mishra",
+            passing_year: "2012",
+            house: "Neelgiri",
+            mobile: "9876500456",
+            father_name: "Mahesh Singh",
+            city: "Mumbai",
+            state: "Maharashtra",
+            country: "India",
+            bio: "Rohit leads product strategy for growth initiatives and data-driven user experience improvements.",
+            interests: "Conducts monthly product case workshops for alumni and students interested in PM roles.",
+            linkedin: "https://linkedin.com",
+            github: "https://github.com",
+            portfolio: "https://portfolio.com",
+            certifications: "Product Management Certificate",
+            languages: "English, Hindi",
+            job_title: "Product Manager",
+            company_name: "Flipkart",
+            employment_type: "Full-time",
+            industry: "E-Commerce",
+            experience_years: "11",
+            work_location: "Mumbai",
+            key_skills: "Product Strategy, Growth",
+            achievements: '["Launched 3 high-impact product initiatives","Built cross-functional product playbook","Guest mentor for startup incubation cohorts"]',
+          },
+          {
+            email: "sneha.dubey@example.com",
+            profile_type: "employed",
+            full_name: "Sneha Dubey",
+            passing_year: "2018",
+            house: "Shiwalik",
+            mobile: "9876500789",
+            father_name: "Irfan Khan",
+            city: "Hyderabad",
+            state: "Telangana",
+            country: "India",
+            bio: "Sneha works on machine learning models for recommendation and business analytics pipelines.",
+            interests: "Helps scholarship applicants with data-science career planning and project reviews.",
+            linkedin: "https://linkedin.com",
+            github: "https://github.com",
+            portfolio: "https://portfolio.com",
+            certifications: "Coursera ML Specialist",
+            languages: "English, Hindi",
+            job_title: "Data Scientist",
+            company_name: "Amazon",
+            employment_type: "Full-time",
+            industry: "IT/Software",
+            experience_years: "5",
+            work_location: "Hyderabad",
+            key_skills: "ML, Analytics",
+            achievements: '["Published internal ML optimization framework","Improved model performance for production workflows","Mentored junior analysts in practical ML"]',
+          },
+          {
+            email: "anurag.singh@example.com",
+            profile_type: "employed",
+            full_name: "Anurag Singh",
+            passing_year: "2010",
+            house: "Arawali",
+            mobile: "9876500222",
+            father_name: "Kamal Sharma",
+            city: "Delhi NCR",
+            state: "Delhi",
+            country: "India",
+            bio: "Anurag is building an education startup focused on access and outcomes for underserved learners.",
+            interests: "Supports entrepreneurship mentorship and helps early-stage founders validate ideas.",
+            linkedin: "https://linkedin.com",
+            github: "https://github.com",
+            portfolio: "https://portfolio.com",
+            certifications: "Executive Leadership Program",
+            languages: "English, Hindi",
+            job_title: "Founder",
+            company_name: "EdTech Venture",
+            employment_type: "Full-time",
+            industry: "Education",
+            experience_years: "14",
+            work_location: "Delhi NCR",
+            key_skills: "Startups, Fundraising",
+            achievements: '["Raised seed funding for education startup","Built partnerships across school networks","Mentored student startup teams"]',
+          },
+          {
+            email: "nidhi.chauhan@example.com",
+            profile_type: "employed",
+            full_name: "Nidhi Chauhan",
+            passing_year: "2016",
+            house: "Neelgiri",
+            mobile: "9876500111",
+            father_name: "Ramesh Chauhan",
+            city: "Pune",
+            state: "Maharashtra",
+            country: "India",
+            bio: "Nidhi designs user-first digital products and contributes to enterprise design systems.",
+            interests: "Runs portfolio feedback sessions for students and design enthusiasts in the alumni network.",
+            linkedin: "https://linkedin.com",
+            github: "https://github.com",
+            portfolio: "https://portfolio.com",
+            certifications: "Nielsen Norman UX Specialist",
+            languages: "English, Hindi",
+            job_title: "UX Designer",
+            company_name: "Adobe",
+            employment_type: "Full-time",
+            industry: "Design",
+            experience_years: "7",
+            work_location: "Pune",
+            key_skills: "Design Systems, Research",
+            achievements: '["Created scalable design system components","Improved usability scores in major product areas","Panel mentor for design career events"]',
+          },
+          {
+            email: "kunal.saxena@example.com",
+            profile_type: "employed",
+            full_name: "Kunal Saxena",
+            passing_year: "2014",
+            house: "Shiwalik",
+            mobile: "9876500333",
+            father_name: "Ashok Saxena",
+            city: "Noida",
+            state: "UP",
+            country: "India",
+            bio: "Kunal leads platform reliability and deployment automation initiatives for large engineering teams.",
+            interests: "Guides learners on DevOps roadmaps and infrastructure fundamentals.",
+            linkedin: "https://linkedin.com",
+            github: "https://github.com",
+            portfolio: "https://portfolio.com",
+            certifications: "CKA (Certified Kubernetes Admin)",
+            languages: "English, Hindi",
+            job_title: "DevOps Lead",
+            company_name: "Infosys",
+            employment_type: "Full-time",
+            industry: "IT/Services",
+            experience_years: "9",
+            work_location: "Noida",
+            key_skills: "Kubernetes, Platform Engineering",
+            achievements: '["Designed CI/CD standards across multiple projects","Reduced deployment incidents through reliability practices","Facilitated DevOps bootcamps for juniors"]',
+          },
+        ];
+
+        for (const p of seedProfiles) {
+          await postgresPool.query(
+            `
+            INSERT INTO user_profiles (
+              email, profile_type, full_name, passing_year, house, mobile, father_name,
+              city, state, country, bio, interests, linkedin, github, portfolio,
+              certifications, languages, job_title, company_name, employment_type,
+              industry, experience_years, work_location, key_skills, achievements
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
+            `,
+            [
+              p.email, p.profile_type, p.full_name, p.passing_year, p.house, p.mobile, p.father_name,
+              p.city, p.state, p.country, p.bio, p.interests, p.linkedin, p.github, p.portfolio,
+              p.certifications, p.languages, p.job_title, p.company_name, p.employment_type,
+              p.industry, p.experience_years, p.work_location, p.key_skills, p.achievements
+            ]
+          );
+        }
+      }
+
       profileTableReady = true;
     } finally {
       profileTableInitPromise = null;
@@ -134,6 +342,8 @@ function mapRow(row: Record<string, unknown>): UserProfile {
     achievements: (row.achievements as string) || "",
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
+    username: (row.username as string) || null,
+    usernameChangesLeft: Number(row.username_changes_left ?? 2),
   };
 }
 
@@ -238,4 +448,31 @@ export async function upsertUserProfile(email: string, data: Partial<Omit<UserPr
   );
 
   return mapRow(result.rows[0]);
+}
+
+export async function generateUniqueUsername(fullName: string): Promise<string> {
+  const cleanName = fullName.toLowerCase().replace(/[^a-z0-9]/g, "");
+  // Take at most 5 characters, pad with 'x' if shorter than 3
+  const prefix = (cleanName.padEnd(3, 'x') || "user").slice(0, 5);
+
+  let attempts = 0;
+  while (attempts < 10) {
+    const suffixLength = 8 - prefix.length;
+    const suffix = randomBytes(4).toString("hex").slice(0, suffixLength);
+    const candidate = `${prefix}${suffix}`; // Total length: exactly 8 characters
+
+    // Check if unique in user_profiles
+    const check = await postgresPool.query(
+      `SELECT 1 FROM user_profiles WHERE LOWER(username) = $1 LIMIT 1`,
+      [candidate]
+    );
+
+    if (check.rowCount === 0) {
+      return candidate;
+    }
+    attempts++;
+  }
+
+  // Absolute fallback
+  return `${prefix}${Date.now().toString().slice(-3)}`;
 }

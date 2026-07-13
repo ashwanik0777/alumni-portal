@@ -5,6 +5,7 @@ export type UserOverviewData = {
   greeting: {
     name: string;
     email: string;
+    username: string | null;
   };
   stats: {
     totalConnections: number;
@@ -140,14 +141,15 @@ export async function getUserOverview(userEmail: string): Promise<UserOverviewDa
     `, [email]),
 
     // Profile info
-    safeQuery<{ full_name: string }>(`
-      SELECT full_name FROM user_connection_profiles WHERE email = $1 LIMIT 1
+    safeQuery<{ full_name: string; username: string | null }>(`
+      SELECT full_name, username FROM user_profiles WHERE email = $1 LIMIT 1
     `, [email]),
   ]);
 
   const cs = connectionStats[0] || { total: "0", pending_in: "0", pending_out: "0" };
   const ss = scholarshipStats[0] || { total: "0", pending: "0", verified: "0", completed: "0" };
   const userName = profileInfo[0]?.full_name || email.split("@")[0].replace(/[._-]+/g, " ");
+  const userUsername = profileInfo[0]?.username || null;
 
   // Build recent activity feed from all sources
   const recentActivity: UserOverviewData["recentActivity"] = [];
@@ -209,6 +211,7 @@ export async function getUserOverview(userEmail: string): Promise<UserOverviewDa
     greeting: {
       name: userName,
       email,
+      username: userUsername,
     },
     stats: {
       totalConnections: Number(cs.total),
