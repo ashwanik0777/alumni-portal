@@ -45,6 +45,8 @@ type ProfileFormState = {
   workLocation: string;
   keySkills: string;
   achievements: string;
+  username: string;
+  usernameChangesLeft: number;
 };
 
 const defaultState: ProfileFormState = {
@@ -80,6 +82,8 @@ const defaultState: ProfileFormState = {
   workLocation: "",
   keySkills: "",
   achievements: "",
+  username: "",
+  usernameChangesLeft: 2,
 };
 
 const STORAGE_KEY = "user_profile_draft_v1";
@@ -116,6 +120,47 @@ export default function UserProfilePage() {
   const [saving, setSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [includeOptionalDetails, setIncludeOptionalDetails] = useState(false);
+
+  const [usernameInput, setUsernameInput] = useState("");
+  const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState("");
+
+  const handleClaimUsername = async () => {
+    const cleanUsername = usernameInput.trim().toLowerCase();
+    if (!cleanUsername) return;
+
+    setIsUpdatingUsername(true);
+    setUsernameStatus("");
+
+    try {
+      const res = await fetch("/api/user/profile/username", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email,
+          username: cleanUsername,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setForm((prev) => ({
+          ...prev,
+          username: data.username,
+          usernameChangesLeft: data.usernameChangesLeft,
+        }));
+        setUsernameInput(data.username || "");
+        setUsernameStatus("Username set successfully!");
+      } else {
+        setUsernameStatus(data.message || "Failed to update username.");
+      }
+    } catch {
+      setUsernameStatus("Failed to update username. Please try again.");
+    } finally {
+      setIsUpdatingUsername(false);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -158,6 +203,7 @@ export default function UserProfilePage() {
       .then((data) => {
         if (data.profile) {
           setForm((prev) => ({ ...prev, ...data.profile }));
+          setUsernameInput(data.profile.username || "");
         }
         setLoading(false);
       })
@@ -286,6 +332,50 @@ export default function UserProfilePage() {
             </p>
           </div>
         </div>
+      </section>
+
+      <section className="rounded-xl border border-border bg-card p-4.5 sm:p-5">
+        <h3 className="text-lg font-bold">Username Configuration</h3>
+
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-end gap-3 max-w-xl">
+          <label className="flex-1">
+            <span className="mb-1.5 block text-sm font-medium text-text-primary">
+              Username
+            </span>
+            <input
+              type="text"
+              value={usernameInput}
+              onChange={(e) => setUsernameInput(e.target.value.replace(/\s+/g, ""))}
+              disabled={form.usernameChangesLeft <= 0}
+              placeholder="e.g. royal_01"
+              className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-text-primary outline-none focus:border-primary disabled:opacity-60"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={handleClaimUsername}
+            disabled={form.usernameChangesLeft <= 0 || isUpdatingUsername || !usernameInput.trim() || usernameInput.toLowerCase() === (form.username || "").toLowerCase()}
+            className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50 h-[42px]"
+          >
+            {isUpdatingUsername ? "Updating..." : "Set Username"}
+          </button>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between text-xs max-w-xl">
+          <span className={`font-semibold ${form.usernameChangesLeft <= 0 ? "text-red-500" : "text-text-secondary"}`}>
+            {form.usernameChangesLeft} {form.usernameChangesLeft === 1 ? "change" : "changes"} left
+          </span>
+          {form.username && (
+            <span className="text-emerald-600 font-medium bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+              Current: @{form.username}
+            </span>
+          )}
+        </div>
+        {!!usernameStatus && (
+          <div className="mt-3 rounded-xl border border-border bg-background px-4 py-2.5 text-xs text-text-secondary max-w-xl">
+            {usernameStatus}
+          </div>
+        )}
       </section>
 
       <form onSubmit={handleSubmitProfile} className="space-y-6">
@@ -437,7 +527,7 @@ export default function UserProfilePage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="inline-flex items-center gap-2 text-xs text-text-secondary">
               <BadgeCheck className="h-4 w-4 text-primary" />
-              Draft is auto-saved locally. Complete all required fields to save to DB.
+              Complete all required fields to save to DB.
             </p>
             <div className="flex flex-wrap gap-2">
               <button

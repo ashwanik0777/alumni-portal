@@ -53,6 +53,7 @@ export default function UserLayout({ children }: { children: ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [userName, setUserName] = useState("Aman Sharma");
   const [userEmail, setUserEmail] = useState("aman.alumni@jnvportal.in");
+  const [isMentor, setIsMentor] = useState(false);
 
   useEffect(() => {
     const email = localStorage.getItem("auth_email");
@@ -69,6 +70,18 @@ export default function UserLayout({ children }: { children: ReactNode }) {
         }
       }
     } catch {}
+
+    fetch("/api/user/mentor")
+      .then((res) => {
+        if (res.ok) {
+          setIsMentor(true);
+        } else {
+          setIsMentor(false);
+        }
+      })
+      .catch(() => {
+        setIsMentor(false);
+      });
   }, []);
 
   const handleSidebarToggle = () => {
@@ -82,6 +95,7 @@ export default function UserLayout({ children }: { children: ReactNode }) {
   const handleLogout = () => {
     document.cookie = "auth_user=; path=/; max-age=0; samesite=strict";
     document.cookie = "auth_role=; path=/; max-age=0; samesite=strict";
+    document.cookie = "auth_email=; path=/; max-age=0; samesite=strict";
     localStorage.removeItem("auth_role");
     localStorage.removeItem("auth_user");
     localStorage.removeItem("auth_email");
@@ -152,27 +166,29 @@ export default function UserLayout({ children }: { children: ReactNode }) {
           </div>
 
           <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
-            {navItems.map((item) => {
-              const active = isActivePath(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsMobileOpen(false)}
-                  className={[
-                    "group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all duration-200",
-                    active
-                      ? "border border-primary/20 bg-primary text-white shadow-lg shadow-primary/20"
-                      : "border border-transparent text-text-secondary hover:border-primary/15 hover:bg-primary/10 hover:text-primary",
-                    isCollapsed ? "justify-center" : "",
-                  ].join(" ")}
-                >
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  {!isCollapsed && <span>{item.label}</span>}
-                  {active && !isCollapsed && <span className="ml-auto h-2 w-2 rounded-full bg-white" />}
-                </Link>
-              );
-            })}
+            {navItems
+              .filter((item) => item.href !== "/user/mentor" || isMentor)
+              .map((item) => {
+                const active = isActivePath(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsMobileOpen(false)}
+                    className={[
+                      "group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all duration-200",
+                      active
+                        ? "border border-primary/20 bg-primary text-white shadow-lg shadow-primary/20"
+                        : "border border-transparent text-text-secondary hover:border-primary/15 hover:bg-primary/10 hover:text-primary",
+                      isCollapsed ? "justify-center" : "",
+                    ].join(" ")}
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    {!isCollapsed && <span>{item.label}</span>}
+                    {active && !isCollapsed && <span className="ml-auto h-2 w-2 rounded-full bg-white" />}
+                  </Link>
+                );
+              })}
           </nav>
 
           <div className="border-t border-border/70 p-3">

@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 type OverviewData = {
-  greeting: { name: string; email: string };
+  greeting: { name: string; email: string; username: string | null };
   stats: {
     totalConnections: number;
     pendingRequests: number;
@@ -214,7 +214,7 @@ export default function UserDashboardPage() {
               <LayoutDashboard className="h-3.5 w-3.5" /> Personal Dashboard
             </div>
             <h2 className="text-2xl font-black sm:text-3xl">
-              Welcome back, {data.greeting.name.split(" ")[0]}!
+              Welcome back, {data.greeting.username ? `@${data.greeting.username}` : data.greeting.name.split(" ")[0]}!
             </h2>
             <p className="mt-1 max-w-2xl text-sm text-text-secondary">
               Track your profile growth, networking updates, event registrations, and scholarship progress from one place.

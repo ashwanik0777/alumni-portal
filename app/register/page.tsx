@@ -31,100 +31,192 @@ const passingYears = Array.from({ length: currentYear - 1986 + 1 }, (_, index) =
 
 const houseOptions = ["Arawali", "Neelgiri", "Shiwalik", "Udayagiri"];
 
-const MEMBER_REGISTRATION_STORAGE_KEY = "admin_member_registrations_v1";
-
-type PendingMemberRegistration = {
-  id: string;
-  fullName: string;
-  email: string;
-  passingYear: string;
-  house: string;
-  mobile: string;
-  fatherName: string;
-  status: "Pending" | "Approved" | "Rejected" | "Needs Info";
-  submittedAt: string;
-};
-
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isOtpVerified, setIsOtpVerified] = useState(false);
   const [otpMessage, setOtpMessage] = useState("");
+  const [otpMessageType, setOtpMessageType] = useState<"success" | "error" | "info">("info");
   const [submitMessage, setSubmitMessage] = useState("");
+  const [submitMessageType, setSubmitMessageType] = useState<"success" | "error">("success");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [verificationId, setVerificationId] = useState("");
 
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     if (!email.trim()) {
       setOtpMessage("Please enter your email address first.");
+      setOtpMessageType("error");
       return;
     }
 
     setIsSendingOtp(true);
     setOtpMessage("");
     setIsOtpVerified(false);
-    setTimeout(() => {
-      setIsSendingOtp(false);
+
+    try {
+      const response = await fetch("/api/auth/register/otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setOtpMessage(data.message || "Failed to send OTP. Please try again.");
+        setOtpMessageType("error");
+        return;
+      }
+
+      setVerificationId(data.verificationId);
       setIsOtpSent(true);
-      setOtpMessage("OTP sent successfully. Use 123456 for frontend demo verification.");
-    }, 900);
+      setOtpMessage("OTP sent to your email. Please check your inbox.");
+      setOtpMessageType("success");
+    } catch {
+      setOtpMessage("Unable to send OTP. Please check your connection and try again.");
+      setOtpMessageType("error");
+    } finally {
+      setIsSendingOtp(false);
+    }
   };
 
-  const handleVerifyOtp = () => {
+  const handleVerifyOtp = async () => {
     if (!isOtpSent) {
       setOtpMessage("Please send OTP first.");
+      setOtpMessageType("error");
       return;
     }
 
-    if (otp.trim() === "123456") {
+    if (!otp.trim()) {
+      setOtpMessage("Please enter the OTP code.");
+      setOtpMessageType("error");
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    setOtpMessage("");
+
+    try {
+      const response = await fetch("/api/auth/register/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          verificationId,
+          otpCode: otp.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.verified) {
+        setIsOtpVerified(false);
+        setOtpMessage(data.message || "Invalid OTP. Please try again.");
+        setOtpMessageType("error");
+        return;
+      }
+
       setIsOtpVerified(true);
       setOtpMessage("Email verified successfully.");
-      return;
+      setOtpMessageType("success");
+    } catch {
+      setOtpMessage("Unable to verify OTP. Please try again.");
+      setOtpMessageType("error");
+    } finally {
+      setIsVerifyingOtp(false);
     }
-
-    setIsOtpVerified(false);
-    setOtpMessage("Invalid OTP. For now use 123456 in frontend demo.");
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!isOtpVerified) {
       setSubmitMessage("Please verify your email with OTP before submitting.");
+      setSubmitMessageType("error");
       return;
     }
 
-    const formData = new FormData(event.currentTarget);
-    const payload: PendingMemberRegistration = {
-      id: `REG-${Date.now()}`,
+    const formElement = event.currentTarget;
+    const formData = new FormData(formElement);
+    const payload = {
       fullName: String(formData.get("fullName") || "").trim(),
-      email: String(formData.get("email") || "").trim().toLowerCase(),
+      email: email.trim().toLowerCase(),
       passingYear: String(formData.get("passingYear") || "").trim(),
       house: String(formData.get("house") || "").trim(),
       mobile: String(formData.get("mobile") || "").trim(),
       fatherName: String(formData.get("fatherName") || "").trim(),
-      status: "Pending",
-      submittedAt: new Date().toISOString(),
+      verificationId,
     };
 
-    if (!payload.fullName || !payload.email || !payload.passingYear || !payload.house || !payload.mobile || !payload.fatherName) {
-      setSubmitMessage("Please fill all required details before submitting.");
+    const missingFields: string[] = [];
+    if (!payload.fullName) missingFields.push("Full Name");
+    if (!payload.email) missingFields.push("Email");
+    if (!payload.passingYear) missingFields.push("Passing Year");
+    if (!payload.house) missingFields.push("House");
+    if (!payload.mobile) missingFields.push("Mobile Number");
+    if (!payload.fatherName) missingFields.push("Father's Name");
+
+    if (missingFields.length > 0) {
+      setSubmitMessage(`Please fill all required details before submitting. Missing: ${missingFields.join(", ")}`);
+      setSubmitMessageType("error");
       return;
     }
 
-    const existingRaw = localStorage.getItem(MEMBER_REGISTRATION_STORAGE_KEY);
-    const existing = existingRaw ? (JSON.parse(existingRaw) as PendingMemberRegistration[]) : [];
-    const withoutSameEmail = existing.filter((item) => item.email !== payload.email);
-    localStorage.setItem(MEMBER_REGISTRATION_STORAGE_KEY, JSON.stringify([payload, ...withoutSameEmail]));
+    setIsSubmitting(true);
+    setSubmitMessage("");
 
-    event.currentTarget.reset();
-    setEmail("");
-    setOtp("");
-    setIsOtpSent(false);
-    setIsOtpVerified(false);
-    setOtpMessage("");
-    setSubmitMessage("Registration submitted successfully. Admin will review and approve from Member Management panel.");
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch {
+        // Safe fallback for HTML error pages
+      }
+
+      if (!response.ok) {
+        setSubmitMessage(data.message || `Registration failed (Status ${response.status}). Please try again.`);
+        setSubmitMessageType("error");
+        return;
+      }
+
+      formElement.reset();
+      setEmail("");
+      setOtp("");
+      setIsOtpSent(false);
+      setIsOtpVerified(false);
+      setOtpMessage("");
+      setVerificationId("");
+      setSubmitMessage("Registration submitted successfully! You will receive a confirmation email shortly. Admin will review and approve your membership.");
+      setSubmitMessageType("success");
+    } catch (err) {
+      console.error("Registration submit client error:", err);
+      setSubmitMessage("Unable to submit registration. Please check your connection and try again.");
+      setSubmitMessageType("error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const otpMsgColor =
+    otpMessageType === "success"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : otpMessageType === "error"
+        ? "border-red-200 bg-red-50 text-red-700"
+        : "border-border bg-background text-text-secondary";
+
+  const submitMsgColor =
+    submitMessageType === "success"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : "border-red-200 bg-red-50 text-red-700";
 
   return (
     <div className="bg-background text-text-primary">
@@ -214,6 +306,7 @@ export default function RegisterPage() {
                     placeholder="you@example.com"
                     className="w-full rounded-xl border border-border bg-background pl-10 pr-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary"
                     required
+                    disabled={isOtpVerified}
                   />
                 </div>
               </label>
@@ -289,28 +382,30 @@ export default function RegisterPage() {
                     value={otp}
                     onChange={(event) => setOtp(event.target.value)}
                     placeholder="Enter 6-digit OTP"
-                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary sm:w-96"
+                    disabled={isOtpVerified}
+                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary sm:w-96 disabled:opacity-60"
                   />
                   <button
                     type="button"
                     onClick={handleSendOtp}
-                    disabled={isSendingOtp}
-                    className="inline-flex min-w-32 items-center justify-center whitespace-nowrap rounded-xl border border-primary/40 bg-transparent px-5 py-3 text-sm font-semibold leading-none text-primary hover:border-primary/70"
+                    disabled={isSendingOtp || isOtpVerified}
+                    className="inline-flex min-w-32 items-center justify-center whitespace-nowrap rounded-xl border border-primary/40 bg-transparent px-5 py-3 text-sm font-semibold leading-none text-primary hover:border-primary/70 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSendingOtp ? "Sending..." : isOtpSent ? "Resend OTP" : "Send OTP"}
                   </button>
                   <button
                     type="button"
                     onClick={handleVerifyOtp}
-                    className="inline-flex min-w-32 items-center justify-center whitespace-nowrap rounded-xl border border-primary/40 bg-transparent px-5 py-3 text-sm font-semibold leading-none text-primary hover:border-primary/70"
+                    disabled={isVerifyingOtp || isOtpVerified}
+                    className="inline-flex min-w-32 items-center justify-center whitespace-nowrap rounded-xl border border-primary/40 bg-transparent px-5 py-3 text-sm font-semibold leading-none text-primary hover:border-primary/70 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Verify OTP
+                    {isVerifyingOtp ? "Verifying..." : isOtpVerified ? "✓ Verified" : "Verify OTP"}
                   </button>
                 </div>
               </label>
 
               {!!otpMessage && (
-                <div className="sm:col-span-2 rounded-xl border border-border bg-background px-4 py-3 text-sm text-text-secondary">
+                <div className={`sm:col-span-2 rounded-xl border px-4 py-3 text-sm ${otpMsgColor}`}>
                   {otpMessage}
                 </div>
               )}
@@ -319,15 +414,15 @@ export default function RegisterPage() {
 
                 <button
                   type="submit"
-                  disabled={!isOtpVerified}
+                  disabled={!isOtpVerified || isSubmitting}
                   className="inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3 font-semibold text-white hover:bg-primary/90 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Submit Registration
+                  {isSubmitting ? "Submitting..." : "Submit Registration"}
                 </button>
               </div>
 
               {!!submitMessage && (
-                <div className="sm:col-span-2 rounded-xl border border-border bg-background px-4 py-3 text-sm text-text-secondary">
+                <div className={`sm:col-span-2 rounded-xl border px-4 py-3 text-sm ${submitMsgColor}`}>
                   {submitMessage}
                 </div>
               )}

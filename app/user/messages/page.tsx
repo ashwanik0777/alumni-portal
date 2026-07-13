@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, CheckCheck, Circle, MessageSquareText, RefreshCw, Search, SendHorizontal, Sparkles, Zap } from "lucide-react";
 
 type Conversation = {
-  id: string;
+  id: string; // participant's email
   name: string;
   role: string;
   isOnline: boolean;
@@ -15,15 +15,16 @@ type Conversation = {
 
 type ChatMessage = {
   id: string;
-  conversationId: string;
   sender: "me" | "them";
   text: string;
   time: string;
-  status: "sending" | "sent" | "delivered";
+  createdAt: string; // ISO string
+  isEdited: boolean;
+  status: "sent" | "delivered";
 };
 
 let messagesCache: { data: Conversation[]; expiresAt: number } | null = null;
-const MESSAGES_CACHE_TTL_MS = 8_000;
+const MESSAGES_CACHE_TTL_MS = 3_000;
 
 function getStoredUserProfile() {
   if (typeof window === "undefined") return { fullName: "", email: "" };
@@ -35,15 +36,15 @@ function getStoredUserProfile() {
     if (raw) {
       const p = JSON.parse(raw) as { fullName?: string; email?: string };
       return {
-        fullName: p.fullName?.trim() || authName || "Aman Sharma",
-        email: p.email?.trim().toLowerCase() || authEmail || "aman.alumni@jnvportal.in",
+        fullName: p.fullName?.trim() || authName || "Alumni",
+        email: p.email?.trim().toLowerCase() || authEmail || "",
       };
     }
     if (authEmail) {
-      return { fullName: authName || "Aman Sharma", email: authEmail };
+      return { fullName: authName || "Alumni", email: authEmail };
     }
   } catch { /* skip */ }
-  return { fullName: "Aman Sharma", email: "aman.alumni@jnvportal.in" };
+  return { fullName: "Alumni", email: "" };
 }
 
 function MessagesSkeleton() {
@@ -77,6 +78,10 @@ export default function UserMessagesPage() {
   const [selectedId, setSelectedId] = useState<string>("");
   const [isSending, setIsSending] = useState(false);
 
+  // Edit Message States
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+
   const loadConversations = useCallback(async (forceFresh = false) => {
     if (!profile.email) { setLoading(false); return; }
 
@@ -88,7 +93,7 @@ export default function UserMessagesPage() {
     }
 
     try {
-      const res = await fetch(`/api/user/messages?email=${encodeURIComponent(profile.email)}`);
+      const res = await fetch(`/api/user/messages`);
       const data = await res.json();
       if (res.ok) {
         setConversations(data.conversations || []);
@@ -104,13 +109,13 @@ export default function UserMessagesPage() {
 
   const loadMessages = useCallback(async (convId: string) => {
     try {
-      const res = await fetch(`/api/user/messages?email=${encodeURIComponent(profile.email)}&conversationId=${encodeURIComponent(convId)}`);
+      const res = await fetch(`/api/user/messages?conversationId=${encodeURIComponent(convId)}`);
       const data = await res.json();
       if (res.ok) setMessages(data.messages || []);
     } catch (e) {
       console.error(e);
     }
-  }, [profile.email]);
+  }, []);
 
   const markRead = useCallback(async (convId: string) => {
     try {
@@ -125,7 +130,19 @@ export default function UserMessagesPage() {
     }
   }, []);
 
-  useEffect(() => { void loadConversations(); }, [loadConversations]);
+  // Polling loop for real-time updates
+  useEffect(() => {
+    loadConversations(true);
+
+    const interval = setInterval(() => {
+      loadConversations(false);
+      if (selectedId) {
+        loadMessages(selectedId);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [selectedId, loadConversations, loadMessages]);
 
   useEffect(() => {
     if (selectedId) {
@@ -143,7 +160,18 @@ export default function UserMessagesPage() {
     const tempId = `temp-${Date.now()}`;
     const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     
-    setMessages((prev) => [...prev, { id: tempId, conversationId: selectedId, sender: "me", text, time, status: "sending" }]);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        sender: "me",
+        text,
+        time,
+        createdAt: new Date().toISOString(),
+        isEdited: false,
+        status: "sent",
+      },
+    ]);
     setDraft("");
 
     try {
@@ -163,6 +191,55 @@ export default function UserMessagesPage() {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleClearChat = async () => {
+    if (!selectedId) return;
+    const confirmed = window.confirm("Are you sure you want to clear this chat? This will only remove messages from your dashboard.");
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch("/api/user/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clear", conversationId: selectedId }),
+      });
+      if (res.ok) {
+        setMessages([]);
+        void loadConversations(true);
+      }
+    } catch (e) {
+      console.error("Failed to clear chat:", e);
+    }
+  };
+
+  const handleSaveEdit = async (msgId: string) => {
+    if (!editingText.trim()) return;
+    try {
+      const res = await fetch("/api/user/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "edit", messageId: msgId, text: editingText }),
+      });
+      if (res.ok) {
+        setEditingMessageId(null);
+        if (selectedId) void loadMessages(selectedId);
+      } else {
+        const data = await res.json();
+        alert(data.message || "Failed to edit message.");
+      }
+    } catch (e) {
+      console.error("Failed to edit message:", e);
+    }
+  };
+
+  const canEdit = (createdAtStr: string) => {
+    try {
+      const created = new Date(createdAtStr).getTime();
+      return Date.now() - created < 5 * 60 * 1000;
+    } catch {
+      return false;
     }
   };
 
@@ -191,9 +268,9 @@ export default function UserMessagesPage() {
             <p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary">
               <Sparkles className="h-3.5 w-3.5" /> Real-Time Messaging Hub
             </p>
-            <h2 className="mt-2 text-2xl font-black">Fast conversations for mentors, alumni, and admin</h2>
+            <h2 className="mt-2 text-2xl font-black">Chat with your connected Alumni</h2>
             <p className="mt-1 text-sm text-text-secondary">
-              Optimized chat-style interface with live database updates and unread tracking.
+              Real-time secure chat system, message editing within 5 minutes, and local chat clearance.
             </p>
           </div>
           <button
@@ -226,7 +303,7 @@ export default function UserMessagesPage() {
 
           <div className="mt-3 space-y-2">
             {filteredConversations.length === 0 ? (
-              <p className="py-4 text-center text-xs text-text-secondary">No conversations found.</p>
+              <p className="py-4 text-center text-xs text-text-secondary">No connected conversations found.</p>
             ) : (
               filteredConversations.map((conv) => (
                 <button
@@ -266,26 +343,80 @@ export default function UserMessagesPage() {
                   <p className="text-sm font-bold text-text-primary">{selectedConversation.name}</p>
                   <p className="text-xs text-text-secondary">{selectedConversation.role}</p>
                 </div>
-                <p className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-                  selectedConversation.isOnline ? "border-primary/20 bg-primary/5 text-primary" : "border-border bg-background text-text-secondary"
-                }`}>
-                  <Zap className="h-3.5 w-3.5" />
-                  {selectedConversation.isOnline ? "Online" : "Away"}
-                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleClearChat}
+                    className="rounded-lg border border-red-200 bg-red-50/50 hover:bg-red-50 hover:text-red-700 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors"
+                  >
+                    Clear Chat
+                  </button>
+                  <p className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold ${
+                    selectedConversation.isOnline ? "border-primary/20 bg-primary/5 text-primary" : "border-border bg-background text-text-secondary"
+                  }`}>
+                    <Zap className="h-3.5 w-3.5" />
+                    {selectedConversation.isOnline ? "Online" : "Away"}
+                  </p>
+                </div>
               </header>
 
               <div className="flex-1 space-y-3 overflow-y-auto bg-background/60 px-4 py-4 sm:px-5">
-                {messages.map((msg) => (
-                  <div key={msg.id} className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-[75%] rounded-2xl px-3.5 py-2.5 text-sm ${msg.sender === "me" ? "bg-primary text-white" : "border border-border bg-card text-text-primary"}`}>
-                      <p>{msg.text}</p>
-                      <div className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${msg.sender === "me" ? "text-white/80" : "text-text-secondary"}`}>
-                        <span>{msg.time}</span>
-                        {msg.sender === "me" && msg.status && <MessageStatusIcon status={msg.status} />}
+                {messages.length === 0 ? (
+                  <p className="text-xs text-text-secondary text-center py-10">No messages yet. Send a message to start chatting!</p>
+                ) : (
+                  messages.map((msg) => {
+                    const isEditing = editingMessageId === msg.id;
+                    return (
+                      <div key={msg.id} className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}>
+                        {isEditing ? (
+                          <div className="max-w-[75%] rounded-2xl bg-primary text-white px-3.5 py-2.5 text-sm shadow-md">
+                            <input
+                              value={editingText}
+                              onChange={(e) => setEditingText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  void handleSaveEdit(msg.id);
+                                } else if (e.key === "Escape") {
+                                  setEditingMessageId(null);
+                                }
+                              }}
+                              className="w-full rounded border border-white/20 bg-black/20 px-2 py-1 text-sm text-white outline-none focus:border-white"
+                              autoFocus
+                            />
+                            <div className="mt-1.5 flex justify-end gap-3 text-xs">
+                              <button onClick={() => setEditingMessageId(null)} className="opacity-80 hover:opacity-100">Cancel</button>
+                              <button onClick={() => void handleSaveEdit(msg.id)} className="font-bold hover:underline">Save</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className={`max-w-[75%] rounded-2xl px-3.5 py-2.5 text-sm relative group ${
+                            msg.sender === "me" ? "bg-primary text-white" : "border border-border bg-card text-text-primary"
+                          }`}>
+                            <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                            <div className={`mt-1.5 flex items-center justify-end gap-1.5 text-[9px] ${
+                              msg.sender === "me" ? "text-white/70" : "text-text-secondary"
+                            }`}>
+                              {msg.isEdited && <span className="italic opacity-85">(edited)</span>}
+                              <span>{msg.time}</span>
+                              {msg.sender === "me" && msg.status && <MessageStatusIcon status={msg.status} />}
+                              
+                              {msg.sender === "me" && canEdit(msg.createdAt) && (
+                                <button
+                                  onClick={() => {
+                                    setEditingMessageId(msg.id);
+                                    setEditingText(msg.text);
+                                  }}
+                                  className="ml-2 font-bold underline opacity-0 group-hover:opacity-100 transition-opacity hover:text-white"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })
+                )}
               </div>
 
               <footer className="border-t border-border px-4 py-3 sm:px-5">
@@ -333,7 +464,6 @@ function StatCard({ label, value }: { label: string; value: string }) {
 }
 
 function MessageStatusIcon({ status }: { status: ChatMessage["status"] }) {
-  if (status === "sending") return <Circle className="h-3 w-3" />;
   if (status === "sent") return <Check className="h-3 w-3" />;
   return <CheckCheck className="h-3 w-3" />;
 }

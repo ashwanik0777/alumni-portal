@@ -10,6 +10,7 @@ type HomeStats = {
   citiesConnected: string;
   opportunitiesShared: string;
   storiesShared: string;
+  positiveOutcomes: string;
 };
 
 type HomeFeedEvent = { title: string; time: string; venue: string; };
