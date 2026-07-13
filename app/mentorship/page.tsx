@@ -36,6 +36,7 @@ export default function MentorshipPage() {
   
   // Mentee Form State
   const [menteeName, setMenteeName] = useState("");
+  const [menteePhone, setMenteePhone] = useState("");
   const [menteeStage, setMenteeStage] = useState("Student");
   const [menteeTrack, setMenteeTrack] = useState("Career Mentorship");
   const [menteeUrgency, setMenteeUrgency] = useState("Flexible");
@@ -44,7 +45,7 @@ export default function MentorshipPage() {
   // Mentor Form State
   const [mentorName, setMentorName] = useState("");
   const [mentorExpertise, setMentorExpertise] = useState("");
-  const [mentorMax, setMentorMax] = useState("1");
+  const [mentorMax, setMentorMax] = useState("5");
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -60,6 +61,15 @@ export default function MentorshipPage() {
         setDataLoaded(true);
       })
       .catch(() => setDataLoaded(true));
+  }, []);
+
+  // Auto-fill name from auth if logged in
+  useEffect(() => {
+    const firstName = localStorage.getItem("auth_first_name") || "";
+    if (firstName) {
+      setMenteeName(firstName);
+      setMentorName(firstName);
+    }
   }, []);
 
   const isLoggedIn = () => {
@@ -90,6 +100,7 @@ export default function MentorshipPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: menteeName,
+          phone: menteePhone,
           currentStage: menteeStage,
           track: menteeTrack,
           goal: menteeGoal,
@@ -105,7 +116,7 @@ export default function MentorshipPage() {
       const data = await res.json();
       if (res.ok) {
         setMessage("Request submitted! We will assign a mentor soon.");
-        setMenteeName(""); setMenteeGoal("");
+        setMenteeName(""); setMenteePhone(""); setMenteeGoal("");
       } else {
         setMessage(data.message || "Failed to submit.");
       }
@@ -356,6 +367,11 @@ export default function MentorshipPage() {
               </label>
 
               <label>
+                <span className="mb-1.5 block text-sm font-medium">Phone Number</span>
+                <input type="tel" value={menteePhone} onChange={e => setMenteePhone(e.target.value)} placeholder="+91 XXXXX XXXXX" className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary placeholder:text-text-secondary/75 outline-none focus:border-primary" />
+              </label>
+
+              <label>
                 <span className="mb-1.5 block text-sm font-medium">Current Stage</span>
                 <select value={menteeStage} onChange={e => setMenteeStage(e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary outline-none focus:border-primary">
                   <option>Student</option>
@@ -408,10 +424,12 @@ export default function MentorshipPage() {
               <label>
                 <span className="mb-1.5 block text-sm font-medium">Max Mentees</span>
                 <select value={mentorMax} onChange={e => setMentorMax(e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-3 text-text-primary outline-none focus:border-primary">
-                  <option>1</option>
-                  <option>2</option>
-                  <option>3</option>
-                  <option>5</option>
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="15">15</option>
+                  <option value="20">20</option>
+                  <option value="25">25</option>
+                  <option value="30">30</option>
                 </select>
               </label>
 
